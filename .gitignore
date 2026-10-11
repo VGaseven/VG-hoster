@@ -99,3 +99,11 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# shopping-list: browser profile (Amazon session) and any tokens never go in git
+.amazon-profile/
+**/.amazon-profile/
+*.token
+.env
+.env.*
+amazon-report.json

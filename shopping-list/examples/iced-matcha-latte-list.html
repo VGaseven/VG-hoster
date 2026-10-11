@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Shopping list</title>
+<style>
+:root{--bg:#f4f6f4;--card:#fff;--ink:#14201b;--muted:#5b6a64;--line:#dce3df;--accent:#0b6b53;--accent-ink:#fff;--soft:#e3f1ec;--warn:#8a5300}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1412;--card:#151d1a;--ink:#e6eeea;--muted:#9aaba4;--line:#2a3631;--accent:#4cc39c;--accent-ink:#06231a;--soft:#173229;--warn:#f0b45a;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Arabic",sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 0}
+h1{font-size:24px;margin:2px 0 4px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:18px 0 0}
+.sub{color:var(--muted);font-size:13px;margin:0}
+.hint{font-size:13px;color:var(--muted);margin:10px 0 0}
+.banner{display:block;margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--soft);text-decoration:none}
+ul{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:10px}
+li{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px}
+li.off{opacity:.55}
+input[type=checkbox]{width:24px;height:24px;margin:2px 0 0;accent-color:var(--accent)}
+.name{font-weight:600;overflow-wrap:anywhere}
+.meta{font-size:13px;color:var(--muted)}
+.row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:6px}
+.price{font-weight:600}.price.na{font-weight:400;font-style:italic;color:var(--muted)}
+.note{font-size:13px;color:var(--warn)}
+a{color:var(--accent);font-weight:500}
+.step{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px}
+.step button{width:34px;height:32px;border:0;background:none;color:inherit;font-size:18px;cursor:pointer}
+.step button:disabled{opacity:.3}
+.step output{min-width:24px;text-align:center;font-weight:600}
+.dock{position:sticky;bottom:0;margin-top:16px;padding:12px 0 16px;background:var(--bg);border-top:1px solid var(--line)}
+.total{font-size:22px;font-weight:700}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.btn{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-weight:500;cursor:pointer}
+.btn.main{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn[hidden],.banner[hidden]{display:none}
+#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:13px}
+textarea{width:100%;min-height:120px;margin-top:8px}
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Shopping list</h1>
+  <p class="sub" id="sub"></p>
+  <a class="banner" id="amazon-list" target="_blank" rel="noopener" hidden>Open the whole list on Amazon.sa ↗</a>
+  <p class="hint">Tick what you want, then open each link to add it to your own cart. Nothing is added or bought for you.</p>
+  <div id="items"></div>
+  <section class="dock">
+    <div class="meta" id="label">Total of ticked items</div>
+    <div class="total" id="total"></div>
+    <div class="note" id="caveat"></div>
+    <div class="btns">
+      <button class="btn main" id="copy">Copy my list</button>
+      <button class="btn" id="csv">Download CSV</button>
+    </div>
+  </section>
+</main>
+<div id="toast" hidden></div>
+
+<!-- ===== THE ONLY PART TO EDIT: the list data ===== -->
+<script type="application/json" id="list-data">
+{"title":"Iced Matcha Latte","currency":"SAR","checked":"","items":[{"name":"Jade Leaf Organic Matcha Green Tea Powder, Culinary Grade","brand":"Jade Leaf","size":"30 g","qty":1,"store":"Amazon.sa","url":"https://www.amazon.sa/dp/B0CRB3DCZ6","amazonUrl":"https://www.amazon.sa/dp/B0CRB3DCZ6","price":null,"category":"Groceries","want":true,"urlKind":"product"},{"name":"Sary Squeeze Honey","brand":"Sary","size":"400 g","qty":1,"price":null,"category":"Groceries","note":"Not found on Amazon.sa in 400 g squeeze (500 g and 1 kg jars are listed). Buy at a supermarket.","want":true,"urlKind":null},{"name":"Almarai Fresh Milk Full Fat","brand":"Almarai","size":"2 L","qty":1,"store":"Amazon.sa (Amazon Now)","url":"https://www.amazon.sa/dp/B08949QG5J","amazonUrl":"https://www.amazon.sa/dp/B08949QG5J","price":null,"category":"Groceries","note":"Fresh milk: sold via Amazon Now, delivery area may be limited.","want":true,"urlKind":"product"},{"name":"FoodVille MF02 Rechargeable Handheld Milk Frother","brand":"FoodVille","qty":1,"store":"Amazon.sa","url":"https://www.amazon.sa/dp/B07HSQKG3J","amazonUrl":"https://www.amazon.sa/dp/B07HSQKG3J","price":null,"category":"Kitchen tools","want":false,"urlKind":"product"}]}
+</script>
+<!-- ================================================= -->
+
+<script>
+(function () {
+  var data = JSON.parse(document.getElementById('list-data').textContent);
+  var cur = data.currency || 'SAR';
+  var items = (data.items || []).map(function (it, i) {
+    return { i: i, name: it.name, size: it.size || '', note: it.note || '', store: it.store || '', url: it.url || '',
+      urlKind: it.urlKind || '', amazon: it.amazonUrl || '', category: it.category || '', price: toHalala(it.price),
+      qty: Math.max(1, Math.min(99, parseInt(it.qty || 1, 10) || 1)), want: it.want !== false };
+  });
+  // Money in whole halalas (integers) so totals never pick up rounding errors.
+  function toHalala(p) {
+    if (p === null || p === undefined || p === '') return null;
+    var s = String(p).replace(/[^0-9.]/g, ''); if (!/^\d+(\.\d+)?$/.test(s)) return null;
+    var parts = s.split('.'); var frac = (parts[1] || '') + '000';
+    return parseInt(parts[0], 10) * 100 + parseInt(frac.slice(0, 2), 10) + (+frac[2] >= 5 ? 1 : 0);
+  }
+  function money(h) { return cur + ' ' + (Math.floor(h / 100)).toLocaleString('en-US') + '.' + String(h % 100).padStart(2, '0'); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function safe(u) { return /^https:\/\//i.test(u) ? u : ''; }
+  function isSearch(u) { return /[?&](k|q|query|kw|search|text)=/i.test(u) || /\/(search|catalogsearch|s)(\/|\?|$)/i.test(u); }
+  function isAmazonProduct(u) { return /^https:\/\/(www\.)?amazon\.sa\/.*(dp|gp\/product)\/[A-Z0-9]{10}/i.test(u); }
+  function asin(u) { var m = /\/(?:dp|gp\/product)\/([A-Z0-9]{10})/i.exec(u || ''); return m ? m[1].toUpperCase() : ''; }
+  function amazonLink(it) { return isAmazonProduct(it.amazon) ? it.amazon : 'https://www.amazon.sa/s?k=' + encodeURIComponent(it.name + (it.size ? ' ' + it.size : '')); }
+  // Downloads don't work inside a claude.ai artifact, so the CSV button is hidden there. Copy works everywhere.
+  function inClaudeArtifact() {
+    try {
+      if (/(^|\.)(claude\.ai|claudeusercontent\.com)$/i.test(location.hostname)) return true;
+      var anc = location.ancestorOrigins; if (anc) for (var k = 0; k < anc.length; k++) if (/claude\.ai|claudeusercontent\.com/i.test(anc[k])) return true;
+      if (/^https:\/\/([a-z0-9-]+\.)*claude\.ai\//i.test(document.referrer)) return true;
+    } catch (e) { /* ignore */ }
+    return false;
+  }
+
+  document.title = data.title || 'Shopping list';
+  document.getElementById('title').textContent = data.title || 'Shopping list';
+  document.getElementById('sub').textContent = items.length + ' items' + (data.checked ? ' · prices checked ' + data.checked : '');
+  if (/^https:\/\/(www\.)?amazon\.sa\/hz\/wishlist\/ls\/[A-Z0-9]+/i.test(data.amazonListUrl || '')) {
+    var al = document.getElementById('amazon-list'); al.href = data.amazonListUrl; al.hidden = false;
+  }
+  if (inClaudeArtifact()) document.getElementById('csv').hidden = true;
+
+  function card(it) {
+    var p = it.price === null ? '<span class="price na">Price not checked</span>'
+      : '<span class="price">' + money(it.price * it.qty) + '</span>' + (it.qty > 1 ? ' <span class="meta">' + money(it.price) + ' each</span>' : '');
+    var store = '';
+    var sameAsAmazon = isAmazonProduct(it.url) && isAmazonProduct(it.amazon) && asin(it.url) === asin(it.amazon);
+    if (safe(it.url) && !sameAsAmazon) {
+      var search = it.urlKind ? it.urlKind === 'search' : isSearch(it.url);
+      var label = search ? 'Search ' + (it.store || 'store') : (it.urlKind && it.urlKind !== 'product' ? (it.store || 'Store') + ' (not a product page)' : (it.store || 'Store'));
+      store = '<a href="' + esc(it.url) + '" target="_blank" rel="noopener" data-link="store">' + esc(label) + ' ↗</a>';
+    }
+    var amz = isAmazonProduct(it.amazon) ? 'Amazon.sa ↗' : 'Search Amazon.sa ↗';
+    return '<li class="' + (it.want ? '' : 'off') + '"><input type="checkbox" data-i="' + it.i + '" ' + (it.want ? 'checked' : '') + ' aria-label="Want ' + esc(it.name) + '">' +
+      '<div><div class="name">' + esc(it.name) + '</div>' + (it.size ? '<div class="meta">' + esc(it.size) + '</div>' : '') +
+      (it.note ? '<div class="note">' + esc(it.note) + '</div>' : '') +
+      '<div class="row">' + p + '<span class="step"><button data-d="-1" data-i="' + it.i + '" aria-label="Less"' + (it.qty <= 1 ? ' disabled' : '') + '>−</button><output>' + it.qty + '</output><button data-d="1" data-i="' + it.i + '" aria-label="More"' + (it.qty >= 99 ? ' disabled' : '') + '>+</button></span></div>' +
+      '<div class="row">' + store + '<a href="' + esc(amazonLink(it)) + '" target="_blank" rel="noopener" data-link="amazon">' + amz + '</a></div></div></li>';
+  }
+  function render() {
+    // Group by category only when the list mixes several categories.
+    var cats = []; items.forEach(function (it) { if (cats.indexOf(it.category) < 0) cats.push(it.category); });
+    var html = cats.length > 1 && cats.every(function (c) { return c; })
+      ? cats.map(function (c) { return '<h2>' + esc(c) + '</h2><ul>' + items.filter(function (it) { return it.category === c; }).map(card).join('') + '</ul>'; }).join('')
+      : '<ul>' + items.map(card).join('') + '</ul>';
+    document.getElementById('items').innerHTML = html;
+    var sum = 0, unknown = 0;
+    items.forEach(function (it) { if (!it.want) return; if (it.price === null) unknown++; else sum += it.price * it.qty; });
+    document.getElementById('total').textContent = money(sum);
+    document.getElementById('label').textContent = unknown ? 'Total of ticked items (incomplete)' : 'Total of ticked items';
+    document.getElementById('caveat').textContent = unknown ? 'Incomplete: ' + unknown + ' ticked item' + (unknown > 1 ? 's have' : ' has') + ' no checked price and ' + (unknown > 1 ? 'are' : 'is') + ' not in the total.' : '';
+  }
+  document.getElementById('items').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-d]'); if (!b) return;
+    var it = items[+b.dataset.i]; it.qty = Math.max(1, Math.min(99, it.qty + +b.dataset.d)); render();
+  });
+  document.getElementById('items').addEventListener('change', function (e) {
+    if (e.target.type === 'checkbox') { items[+e.target.dataset.i].want = e.target.checked; render(); }
+  });
+  function chosen() { return items.filter(function (it) { return it.want; }); }
+  function toast(t) { var el = document.getElementById('toast'); el.textContent = t; el.hidden = false; setTimeout(function () { el.hidden = true; }, 2200); }
+  function listText() {
+    var lines = [data.title, ''].concat(chosen().map(function (it) {
+      return it.qty + ' × ' + it.name + (it.size ? ' (' + it.size + ')' : '') + ' — ' + (it.price === null ? 'price not checked' : money(it.price) + (it.qty > 1 ? ' each' : '')) + '\n   ' + (safe(it.url) || amazonLink(it));
+    }));
+    var sum = 0, unknown = 0; chosen().forEach(function (it) { if (it.price === null) unknown++; else sum += it.price * it.qty; });
+    lines.push('', 'Total: ' + money(sum) + (unknown ? ' (incomplete: ' + unknown + ' without a checked price)' : ''));
+    if (data.amazonListUrl) lines.push('Amazon list: ' + data.amazonListUrl);
+    return lines.join('\n');
+  }
+  document.getElementById('copy').onclick = function () {
+    var text = listText();
+    var shown = function () {
+      var ta = document.querySelector('.dock textarea') || document.createElement('textarea');
+      ta.value = text; document.querySelector('.dock').appendChild(ta); ta.focus(); ta.select();
+      var ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      toast(ok ? 'List copied' : 'Select and copy the text below');
+    };
+    try {
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(function () { window.__copied = text; toast('List copied'); }, shown);
+      else shown();
+    } catch (err) { shown(); }
+  };
+  document.getElementById('csv').onclick = function () {
+    var q = function (v) { v = String(v); if (/^[=+\-@]/.test(v)) v = "'" + v; return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    var rows = [['Item', 'Size', 'Qty', 'Price each', 'Currency', 'Store', 'Link', 'Amazon']].concat(chosen().map(function (it) {
+      return [it.name, it.size, it.qty, it.price === null ? 'not checked' : (it.price / 100).toFixed(2), cur, it.store, safe(it.url), amazonLink(it)];
+    }));
+    // \uFEFF = byte-order mark, so Excel opens Arabic text correctly.
+    var blob = new Blob(['\uFEFF' + rows.map(function (r) { return r.map(q).join(','); }).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = ((data.title || '').replace(/[^\w\- ]+/g, '').trim() || 'shopping-list') + '.csv'; a.click();
+  };
+  render();
+})();
+</script>
+</body>
+</html>
