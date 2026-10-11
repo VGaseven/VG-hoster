@@ -1,0 +1,18 @@
+{
+  "title": "Iced Matcha Latte",
+  "currency": "SAR",
+  "checked": "",
+  "items": [
+    {"name": "Jade Leaf Organic Matcha Green Tea Powder, Culinary Grade", "brand": "Jade Leaf", "size": "30 g", "qty": 1,
+     "store": "Amazon.sa", "url": "https://www.amazon.sa/dp/B0CRB3DCZ6", "amazonUrl": "https://www.amazon.sa/dp/B0CRB3DCZ6",
+     "price": null, "category": "Groceries"},
+    {"name": "Sary Squeeze Honey", "brand": "Sary", "size": "400 g", "qty": 1, "price": null, "category": "Groceries",
+     "note": "Not found on Amazon.sa in 400 g squeeze (500 g and 1 kg jars are listed). Buy at a supermarket."},
+    {"name": "Almarai Fresh Milk Full Fat", "brand": "Almarai", "size": "2 L", "qty": 1,
+     "store": "Amazon.sa (Amazon Now)", "url": "https://www.amazon.sa/dp/B08949QG5J", "amazonUrl": "https://www.amazon.sa/dp/B08949QG5J",
+     "price": null, "category": "Groceries", "note": "Fresh milk: sold via Amazon Now, delivery area may be limited."},
+    {"name": "FoodVille MF02 Rechargeable Handheld Milk Frother", "brand": "FoodVille", "qty": 1,
+     "store": "Amazon.sa", "url": "https://www.amazon.sa/dp/B07HSQKG3J", "amazonUrl": "https://www.amazon.sa/dp/B07HSQKG3J",
+     "price": null, "category": "Kitchen tools", "want": false}
+  ]
+}
