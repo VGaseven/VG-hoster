@@ -100,12 +100,12 @@ def pill(draw_size, text, font, fg, bg, pad=(46, 20), rtl=True):
     return img
 
 
-def caption_layer(text, with_url=False):
+def caption_layer(text, with_url=False, top=False):
     # Noto Sans Arabic has no U+2026; three full stops look the same on screen.
     text = text.replace('\u2026', '...')
     layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
     cap = pill(None, text, ImageFont.truetype(FONT_AR, 46), (255, 255, 255, 255), (22, 32, 38, 205))
-    y = H - 60 - cap.height + 20
+    y = 40 if top else H - 60 - cap.height + 20
     layer.alpha_composite(cap, ((W - cap.width) // 2, y))
     if with_url:
         url = pill(None, URL_TEXT, ImageFont.truetype(FONT_LAT, 34), (20, 83, 72, 255),
@@ -118,7 +118,7 @@ def caption_layer(text, with_url=False):
 def init_worker(cap):
     global CAP
     CAP = cap
-    CAP['layers'] = [caption_layer(s['caption'], s['id'] == 's6') for s in CAP['shots']]
+    CAP['layers'] = [caption_layer(s['caption'], s['id'] == 's6', s.get('captionTop', False)) for s in CAP['shots']]
 
 
 @lru_cache(maxsize=6)
