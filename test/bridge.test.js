@@ -9,7 +9,7 @@ import os from "node:os";
 import path from "node:path";
 
 const TOKEN = "test-token", HOOK_SECRET = "hook-secret", CHAT = "42";
-const tgQueue = [], tgSent = [], ghIssues = [], n8nCalls = [];
+const tgQueue = [], tgSent = [], ghIssues = [], n8nCalls = [], n8nStore = [];
 let mock, bridge, base, mockUrl, tmp, updateId = 1;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -28,6 +28,16 @@ before(async () => {
       if (req.url === "/gh/repos/o/r/issues") { ghIssues.push(b); return json(201, { number: 7, html_url: "https://github.com/o/r/issues/7" }); }
       if (req.url === "/anth/v1/messages") return json(200, { id: "m1", type: "message", role: "assistant", model: b.model, stop_reason: "end_turn",
         content: [{ type: "text", text: "Of course! Happy to help the team." }], usage: { input_tokens: 10, output_tokens: 5 } });
+      if (req.url === "/n8napi/webhook/hello") return json(200, { ok: true, got: b.payload });
+      if (req.url.startsWith("/n8napi/")) {
+        if (req.headers["x-n8n-api-key"] !== "k") return json(401, { message: "unauthorized" });
+        const u = req.url.slice("/n8napi".length);
+        if (u === "/api/v1/workflows" && req.method === "POST") { n8nStore.push({ ...b, id: "w1", active: false }); return json(200, n8nStore.at(-1)); }
+        if (u.startsWith("/api/v1/workflows?")) return json(200, { data: n8nStore });
+        if (u === "/api/v1/workflows/w1/activate") { n8nStore[0].active = true; return json(200, n8nStore[0]); }
+        if (u === "/api/v1/workflows/w1" && req.method === "DELETE") { n8nStore.length = 0; return json(200, {}); }
+        return json(404, { message: "not found" });
+      }
       if (req.url === "/n8n/hook") { n8nCalls.push(b); return json(200, { ok: true }); }
       if (req.url === "/tg/botT/getUpdates") { if (!tgQueue.length) await sleep(100); return json(200, { ok: true, result: tgQueue.splice(0) }); }
       if (req.url.startsWith("/tg/botT/")) { tgSent.push({ method: req.url.split("/").pop(), ...b }); return json(200, { ok: true, result: {} }); }
@@ -42,7 +52,7 @@ before(async () => {
   base = `http://127.0.0.1:${port}`;
   bridge = spawn(process.execPath, ["--no-warnings", "server.js"], {
     cwd: path.join(import.meta.dirname, ".."),
-    env: { PATH: process.env.PATH, ANTHROPIC_API_KEY: "x", ANTHROPIC_BASE_URL: `${mockUrl}/anth`, PORT: String(port), BRIDGE_TOKEN: TOKEN, DB_FILE: path.join(tmp, "b.db"), TRUST_PROXY: "0",
+    env: { PATH: process.env.PATH, ANTHROPIC_API_KEY: "x", ANTHROPIC_BASE_URL: `${mockUrl}/anth`, N8N_API_URL: `${mockUrl}/n8napi`, N8N_API_KEY: "k", PORT: String(port), BRIDGE_TOKEN: TOKEN, DB_FILE: path.join(tmp, "b.db"), TRUST_PROXY: "0",
       GITHUB_TOKEN: "gh", GITHUB_REPO: "o/r", GITHUB_API_URL: `${mockUrl}/gh`, GITHUB_WEBHOOK_SECRET: HOOK_SECRET,
       TELEGRAM_BOT_TOKEN: "T", TELEGRAM_CHAT_ID: CHAT, TELEGRAM_API_URL: `${mockUrl}/tg`,
       N8N_WORKFLOWS: JSON.stringify({ ping: { url: `${mockUrl}/n8n/hook`, description: "test hook" } }) },
@@ -188,4 +198,18 @@ test("the team chat shows AI-to-AI messages and agent activity", async () => {
   assert.ok(chat.includes("chatgpt: → @claude: Do you love me?"), chat.join("\n"));
   assert.ok(chat.includes("claude: Of course! Happy to help the team."), chat.join("\n"));
   assert.ok(chat.some((m) => m.startsWith("chatgpt: 📋 New task for @claude: Write slogans")), chat.join("\n"));
+});
+
+test("agents build, switch on and run n8n workflows through the bridge", async () => {
+  const saved = await mcp("claude", "n8n_save_workflow", { name: "Hello", nodes: [
+    { name: "Webhook", type: "n8n-nodes-base.webhook", typeVersion: 2, position: [0, 0], parameters: { path: "hello", httpMethod: "POST" } }] });
+  assert.ok(!saved.error, saved.text);
+  assert.deepEqual(saved.json.webhooks, ["hello"]);
+  assert.equal((await mcp("claude", "n8n_set_active", { id: "w1", active: true })).json.active, true);
+  assert.equal((await mcp("chatgpt", "n8n_list_workflows")).json[0].active, true);
+  const run = await mcp("chatgpt", "n8n_run_webhook", { path: "hello", payload: { a: 1 } });
+  const aid = run.text.match(/request (\w+)/)[1];
+  assert.match((await api(`approvals/${aid}`, "POST", { approve: true })).body, /Ran webhook "hello" \(HTTP 200\)/);
+  assert.match((await mcp("claude", "n8n_delete_workflow", { id: "w1" })).text, /Needs the human's approval/);
+  assert.ok((await mcp("claude", "n8n_run_webhook", { path: "../etc" })).text.includes("approval"), "path check runs after approval");
 });

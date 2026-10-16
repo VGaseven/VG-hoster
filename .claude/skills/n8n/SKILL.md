@@ -34,16 +34,16 @@ Ask one short question — "What do you want to automate?" — and offer 4–6 n
 Each idea: one line saying what happens and when. End with "Pick a number, or tell me your own idea."
 
 ## 3. Build the one he picks
-Say in one line what you'll build and which accounts it needs (e.g. Gmail login in n8n). Then:
+Say in one line what you'll build and which logins it needs (e.g. Gmail login in n8n). Then build it through the Team Bridge — it runs next to n8n, so this works from anywhere (cloud Claude, Claude.ai, Codex):
+1. `n8n_list_workflows` to avoid duplicates; `n8n_get_workflow` to copy patterns from an existing one.
+2. `n8n_save_workflow` with n8n's workflow JSON (`name`, `nodes`, `connections`). Start with a Webhook node (POST, a short `path`) if the team should be able to run it; Schedule Trigger for timed jobs.
+3. `n8n_set_active` with `active: true`.
+4. Test: `n8n_run_webhook` (Shahed approves it), then `n8n_executions` to confirm it succeeded.
+5. Report: name, trigger, what it does, how to turn it off (`n8n_set_active` false).
 
-- **If you can reach n8n** (you run on his Mac, e.g. Codex, and have the n8n API key):
-  1. `POST http://localhost:5678/api/v1/workflows` with header `X-N8N-API-KEY`, body = the workflow JSON (name, nodes, connections, settings).
-  2. `POST /api/v1/workflows/{id}/activate`.
-  3. If other AIs should trigger it, start it with a Webhook node (POST) and tell Shahed the one line to add to `N8N_WORKFLOWS` in `~/VG-hoster/.env`, then restart the bridge.
-  4. Report: name, trigger, what it does, how to turn it off.
-- **If you can't reach n8n** (you run in the cloud, like Claude Code on claude.ai): create a bridge task with `create_task`, assignee `chatgpt` (Codex is the automation engineer), with the full spec. Tell Shahed: "Sent to Codex — tell it to check its tasks."
+If the tools say n8n isn't connected, tell Shahed to add `N8N_API_KEY` (n8n → Settings → n8n API) to `~/VG-hoster/.env` and restart the bridge. If there are no Team Bridge tools at all, create nothing — tell him which app to use (Codex or Claude.ai with Team Bridge on).
 
-Never ask for the n8n API key in a shared chat or the team chat. Workflows that send messages or emails to other people need Shahed's OK first.
+Never ask for the n8n API key in chat. Workflows that message or email other people need Shahed's OK first.
 
 ## 4. Log it
 Post one line to `team_chat`: "New automation: <name> — <what it does>".

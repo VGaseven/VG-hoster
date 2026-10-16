@@ -5,7 +5,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as core from "./core.js";
 import * as sched from "./scheduler.js";
 import { notify } from "./notify.js";
-import { listWorkflows, triggerWorkflow } from "./n8n.js";
+import * as n8n from "./n8n.js";
+const { listWorkflows, triggerWorkflow } = n8n;
 import { githubReady } from "./github.js";
 
 export const AGENTS = ["claude", "chatgpt", "claude-code"];
@@ -29,7 +30,7 @@ tool("get_briefing", "Start here: your role, the human's profile, core memories,
     my_tasks: core.listTasks({ project: p }).filter((t) => t.status !== "done" && [actor, "anyone"].includes(t.assignee)),
     team: core.teamStatus({ project: p }),
     team_chat: core.listMessages({ project: p, limit: 10 }), projects: core.listProjects().map((x) => x.name),
-    integrations: { claude_code_via_github: githubReady(), n8n_workflows: listWorkflows().map((w) => w.name) },
+    integrations: { claude_code_via_github: githubReady(), n8n_workflows: listWorkflows().map((w) => w.name), n8n_builder: n8n.n8nReady() },
   }), { readOnly: true });
 tool("team_status", "Quick status for the human: who is working on what, open tasks, pending approvals, paused or not, spend today.",
   { project: z.string().optional() }, (a) => core.teamStatus(a), { readOnly: true });
@@ -116,6 +117,23 @@ tool("fetch_url", "Fetch a public web page as text.", { url: z.string().url() },
 tool("list_workflows", "List the n8n workflows you can trigger (email, deploy, CRM… whatever the human set up).", {}, () => listWorkflows(), { readOnly: true });
 tool("trigger_workflow", "Run one of the human's n8n workflows with a JSON payload.", { name: z.string(), payload: z.record(z.string(), z.any()).default({}) },
   (a, actor) => { core.assertRunning(); core.log(actor, "trigger_workflow", a.name); return triggerWorkflow(a, actor); });
+
+// n8n builder: the bridge runs next to n8n, so every agent (cloud ones too) can build and run workflows through it.
+const Node = z.object({ name: z.string(), type: z.string(), typeVersion: z.number(), position: z.array(z.number()).length(2),
+  parameters: z.record(z.string(), z.any()).default({}) }).passthrough();
+tool("n8n_list_workflows", "List every workflow in the human's n8n (id, name, on/off, webhook paths).", {}, () => n8n.n8nListWorkflows(), { readOnly: true });
+tool("n8n_get_workflow", "Read one n8n workflow in full (nodes and connections), e.g. before changing it.", { id: z.string() }, (a) => n8n.n8nGetWorkflow(a), { readOnly: true });
+tool("n8n_save_workflow", "Create an n8n workflow (no id) or replace one (with id). Give n8n's workflow JSON: nodes and connections. Start with a Webhook node (POST) if agents should run it. It's created switched off; then call n8n_set_active.",
+  { id: z.string().optional(), name: z.string(), nodes: z.array(Node).min(1), connections: z.record(z.string(), z.any()).default({}), settings: z.record(z.string(), z.any()).default({}) },
+  (a, actor) => { core.assertRunning(); core.log(actor, "n8n_save_workflow", a.name); return n8n.n8nSaveWorkflow(a); });
+tool("n8n_set_active", "Switch an n8n workflow on (active=true) or off.", { id: z.string(), active: z.boolean() },
+  (a, actor) => { core.assertRunning(); core.log(actor, "n8n_set_active", `${a.id} ${a.active}`); return n8n.n8nSetActive(a); });
+tool("n8n_run_webhook", "Run an active n8n workflow that starts with a Webhook node, by its path, with a JSON payload.",
+  { path: z.string(), payload: z.record(z.string(), z.any()).default({}), test: z.boolean().default(false) },
+  (a, actor) => { core.assertRunning(); core.log(actor, "n8n_run_webhook", a.path); return n8n.n8nRunWebhook(a, actor); });
+tool("n8n_executions", "Recent n8n runs and whether they succeeded (optionally for one workflow).", { workflowId: z.string().optional(), limit: z.number().default(10) },
+  (a) => n8n.n8nExecutions(a), { readOnly: true });
+tool("n8n_delete_workflow", "Delete an n8n workflow.", { id: z.string() }, (a, actor) => { core.log(actor, "n8n_delete_workflow", a.id); return n8n.n8nDeleteWorkflow(a); });
 
 // Scheduling & notifications
 tool("create_schedule", "Run a prompt on a schedule (cron, e.g. '0 9 * * 1-5' = weekdays 9am).",

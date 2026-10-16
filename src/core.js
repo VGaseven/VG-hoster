@@ -41,9 +41,10 @@ export function resumeAll(_args, actor) {
 
 // ---------- approval levels ----------
 // 🔴 red: an AI must get the human's OK first.  🟡 yellow: runs, and the human is notified.  🟢 green: just runs.
-const envSet = (name, fallback) => new Set((process.env[name] ?? fallback).split(",").map((s) => s.trim()).filter(Boolean));
-const RED = envSet("REQUIRE_APPROVAL", "forget,delete_file,create_schedule,delete_task,trigger_workflow");
-const YELLOW = envSet("NOTIFY_ACTIONS", "save_project,set_role,save_skill,import_memories,set_schedule_enabled,dispatch_task");
+// The env lists add to the built-in ones, so tools added later are still covered even if an older .env sets these lists.
+const envSet = (name, builtIn) => new Set([...builtIn.split(","), ...(process.env[name] ?? "").split(",")].map((s) => s.trim()).filter(Boolean));
+const RED = envSet("REQUIRE_APPROVAL", "forget,delete_file,create_schedule,delete_task,trigger_workflow,n8n_run_webhook,n8n_delete_workflow");
+const YELLOW = envSet("NOTIFY_ACTIONS", "save_project,set_role,save_skill,import_memories,set_schedule_enabled,dispatch_task,n8n_save_workflow,n8n_set_active");
 export const levelOf = (name) => (RED.has(name) ? "red" : YELLOW.has(name) ? "yellow" : "green");
 
 // Stops ChatGPT and Claude from ping-ponging forever.
