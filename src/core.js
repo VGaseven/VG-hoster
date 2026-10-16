@@ -59,6 +59,7 @@ export function createTask({ title, details = "", assignee = "anyone", project =
   const t = { id: id(), title, details, assignee, project, parent };
   run("INSERT INTO tasks (id, project, title, details, assignee, parent) VALUES (?,?,?,?,?,?)", t.id, project, title, details, assignee, parent);
   log(actor, "create_task", `${t.id} ${title} -> ${assignee}`);
+  feedEvent(project, actor, `📋 New task for @${assignee}: ${title}${details ? `\n${clip(details, 400)}` : ""}`);
   return getTask(t.id);
 }
 export function getTask(tid) {
@@ -118,7 +119,9 @@ export function updateTask({ id: tid, note, status, assignee }, actor) {
   if (status === "open" || (assignee && assignee !== t.claimed_by)) releaseClaim(tid);
   run("UPDATE tasks SET updated = ? WHERE id = ?", now(), tid);
   log(actor, "update_task", `${tid} ${status || ""} ${assignee ? "-> " + assignee : ""} ${note || ""}`);
-  if (status === "done") notify(`Task done by ${actor}: ${get("SELECT title FROM tasks WHERE id = ?", tid).title}`);
+  if (status === "done") notify(`Task done by ${actor}: ${t.title}`);
+  const what = status === "done" ? "✅ Done" : status === "in_progress" ? "🔨 Working on" : assignee ? `↪️ Handed to @${assignee}` : "📝 Note on";
+  if (status || assignee || note) feedEvent(t.project, actor, `${what}: ${t.title}${note ? `\n${clip(note, 1500)}` : ""}`);
   return getTask(tid);
 }
 export function deleteTask({ id: tid }, actor) {
@@ -338,11 +341,14 @@ export function deleteFile({ path, project = "default" }, actor) {
 }
 
 // ---------- coworker calls ----------
-export async function askAgent({ agent, prompt, project = "default" }, actor) {
+// feed: also show the question and the answer in the team chat, so the human can watch the AIs work together.
+export async function askAgent({ agent, prompt, project = "default", feed = true }, actor) {
   assertRunning();
   loopGuard();
   log(actor, `ask_${agent}`, prompt);
+  if (feed) postMessage({ text: `→ @${agent}: ${clip(prompt, 600)}`, project }, actor);
   const reply = await ask(agent, prompt, { project });
+  if (feed) postMessage({ text: clip(reply, 4000), project }, agent);
   await absorb(reply, agent, project);
   return reply;
 }
@@ -397,7 +403,7 @@ export async function workTask({ id: tid, agent }, actor) {
   claimTask({ id: tid }, who, { override: actor === "human" });
   try {
     const notes = t.notes.map((n) => `- ${n.author}: ${n.note}`).join("\n");
-    const result = await askAgent({ agent: who, project: t.project, prompt: `Do this task and give the finished result.\n\nTask: ${t.title}\n${t.details}\n\nNotes so far:\n${notes || "(none)"}` }, actor);
+    const result = await askAgent({ agent: who, project: t.project, prompt: `Do this task and give the finished result.\n\nTask: ${t.title}\n${t.details}\n\nNotes so far:\n${notes || "(none)"}`, feed: false }, actor);
     return updateTask({ id: tid, status: "done", note: result }, who);
   } catch (e) {
     releaseClaim(tid);
@@ -409,6 +415,11 @@ export async function workTask({ id: tid, agent }, actor) {
 // ---------- team chat ----------
 export const listMessages = ({ project = "default", limit = 100 } = {}) =>
   all("SELECT * FROM messages WHERE project = ? ORDER BY id DESC LIMIT ?", project, limit).reverse();
+const clip = (s, n) => (String(s).length > n ? String(s).slice(0, n) + "…" : String(s));
+// Team activity (tasks, notes, handoffs) shows up in the team chat too. The human's own dashboard clicks don't, to keep it readable.
+function feedEvent(project, actor, text) {
+  if (actor !== "human") postMessage({ text, project }, actor);
+}
 export function postMessage({ text, project = "default" }, actor) {
   run("INSERT INTO messages (project, author, text) VALUES (?,?,?)", project, actor, text);
   return listMessages({ project, limit: 1 })[0];
@@ -420,7 +431,7 @@ export async function teamChat({ text, to = "both", project = "default" }, actor
   const thread = listMessages({ project, limit: 30 }).slice(0, -1).map((m) => `${m.author}: ${m.text}`).join("\n\n");
   const prompt = `Team chat so far:\n${thread || "(start)"}\n\n${actor}: ${text}\n\nReply as yourself in the team chat.`;
   const agents = to === "both" ? ["claude", "chatgpt"] : [to];
-  const replies = await Promise.all(agents.map((a) => askAgent({ agent: a, prompt, project }, actor).catch((e) => `(error: ${e.message})`)));
+  const replies = await Promise.all(agents.map((a) => askAgent({ agent: a, prompt, project, feed: false }, actor).catch((e) => `(error: ${e.message})`)));
   return agents.map((a, i) => postMessage({ text: replies[i], project }, a));
 }
 

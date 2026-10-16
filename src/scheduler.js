@@ -9,7 +9,7 @@ const jobs = new Map();
 
 async function fire(s) {
   try {
-    const result = await askAgent({ agent: s.agent, prompt: s.prompt, project: s.project }, "scheduler");
+    const result = await askAgent({ agent: s.agent, prompt: s.prompt, project: s.project, feed: false }, "scheduler");
     run("UPDATE schedules SET last_run = ?, last_result = ? WHERE id = ?", new Date().toISOString(), result.slice(0, 20000), s.id);
     postMessage({ text: `⏰ Scheduled job ${s.id}:\n${result}`, project: s.project }, s.agent);
     if (s.notify) await notify(`⏰ ${s.agent} (${s.id}): ${result.slice(0, 1500)}`);

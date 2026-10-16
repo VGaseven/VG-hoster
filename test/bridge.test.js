@@ -26,6 +26,8 @@ before(async () => {
       const json = (code, v) => { res.writeHead(code, { "Content-Type": "application/json" }); res.end(JSON.stringify(v)); };
       const b = body ? JSON.parse(body) : {};
       if (req.url === "/gh/repos/o/r/issues") { ghIssues.push(b); return json(201, { number: 7, html_url: "https://github.com/o/r/issues/7" }); }
+      if (req.url === "/anth/v1/messages") return json(200, { id: "m1", type: "message", role: "assistant", model: b.model, stop_reason: "end_turn",
+        content: [{ type: "text", text: "Of course! Happy to help the team." }], usage: { input_tokens: 10, output_tokens: 5 } });
       if (req.url === "/n8n/hook") { n8nCalls.push(b); return json(200, { ok: true }); }
       if (req.url === "/tg/botT/getUpdates") { if (!tgQueue.length) await sleep(100); return json(200, { ok: true, result: tgQueue.splice(0) }); }
       if (req.url.startsWith("/tg/botT/")) { tgSent.push({ method: req.url.split("/").pop(), ...b }); return json(200, { ok: true, result: {} }); }
@@ -40,7 +42,7 @@ before(async () => {
   base = `http://127.0.0.1:${port}`;
   bridge = spawn(process.execPath, ["--no-warnings", "server.js"], {
     cwd: path.join(import.meta.dirname, ".."),
-    env: { PATH: process.env.PATH, PORT: String(port), BRIDGE_TOKEN: TOKEN, DB_FILE: path.join(tmp, "b.db"), TRUST_PROXY: "0",
+    env: { PATH: process.env.PATH, ANTHROPIC_API_KEY: "x", ANTHROPIC_BASE_URL: `${mockUrl}/anth`, PORT: String(port), BRIDGE_TOKEN: TOKEN, DB_FILE: path.join(tmp, "b.db"), TRUST_PROXY: "0",
       GITHUB_TOKEN: "gh", GITHUB_REPO: "o/r", GITHUB_API_URL: `${mockUrl}/gh`, GITHUB_WEBHOOK_SECRET: HOOK_SECRET,
       TELEGRAM_BOT_TOKEN: "T", TELEGRAM_CHAT_ID: CHAT, TELEGRAM_API_URL: `${mockUrl}/tg`,
       N8N_WORKFLOWS: JSON.stringify({ ping: { url: `${mockUrl}/n8n/hook`, description: "test hook" } }) },
@@ -176,4 +178,14 @@ test("fetch_url refuses private and internal addresses", async () => {
     assert.ok(r.error, url);
     assert.match(r.text, /Blocked/, url);
   }
+});
+
+test("the team chat shows AI-to-AI messages and agent activity", async () => {
+  const r = await mcp("chatgpt", "ask_claude", { prompt: "Do you love me?", project: "feed" });
+  assert.ok(!r.error, r.text);
+  await mcp("chatgpt", "create_task", { title: "Write slogans", assignee: "claude", project: "feed" });
+  const chat = (await api("chat?project=feed")).body.map((m) => `${m.author}: ${m.text}`);
+  assert.ok(chat.includes("chatgpt: → @claude: Do you love me?"), chat.join("\n"));
+  assert.ok(chat.includes("claude: Of course! Happy to help the team."), chat.join("\n"));
+  assert.ok(chat.some((m) => m.startsWith("chatgpt: 📋 New task for @claude: Write slogans")), chat.join("\n"));
 });
