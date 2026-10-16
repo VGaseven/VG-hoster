@@ -1,10 +1,15 @@
 // Model calls, with shared team context, cost tracking and budget caps.
+// AI_ENGINE=subscription (default): Claude Code and Codex answer on this computer with your Claude and ChatGPT plans. No API bill.
+// AI_ENGINE=api: the old way, paid per message from ANTHROPIC_API_KEY / OPENAI_API_KEY.
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import { all, get, run } from "./db.js";
+import { askViaCli, runClaude, runCodex, LimitError } from "./cli.js";
 
-export const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
-export const openai = process.env.OPENAI_API_KEY ? new OpenAI() : null;
+export const ENGINE = process.env.AI_ENGINE === "api" ? "api" : "subscription";
+const USE_API = ENGINE === "api";
+export const anthropic = USE_API && process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
+export const openai = USE_API && process.env.OPENAI_API_KEY ? new OpenAI() : null;
 const DEFAULT_CLAUDE = process.env.CLAUDE_MODEL || "claude-opus-5-5";
 const DEFAULT_GPT = process.env.GPT_MODEL || "gpt-5";
 const DAILY_BUDGET = Number(process.env.DAILY_BUDGET_USD || 0); // 0 = no cap
@@ -62,9 +67,17 @@ If you learn something worth keeping long-term, end your reply with lines like "
 }
 
 export async function ask(agent, prompt, { project = "default", system, history = [] } = {}) {
-  checkBudget(project);
   const proj = get("SELECT * FROM projects WHERE name = ?", project) || {};
   const sys = system || teamContext(agent, project);
+  if (!USE_API) {
+    // Project gpt_model is an API model name, so Codex only takes CODEX_MODEL.
+    const model = agent === "claude" ? proj.claude_model || process.env.CLAUDE_MODEL : process.env.CODEX_MODEL;
+    const r = await askViaCli(agent, { system: sys, prompt, history, model });
+    track(project, `${r.engine}-subscription`, 0, 0);
+    const name = r.engine === "claude" ? "Claude" : "Codex";
+    return r.switched ? `(${name} answered: the other one hit its plan limit.)\n\n${r.text}` : r.text;
+  }
+  checkBudget(project);
   if (agent === "claude") {
     if (!anthropic) throw new Error("ANTHROPIC_API_KEY not set");
     const model = proj.claude_model || DEFAULT_CLAUDE;
@@ -86,7 +99,7 @@ export async function ask(agent, prompt, { project = "default", system, history 
 }
 
 export async function embed(text) {
-  if (!openai) return null;
+  if (!openai) return null; // subscription mode: memory search uses keywords instead
   try {
     const r = await openai.embeddings.create({ model: "text-embedding-3-small", input: text.slice(0, 8000) });
     return r.data[0].embedding;
@@ -94,6 +107,11 @@ export async function embed(text) {
 }
 
 export async function webSearch(query, project = "default") {
+  if (!USE_API) {
+    const prompt = `Search the web and answer with sources: ${query}`;
+    try { return await runClaude({ prompt, web: true }); }
+    catch (e) { if (!(e instanceof LimitError)) throw e; return runCodex({ prompt }); }
+  }
   checkBudget(project);
   if (openai) {
     const r = await openai.responses.create({ model: DEFAULT_GPT, tools: [{ type: "web_search" }], input: `Search the web and answer with sources: ${query}` });

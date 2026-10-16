@@ -8,7 +8,8 @@ import { buildMcp, AGENTS } from "./src/mcp.js";
 import * as core from "./src/core.js";
 import * as sched from "./src/scheduler.js";
 import { db, DB_FILE } from "./src/db.js";
-import { anthropic, openai } from "./src/llm.js";
+import { anthropic, openai, ENGINE } from "./src/llm.js";
+import { engineStatus, checkEngines } from "./src/cli.js";
 import { notify } from "./src/notify.js";
 import { githubReady, verifySignature } from "./src/github.js";
 import { listWorkflows } from "./src/n8n.js";
@@ -69,11 +70,13 @@ const api = express.Router();
 api.use(auth);
 const h = (fn) => async (req, res) => { try { res.json(await fn({ ...req.query, ...req.body, ...req.params })); } catch (e) { res.status(400).json({ error: e.message }); } };
 const H = "human";
-api.get("/overview", h(() => ({ health: { claude: !!anthropic, chatgpt: !!openai, github: githubReady(), github_webhook: !!process.env.GITHUB_WEBHOOK_SECRET,
+const sub = ENGINE === "subscription";
+api.get("/overview", h(() => ({ health: { engine: ENGINE, engines: sub ? engineStatus() : null, claude: sub || !!anthropic, chatgpt: sub || !!openai, github: githubReady(), github_webhook: !!process.env.GITHUB_WEBHOOK_SECRET,
   telegram: !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID), n8n: listWorkflows().map((w) => w.name) },
   usage: core.usage(), projects: core.listProjects(), pending: core.pendingApprovals().length,
   paused: core.isPaused(), paused_info: core.getSetting("paused_info") })));
 api.get("/status", h((a) => core.teamStatus(a)));
+api.post("/engines/check", h(() => checkEngines()));
 api.post("/pause", h((a) => core.pauseAll(a, H)));
 api.post("/resume", h((a) => core.resumeAll(a, H)));
 api.get("/chat", h((a) => core.listMessages(a)));

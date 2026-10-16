@@ -21,6 +21,16 @@ You ⇄ Telegram: /status · Approve/Reject buttons · stop · /resume
 - **Kill switch:** send `stop` (or `/pause`) to the Telegram bot, press ⏸ in the dashboard, or have any AI call `pause_all`. Every AI tool, schedule and dispatch stops. Only you can `/resume`.
 - **Loop limit, budget cap, activity log:** as before (`MAX_AI_CALLS_PER_MIN`, `DAILY_BUDGET_USD`, Activity tab).
 
+## Free mode: your subscriptions do the thinking
+By default (`AI_ENGINE=subscription`) every "ask Claude", "ask ChatGPT", debate, review, split, schedule and skill runs through
+**Claude Code** and **Codex on the computer that runs the bridge**, signed in with your Claude and ChatGPT plans. Nothing is billed to an API.
+- **Sign in once** on that computer: `claude` → `/login` (choose your Claude account), and `codex login` → **Sign in with ChatGPT**.
+- **API keys are hidden** from Claude Code and Codex, so they can't bill the API by accident even if `.env` still has them.
+- **Automatic switch:** if one hits its plan limit, the other answers (the reply says so), and the tired one rests for `LIMIT_COOLDOWN_MIN`.
+- **Check it:** dashboard → Settings → **Test both**.
+- Memory search uses keywords in this mode (meaning-based search needs the OpenAI API).
+- Set `AI_ENGINE=api` to go back to paying per message.
+
 ## Setup (about 20 minutes)
 1. **Deploy.** Render → New → Blueprint → this repo/branch (uses `render.yaml`). Or use the `Dockerfile` on Railway, Fly.io or a VPS, and mount `/data`.
    Set `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`. `BRIDGE_TOKEN` and `GITHUB_WEBHOOK_SECRET` are generated; copy them from Render. All options: `.env.example`.

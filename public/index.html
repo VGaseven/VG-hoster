@@ -350,8 +350,14 @@ async function loadSettings() {
   const h = (await api("overview")).health, ok = (b) => (b ? "✓" : "✗");
   $("connect").innerHTML = `ChatGPT (Dots) connector URL:<pre>${esc(base)}?agent=chatgpt${esc(tok)}</pre>Claude.ai connector URL:<pre>${esc(base)}?agent=claude${esc(tok)}</pre>
     Claude Code:<pre>claude mcp add --transport http bridge "${esc(base)}?agent=claude-code${esc(tok)}"</pre>Keep these private — they contain your token.
-    <p>${ok(h.claude)} Claude API · ${ok(h.chatgpt)} OpenAI API · ${ok(h.github)} GitHub dispatch · ${ok(h.github_webhook)} GitHub webhook · ${ok(h.telegram)} Telegram · n8n: ${h.n8n.length ? esc(h.n8n.join(", ")) : "✗"}</p>
+    <p>${h.engine === "subscription" ? `AI: your subscriptions (Claude Code ${esc(h.engines.claude)} · Codex ${esc(h.engines.codex)}) <button id="engCheck">Test both</button>` : `${ok(h.claude)} Claude API · ${ok(h.chatgpt)} OpenAI API`} · ${ok(h.github)} GitHub dispatch · ${ok(h.github_webhook)} GitHub webhook · ${ok(h.telegram)} Telegram · n8n: ${h.n8n.length ? esc(h.n8n.join(", ")) : "✗"}</p>
     <p>GitHub webhook URL (Payload: application/json; events: Issues, Issue comments, Pull requests):</p><pre>${esc(location.origin + location.pathname.replace(/\/$/, ""))}/github/webhook</pre>`;
+  const ec = $("engCheck");
+  if (ec) ec.onclick = async () => {
+    ec.disabled = true; ec.textContent = "Testing…";
+    try { const r = await api("engines/check", { method: "POST" }); alert(Object.entries(r).map(([k, v]) => `${k}: ${v.ok ? "✓ works" : "✗ " + v.error}`).join("\n")); }
+    finally { ec.disabled = false; ec.textContent = "Test both"; }
+  };
 }
 $("pList").onclick = async (e) => { if (e.target.dataset.pdel) { await api("profile", { method: "POST", body: { key: e.target.dataset.pdel, value: "" } }); loadSettings(); } };
 $("pSave").onclick = async () => { await api("profile", { method: "POST", body: { key: $("pKey").value, value: $("pVal").value } }); $("pKey").value = $("pVal").value = ""; loadSettings(); };
@@ -370,7 +376,7 @@ $("bkp").onclick = async () => alert("Saved " + (await api("backup", { method: "
 async function loadActivity() {
   const [acts, o] = await Promise.all([api("activity?limit=200"), api("overview")]);
   const u = o.usage;
-  $("usage").innerHTML = `<b>Spend today:</b> $${u.today_usd.toFixed(4)} · Claude ${o.health.claude ? "✓ connected" : "✗ no key"} · ChatGPT ${o.health.chatgpt ? "✓ connected" : "✗ no key"}
+  $("usage").innerHTML = `<b>Spend today:</b> $${u.today_usd.toFixed(4)} · ${o.health.engine === "subscription" ? "AI runs on your Claude and ChatGPT subscriptions: no API cost" : `Claude ${o.health.claude ? "✓ connected" : "✗ no key"} · ChatGPT ${o.health.chatgpt ? "✓ connected" : "✗ no key"}`}
     <table>${u.by_model.map((m) => `<tr><td>${esc(m.model)}</td><td>${m.input_tokens} in / ${m.output_tokens} out</td><td>$${m.cost_usd.toFixed(4)}</td></tr>`).join("")}</table>`;
   $("actTable").innerHTML = acts.map((a) => `<tr><td class="muted" style="white-space:nowrap">${esc(a.at)}</td><td><b>${esc(a.actor)}</b></td><td>${esc(a.action)}</td><td>${esc(a.detail)}</td></tr>`).join("");
 }
