@@ -1,0 +1,28 @@
+{
+  "name": "vg-hoster",
+  "version": "1.0.0",
+  "description": "MCP bridge so ChatGPT and Claude can work together on shared tasks",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VGaseven/VG-hoster.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/VGaseven/VG-hoster/issues"
+  },
+  "homepage": "https://github.com/VGaseven/VG-hoster#readme",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "express": "^5.3.0",
+    "openai": "^7.34.0",
+    "zod": "^4.6.7"
+  },
+  "type": "module"
+}
