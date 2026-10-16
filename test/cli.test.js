@@ -42,3 +42,16 @@ test("when Claude hits its plan limit, Codex answers and Claude rests", async ()
   const r2 = await askViaCli("claude", { prompt: "hi" });
   assert.equal(r2.engine, "codex");
 });
+
+test("Windows npm .cmd launchers are run through Node", async () => {
+  const win = fs.mkdtempSync(path.join(os.tmpdir(), "cli-win-"));
+  const js = path.join(win, "node_modules", "@openai", "codex", "bin", "codex.js");
+  fs.mkdirSync(path.dirname(js), { recursive: true });
+  fs.writeFileSync(js, `const fs = require("fs"); process.stdin.resume().on("end", () => fs.writeFileSync(process.argv[process.argv.indexOf("-o") + 1], "from cmd shim"));`);
+  const cmd = path.join(win, "codex.cmd");
+  const rel = ["node_modules", "@openai", "codex", "bin", "codex.js"].join(path.sep === "/" ? "/" : "\\");
+  fs.writeFileSync(cmd, `@ECHO off\r\nendLocal & goto #_undefined_# 2>NUL || title %COMSPEC% & "%_prog%"  "%dp0%${path.sep}${rel}" %*\r\n`);
+  process.env.CODEX_BIN = cmd;
+  const fresh = await import(`../src/cli.js?win=${Date.now()}`);
+  assert.equal(await fresh.runCodex({ prompt: "hi" }), "from cmd shim");
+});

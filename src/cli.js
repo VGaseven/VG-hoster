@@ -5,13 +5,27 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-// Apps started at login get a short PATH, so also look where Claude Code and Codex usually install.
-const EXTRA_DIRS = [path.join(os.homedir(), ".local/bin"), path.join(os.homedir(), ".claude/local"), "/opt/homebrew/bin", "/usr/local/bin", path.join(os.homedir(), ".npm-global/bin")];
+// Apps started at login get a short PATH, so also look where Claude Code and Codex usually install (Mac and Windows).
+const WIN = process.platform === "win32";
+const EXTRA_DIRS = [path.join(os.homedir(), ".local", "bin"), path.join(os.homedir(), ".claude", "local"), "/opt/homebrew/bin", "/usr/local/bin",
+  path.join(os.homedir(), ".npm-global", "bin"), ...(process.env.APPDATA ? [path.join(process.env.APPDATA, "npm")] : [])];
+const EXTS = WIN ? [".exe", ".cmd", ""] : [""];
+// Returns { cmd, pre }: the program to start and any arguments that go before ours.
+// Windows npm installs are .cmd files, which Node can't start safely with arguments, so we run their JavaScript with Node directly.
 function findBin(name) {
-  if (name.includes("/")) return name;
-  const dirs = [...(process.env.PATH || "").split(path.delimiter), ...EXTRA_DIRS];
-  for (const d of dirs) { const f = path.join(d, name); try { fs.accessSync(f, fs.constants.X_OK); return f; } catch { /* keep looking */ } }
-  return name;
+  let file = name;
+  if (!/[\\/]/.test(name)) {
+    const dirs = [...(process.env.PATH || "").split(path.delimiter), ...EXTRA_DIRS];
+    search: for (const d of dirs) for (const ext of EXTS) {
+      const f = path.join(d, name + ext);
+      try { fs.accessSync(f, fs.constants.X_OK); if (fs.statSync(f).isFile()) { file = f; break search; } } catch { /* keep looking */ }
+    }
+  }
+  if (file.toLowerCase().endsWith(".cmd")) {
+    const m = fs.readFileSync(file, "utf8").match(/%dp0%[\\/]?(node_modules[^"]+?\.(?:js|mjs|cjs))/i);
+    if (m) return { cmd: process.execPath, pre: [path.join(path.dirname(file), m[1])] };
+  }
+  return { cmd: file, pre: [] };
 }
 const CLAUDE_BIN = findBin(process.env.CLAUDE_BIN || "claude");
 const CODEX_BIN = findBin(process.env.CODEX_BIN || "codex");
@@ -38,9 +52,10 @@ async function slot(fn) {
   try { return await fn(); } finally { running--; waiting.shift()?.(); }
 }
 
-function exec(bin, args, input, timeoutMs = TIMEOUT_MS) {
+function exec({ cmd, pre }, args, input, timeoutMs = TIMEOUT_MS) {
+  const bin = path.basename(pre[0] || cmd);
   return new Promise((resolve, reject) => {
-    const child = spawn(bin, args, { env: cleanEnv(), cwd: os.tmpdir(), stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn(cmd, [...pre, ...args], { env: cleanEnv(), cwd: os.tmpdir(), stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
     let out = "", err = "";
     const timer = setTimeout(() => { child.kill("SIGTERM"); reject(new Error(`${bin} took longer than ${Math.round(timeoutMs / 1000)}s (is it signed in?)`)); }, timeoutMs);
     child.stdout.on("data", (d) => (out += d));
