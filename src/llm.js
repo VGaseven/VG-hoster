@@ -1,0 +1,110 @@
+// Model calls, with shared team context, cost tracking and budget caps.
+import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
+import { all, get, run } from "./db.js";
+
+export const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
+export const openai = process.env.OPENAI_API_KEY ? new OpenAI() : null;
+const DEFAULT_CLAUDE = process.env.CLAUDE_MODEL || "claude-opus-5-5";
+const DEFAULT_GPT = process.env.GPT_MODEL || "gpt-5";
+const DAILY_BUDGET = Number(process.env.DAILY_BUDGET_USD || 0); // 0 = no cap
+
+// USD per million tokens [input, output]; override with PRICES='{"model":[in,out]}'.
+const PRICES = { "claude-opus-5-5": [5, 25], "claude-sonnet-5-5": [3, 15], "claude-haiku-5-5": [1, 5], "gpt-5": [1.25, 10], "gpt-5-mini": [0.25, 2],
+  ...JSON.parse(process.env.PRICES || "{}") };
+
+function track(project, model, inTok, outTok) {
+  const [pi, po] = PRICES[model] || [0, 0];
+  run("INSERT INTO usage (project, model, input_tokens, output_tokens, cost_usd) VALUES (?,?,?,?,?)",
+    project, model, inTok, outTok, (inTok * pi + outTok * po) / 1e6);
+}
+
+export function spend(project) {
+  const day = get("SELECT COALESCE(SUM(cost_usd),0) c FROM usage WHERE at >= date('now')").c;
+  const proj = project ? get("SELECT COALESCE(SUM(cost_usd),0) c FROM usage WHERE project = ?", project).c : null;
+  return { today_usd: day, project_usd: proj };
+}
+
+function checkBudget(project) {
+  const s = spend(project);
+  if (DAILY_BUDGET && s.today_usd >= DAILY_BUDGET) throw new Error(`Daily budget of $${DAILY_BUDGET} reached`);
+  const p = get("SELECT budget_usd FROM projects WHERE name = ?", project);
+  if (p?.budget_usd && s.project_usd >= p.budget_usd) throw new Error(`Project budget of $${p.budget_usd} reached`);
+}
+
+export function teamContext(agent, project = "default") {
+  const other = agent === "claude" ? "ChatGPT" : "Claude";
+  const profile = all("SELECT key, value FROM profile").map((r) => `- ${r.key}: ${r.value}`).join("\n") || "(not set)";
+  const roles = Object.fromEntries(all("SELECT agent, role FROM roles").map((r) => [r.agent, r.role]));
+  const proj = get("SELECT * FROM projects WHERE name = ?", project) || { name: project, description: "", lead: "anyone" };
+  const pinned = all("SELECT text FROM memories WHERE pinned = 1 AND project IN (?, 'default')", project);
+  const recent = all("SELECT id, author, text FROM memories WHERE pinned = 0 AND project = ? ORDER BY at DESC LIMIT 30", project);
+  const tasks = all("SELECT id, title, assignee, status FROM tasks WHERE project = ? AND status != 'done' ORDER BY updated DESC LIMIT 20", project);
+  return `You are ${agent === "claude" ? "Claude" : "ChatGPT"}, working as an equal coworker alongside ${other} for a human, who is the boss.
+Your role: ${roles[agent] || "general assistant"}
+${other}'s role: ${roles[agent === "claude" ? "chatgpt" : "claude"] || "general assistant"}
+Project: ${proj.name} — ${proj.description || "no description"} (lead: ${proj.lead})
+
+About the human (always respect this):
+${profile}
+
+Core memories:
+${pinned.map((m) => "- " + m.text).join("\n") || "(none)"}
+
+Recent project memories:
+${recent.map((m) => `- (${m.author}) ${m.text}`).join("\n") || "(none)"}
+
+Open tasks:
+${tasks.map((t) => `- [${t.id}] ${t.title} -> ${t.assignee} (${t.status})`).join("\n") || "(none)"}
+
+If you learn something worth keeping long-term, end your reply with lines like "REMEMBER: <fact>".`;
+}
+
+export async function ask(agent, prompt, { project = "default", system, history = [] } = {}) {
+  checkBudget(project);
+  const proj = get("SELECT * FROM projects WHERE name = ?", project) || {};
+  const sys = system || teamContext(agent, project);
+  if (agent === "claude") {
+    if (!anthropic) throw new Error("ANTHROPIC_API_KEY not set");
+    const model = proj.claude_model || DEFAULT_CLAUDE;
+    const r = await anthropic.messages.create({
+      model, max_tokens: 8000, system: sys, ...(proj.temperature != null ? { temperature: proj.temperature } : {}),
+      messages: [...history, { role: "user", content: prompt }],
+    });
+    track(project, model, r.usage.input_tokens, r.usage.output_tokens);
+    return r.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
+  }
+  if (!openai) throw new Error("OPENAI_API_KEY not set");
+  const model = proj.gpt_model || DEFAULT_GPT;
+  const r = await openai.responses.create({
+    model, instructions: sys, ...(proj.temperature != null ? { temperature: proj.temperature } : {}),
+    input: [...history, { role: "user", content: prompt }],
+  });
+  track(project, model, r.usage?.input_tokens || 0, r.usage?.output_tokens || 0);
+  return r.output_text;
+}
+
+export async function embed(text) {
+  if (!openai) return null;
+  try {
+    const r = await openai.embeddings.create({ model: "text-embedding-3-small", input: text.slice(0, 8000) });
+    return r.data[0].embedding;
+  } catch { return null; }
+}
+
+export async function webSearch(query, project = "default") {
+  checkBudget(project);
+  if (openai) {
+    const r = await openai.responses.create({ model: DEFAULT_GPT, tools: [{ type: "web_search" }], input: `Search the web and answer with sources: ${query}` });
+    track(project, DEFAULT_GPT, r.usage?.input_tokens || 0, r.usage?.output_tokens || 0);
+    return r.output_text;
+  }
+  if (anthropic) {
+    const r = await anthropic.messages.create({ model: DEFAULT_CLAUDE, max_tokens: 4000,
+      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }],
+      messages: [{ role: "user", content: `Search the web and answer with sources: ${query}` }] });
+    track(project, DEFAULT_CLAUDE, r.usage.input_tokens, r.usage.output_tokens);
+    return r.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
+  }
+  throw new Error("No API key set for web search");
+}

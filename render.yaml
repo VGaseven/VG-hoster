@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: vg-hoster-bridge
+    runtime: docker
+    plan: starter
+    healthCheckPath: /health
+    disk: { name: data, mountPath: /data, sizeGB: 1 }
+    envVars:
+      - { key: BRIDGE_TOKEN, generateValue: true }
+      - { key: ANTHROPIC_API_KEY, sync: false }
+      - { key: OPENAI_API_KEY, sync: false }
+      - { key: DAILY_BUDGET_USD, value: "5" }
