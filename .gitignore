@@ -103,3 +103,4 @@ ENV/
 node_modules/
 .env
 tasks.json
+memory.json

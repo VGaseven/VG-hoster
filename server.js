@@ -11,11 +11,36 @@ import OpenAI from "openai";
 const PORT = process.env.PORT || 3000;
 const TOKEN = process.env.BRIDGE_TOKEN; // optional: required as ?token= or Bearer header
 const DB = process.env.TASKS_FILE || "tasks.json";
+const MEM = process.env.MEMORY_FILE || "memory.json";
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
 const GPT_MODEL = process.env.GPT_MODEL || "gpt-5";
 
 const load = () => (fs.existsSync(DB) ? JSON.parse(fs.readFileSync(DB, "utf8")) : []);
 const save = (tasks) => fs.writeFileSync(DB, JSON.stringify(tasks, null, 2));
+const loadMem = () => (fs.existsSync(MEM) ? JSON.parse(fs.readFileSync(MEM, "utf8")) : []);
+const saveMem = (m) => fs.writeFileSync(MEM, JSON.stringify(m, null, 2));
+const Who = z.enum(["chatgpt", "claude", "human"]);
+
+// Shared context handed to whichever AI is consulted, so coworkers know what the other knows.
+function teamContext(self) {
+  const mem = loadMem().map((m) => `- [${m.id}] (${m.author}${m.tags.length ? ", " + m.tags.join(",") : ""}) ${m.text}`).join("\n") || "(none)";
+  const open = load().filter((t) => t.status !== "done")
+    .map((t) => `- [${t.id}] ${t.title} -> ${t.assignee} (${t.status})${t.notes.length ? " last note: " + t.notes.at(-1).note : ""}`).join("\n") || "(none)";
+  const other = self === "claude" ? "ChatGPT" : "Claude";
+  return `You are working as a coworker alongside ${other} and a human. You share a memory and task board.\n\nShared memories:\n${mem}\n\nOpen tasks:\n${open}\n\nIf you learn something worth keeping, end your reply with lines of the form "REMEMBER: <fact>".`;
+}
+
+// Pull "REMEMBER:" lines from a coworker's reply into shared memory.
+function absorb(reply, author) {
+  const facts = [...reply.matchAll(/^REMEMBER:\s*(.+)$/gm)].map((m) => m[1].trim());
+  if (facts.length) {
+    const mem = loadMem();
+    for (const f of facts) mem.push({ id: randomUUID().slice(0, 8), text: f, author, tags: [], at: new Date().toISOString() });
+    saveMem(mem);
+  }
+  return facts;
+}
+
 const text = (v) => ({ content: [{ type: "text", text: typeof v === "string" ? v : JSON.stringify(v, null, 2) }] });
 
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
@@ -58,21 +83,53 @@ function buildServer() {
     return text(task);
   });
 
+  server.registerTool("remember", {
+    description: "Save a fact, preference, or decision to the memory shared by ChatGPT and Claude.",
+    inputSchema: { text: z.string(), author: Who, tags: z.array(z.string()).default([]) },
+  }, async ({ text: t, author, tags }) => {
+    const mem = loadMem();
+    const m = { id: randomUUID().slice(0, 8), text: t, author, tags, at: new Date().toISOString() };
+    mem.push(m);
+    saveMem(mem);
+    return text(m);
+  });
+
+  server.registerTool("recall", {
+    description: "Search shared memory (both AIs' memories). Empty query returns everything. Call this at the start of a conversation.",
+    inputSchema: { query: z.string().default(""), tag: z.string().optional() },
+  }, async ({ query, tag }) => {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    return text(loadMem().filter((m) => (!tag || m.tags.includes(tag)) && words.every((w) => m.text.toLowerCase().includes(w))));
+  });
+
+  server.registerTool("forget", {
+    description: "Delete a shared memory by id.",
+    inputSchema: { id: z.string() },
+  }, async ({ id }) => {
+    const mem = loadMem();
+    const kept = mem.filter((m) => m.id !== id);
+    saveMem(kept);
+    return text(kept.length < mem.length ? `Forgot ${id}` : `No memory ${id}`);
+  });
+
   server.registerTool("ask_claude", {
-    description: "Ask Claude (Anthropic) for help, a second opinion, or a review. Needs ANTHROPIC_API_KEY on the server.",
+    description: "Ask your coworker Claude (sees shared memory + tasks) for help, a second opinion, or a review. Needs ANTHROPIC_API_KEY on the server.",
     inputSchema: { prompt: z.string() },
   }, async ({ prompt }) => {
     if (!anthropic) return { ...text("ANTHROPIC_API_KEY not set"), isError: true };
-    const r = await anthropic.messages.create({ model: CLAUDE_MODEL, max_tokens: 4096, messages: [{ role: "user", content: prompt }] });
-    return text(r.content.filter((b) => b.type === "text").map((b) => b.text).join("\n"));
+    const r = await anthropic.messages.create({ model: CLAUDE_MODEL, max_tokens: 4096, system: teamContext("claude"), messages: [{ role: "user", content: prompt }] });
+    const reply = r.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
+    absorb(reply, "claude");
+    return text(reply);
   });
 
   server.registerTool("ask_chatgpt", {
-    description: "Ask ChatGPT (OpenAI) for help, a second opinion, or a review. Needs OPENAI_API_KEY on the server.",
+    description: "Ask your coworker ChatGPT (sees shared memory + tasks) for help, a second opinion, or a review. Needs OPENAI_API_KEY on the server.",
     inputSchema: { prompt: z.string() },
   }, async ({ prompt }) => {
     if (!openai) return { ...text("OPENAI_API_KEY not set"), isError: true };
-    const r = await openai.responses.create({ model: GPT_MODEL, input: prompt });
+    const r = await openai.responses.create({ model: GPT_MODEL, instructions: teamContext("chatgpt"), input: prompt });
+    absorb(r.output_text, "chatgpt");
     return text(r.output_text);
   });
 
