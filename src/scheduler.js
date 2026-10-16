@@ -2,7 +2,7 @@
 import cron from "node-cron";
 import { randomUUID } from "node:crypto";
 import { all, get, run } from "./db.js";
-import { askAgent, log, registerRisky, postMessage } from "./core.js";
+import { askAgent, log, postMessage } from "./core.js";
 import { notify } from "./notify.js";
 
 const jobs = new Map();
@@ -47,5 +47,3 @@ export function deleteSchedule({ id }, actor) {
   return `Deleted schedule ${id}`;
 }
 export async function runScheduleNow({ id }) { const s = get("SELECT * FROM schedules WHERE id = ?", id); if (!s) throw new Error(`No schedule ${id}`); await fire(s); return get("SELECT * FROM schedules WHERE id = ?", id); }
-
-registerRisky("create_schedule", createSchedule);

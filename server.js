@@ -1,14 +1,18 @@
 // VG-hoster bridge: MCP server for ChatGPT + Claude, plus a dashboard where you work with both.
 import express from "express";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { buildMcp } from "./src/mcp.js";
+import { buildMcp, AGENTS } from "./src/mcp.js";
 import * as core from "./src/core.js";
 import * as sched from "./src/scheduler.js";
 import { db, DB_FILE } from "./src/db.js";
 import { anthropic, openai } from "./src/llm.js";
 import { notify } from "./src/notify.js";
+import { githubReady, verifySignature } from "./src/github.js";
+import { listWorkflows } from "./src/n8n.js";
+import { startTelegram } from "./src/telegram.js";
 
 const PORT = process.env.PORT || 3000;
 const TOKEN = process.env.BRIDGE_TOKEN;
@@ -16,7 +20,8 @@ const RATE_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 120);
 if (!TOKEN) console.warn("WARNING: BRIDGE_TOKEN not set — anyone with the URL can use the bridge.");
 
 const app = express();
-app.use(express.json({ limit: "10mb" }));
+// Behind Render/Railway/Fly there is one proxy hop; this makes req.ip the real client. Set TRUST_PROXY=0 when exposed directly.
+app.set("trust proxy", Number(process.env.TRUST_PROXY ?? 1));
 
 // Simple per-IP rate limit.
 const hits = new Map();
@@ -26,16 +31,31 @@ app.use((req, res, next) => {
   if (list.length > RATE_PER_MIN) return res.status(429).json({ error: "rate limited" });
   next();
 });
+// Forget idle clients so the map can't grow forever.
+setInterval(() => { const t = Date.now(); for (const [k, list] of hits) if (t - list[list.length - 1] > 60_000) hits.delete(k); }, 60_000).unref();
+
+// ---- GitHub webhook: Claude Code progress (comments, PRs, closed issues) flows back onto tasks. Needs the raw body for the signature. ----
+app.post("/github/webhook", express.raw({ type: "*/*", limit: "5mb" }), (req, res) => {
+  if (!process.env.GITHUB_WEBHOOK_SECRET) return res.status(404).json({ error: "GitHub webhook not configured" });
+  if (!verifySignature(req.body, req.get("x-hub-signature-256"))) return res.status(401).json({ error: "bad signature" });
+  try { res.json({ result: core.handleGithubEvent(req.get("x-github-event"), JSON.parse(req.body.toString("utf8"))) }); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+app.use(express.json({ limit: "10mb" }));
 
 const tokenOf = (req) => req.query.token || (req.headers.authorization || "").replace(/^Bearer /, "") ||
   (req.headers.cookie || "").match(/(?:^|;\s*)bridge_token=([^;]+)/)?.[1];
-const auth = (req, res, next) => (!TOKEN || decodeURIComponent(tokenOf(req) || "") === TOKEN ? next() : res.status(401).json({ error: "unauthorized" }));
+const decode = (s) => { try { return decodeURIComponent(s); } catch { return s; } };
+const digest = (s) => crypto.createHash("sha256").update(String(s)).digest();
+const tokenOk = (given) => crypto.timingSafeEqual(digest(given), digest(TOKEN)); // constant-time compare
+const auth = (req, res, next) => (!TOKEN || tokenOk(decode(tokenOf(req) || "")) ? next() : res.status(401).json({ error: "unauthorized" }));
 
-app.get("/health", (_req, res) => res.json({ ok: true, claude: !!anthropic, chatgpt: !!openai, db: DB_FILE }));
+app.get("/health", (_req, res) => res.json({ ok: true }));
 
-// ---- MCP endpoint (stateless). Use ?agent=chatgpt or ?agent=claude on each connector URL. ----
+// ---- MCP endpoint (stateless). Use ?agent=chatgpt, ?agent=claude or ?agent=claude-code on each connector URL. ----
 app.post("/mcp", auth, async (req, res) => {
-  const actor = ["claude", "chatgpt"].includes(req.query.agent) ? req.query.agent : "unknown-agent";
+  const actor = AGENTS.includes(req.query.agent) ? req.query.agent : "unknown-agent";
   const server = buildMcp(actor);
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   res.on("close", () => { transport.close(); server.close(); });
@@ -49,15 +69,21 @@ const api = express.Router();
 api.use(auth);
 const h = (fn) => async (req, res) => { try { res.json(await fn({ ...req.query, ...req.body, ...req.params })); } catch (e) { res.status(400).json({ error: e.message }); } };
 const H = "human";
-api.get("/overview", h(() => ({ health: { claude: !!anthropic, chatgpt: !!openai }, usage: core.usage(), projects: core.listProjects(),
-  pending: core.listApprovals().filter((a) => a.status === "pending").length })));
+api.get("/overview", h(() => ({ health: { claude: !!anthropic, chatgpt: !!openai, github: githubReady(), github_webhook: !!process.env.GITHUB_WEBHOOK_SECRET,
+  telegram: !!(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID), n8n: listWorkflows().map((w) => w.name) },
+  usage: core.usage(), projects: core.listProjects(), pending: core.pendingApprovals().length,
+  paused: core.isPaused(), paused_info: core.getSetting("paused_info") })));
+api.get("/status", h((a) => core.teamStatus(a)));
+api.post("/pause", h((a) => core.pauseAll(a, H)));
+api.post("/resume", h((a) => core.resumeAll(a, H)));
 api.get("/chat", h((a) => core.listMessages(a)));
 api.post("/chat", h((a) => core.teamChat(a, H)));
 api.get("/tasks", h((a) => core.listTasks(a)));
-api.post("/tasks", h((a) => core.createTask(a, H)));
-api.patch("/tasks/:id", h((a) => core.updateTask(a, H)));
+api.post("/tasks", h((a) => core.route(core.createTask(a, H), H)));
+api.patch("/tasks/:id", h((a) => { const t = core.updateTask(a, H); return a.assignee ? core.route(t, H) : t; }));
 api.delete("/tasks/:id", h((a) => core.deleteTask(a, H)));
 api.post("/tasks/:id/work", h((a) => core.workTask(a, H)));
+api.post("/tasks/:id/dispatch", h((a) => core.dispatchTask(a, H)));
 api.post("/split", h((a) => core.splitTask(a, H)));
 api.post("/debate", h((a) => core.debate(a, H)));
 api.post("/review", h((a) => core.review(a, H)));
@@ -108,4 +134,5 @@ function backup() {
 setInterval(() => { try { backup(); } catch (e) { console.error("backup failed", e.message); } }, 24 * 3600_000).unref();
 
 sched.startScheduler();
+if (startTelegram()) console.log("Telegram remote control on (/status, /approvals, /pause, /resume)");
 app.listen(PORT, () => console.log(`Bridge on http://localhost:${PORT}  (dashboard /, MCP /mcp)`));

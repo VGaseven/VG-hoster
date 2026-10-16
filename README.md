@@ -1,59 +1,85 @@
 # VG-hoster — Team Bridge
-ChatGPT and Claude work as **equal coworkers** for you. They share memory, tasks, files, skills and a team chat, and each can call the other.
-You run everything from one dashboard.
+You talk to **Dots (ChatGPT)**. Dots briefs you and passes work to **Claude** (thinking, writing, reviewing) and **Claude Code** (builds in your GitHub repo).
+Everyone shares memory, tasks, files, skills and a team chat. You stay in control from Telegram or the dashboard.
+
+```
+You ⇄ Dots (ChatGPT) ──┐
+You ⇄ Claude.ai ───────┼──► Bridge (MCP) ──► tasks · memory · approvals · n8n
+Claude Code ───────────┘         │
+                                 └─► GitHub issue "@claude …" ──► Claude Code Action ──► PR ──► you approve
+You ⇄ Telegram: /status · Approve/Reject buttons · stop · /resume
+```
 
 ## Who controls whom
-- **You're the boss.** ChatGPT and Claude are peers. Each can call the other (`ask_claude`, `ask_chatgpt`, `debate`, `review`).
-- **Approvals:** risky actions an AI starts wait for your OK in the dashboard. By default these are deleting memories, files or tasks and creating schedules. Change the list with `REQUIRE_APPROVAL`.
-- **Loop limit:** caps AI-to-AI calls per minute, so they can't ping-pong forever (`MAX_AI_CALLS_PER_MIN`, default 20).
-- **Activity log:** every action is recorded with who did it.
+- **You're the boss.** Dots is your front desk; Claude and Claude Code do the work.
+- **No duplicate work:** an agent must `claim_task` (or `next_task`) before working. Claims are atomic, so two agents can never hold the same task. Abandoned claims expire after `CLAIM_TTL_MIN` (120).
+- **Approval levels:**
+  - 🔴 red actions wait for your OK: Approve/Reject buttons in Telegram or the dashboard (`REQUIRE_APPROVAL`; default: deleting memories, files or tasks, creating schedules, n8n workflows).
+  - 🟡 yellow actions run and notify you (`NOTIFY_ACTIONS`).
+  - 🟢 everything else just runs.
+  An AI can never approve anything.
+- **Kill switch:** send `stop` (or `/pause`) to the Telegram bot, press ⏸ in the dashboard, or have any AI call `pause_all`. Every AI tool, schedule and dispatch stops. Only you can `/resume`.
+- **Loop limit, budget cap, activity log:** as before (`MAX_AI_CALLS_PER_MIN`, `DAILY_BUDGET_USD`, Activity tab).
+
+## Setup (about 20 minutes)
+1. **Deploy.** Render → New → Blueprint → this repo/branch (uses `render.yaml`). Or use the `Dockerfile` on Railway, Fly.io or a VPS, and mount `/data`.
+   Set `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`. `BRIDGE_TOKEN` and `GITHUB_WEBHOOK_SECRET` are generated; copy them from Render. All options: `.env.example`.
+2. **Dashboard:** open `https://YOUR-APP/` and paste the token. **Settings → Connect your apps** shows every URL below.
+3. **Dots (ChatGPT):** Settings → Apps & Connectors → Advanced → Developer mode → Create connector → `https://YOUR-APP/mcp?agent=chatgpt&token=…`.
+   Then tell it once: *"You're Dots. Call get_briefing at the start of every chat."*
+4. **Claude.ai:** Settings → Connectors → Add custom connector → `https://YOUR-APP/mcp?agent=claude&token=…`
+5. **Claude Code** (on your computer, inside your website repo):
+   `claude mcp add --transport http bridge "https://YOUR-APP/mcp?agent=claude-code&token=…"`, and copy `templates/CLAUDE.md` into that repo.
+6. **Claude Code on GitHub** (lets Dots get things built while you're away):
+   - In the website repo, run `claude` → `/install-github-app`, or copy `templates/claude.yml` to `.github/workflows/` and add the `ANTHROPIC_API_KEY` secret.
+   - Create a fine-grained GitHub token with **Issues: read/write** on that repo. Set `GITHUB_TOKEN` and `GITHUB_REPO=owner/repo` on the bridge.
+   - Repo → Settings → Webhooks → Add: URL `https://YOUR-APP/github/webhook`, content type `application/json`, secret = `GITHUB_WEBHOOK_SECRET`, events: **Issues, Issue comments, Pull requests**.
+7. **Telegram:** create a bot with @BotFather and set `TELEGRAM_BOT_TOKEN`. Message the bot once, then open `https://api.telegram.org/bot<token>/getUpdates` to find your chat id and set `TELEGRAM_CHAT_ID`. Send `/status` to test it.
+8. **n8n (optional):** create workflows that start with a **Webhook** node and set
+   `N8N_WORKFLOWS={"send_email":{"url":"https://n8n…/webhook/…","description":"Email a customer"}}`. AIs see them via `list_workflows`/`trigger_workflow`.
+
+**Test it:** tell Dots *"Have Claude Code add a FAQ section to the homepage."* You should get a Telegram ping with the GitHub issue, then a PR to review. Merge the PR, and the task turns done.
+
+## What a task looks like
+`open` → claimed (`in_progress`, 🔒 by one agent) → `done`. For Claude Code: task → GitHub issue → bot comments and the PR are added as notes → issue closed by your merge → done.
+Closed as "not planned" → the task comes back to you.
 
 ## The dashboard (`/`)
 | Tab | What you do there |
 |---|---|
 | Chat | One team thread. Message Claude, ChatGPT, both, or start a debate. |
-| Tasks | Kanban board by assignee. Drag to hand off, "Do it" to have the AI work the task now, "Split with AI" to break a goal into subtasks. |
-| Memory | Search (by meaning when OpenAI is configured), pin core memories, edit, delete, import (paste a ChatGPT memory list), export. |
+| Tasks | Kanban by assignee (incl. Claude Code). Drag to hand off, "Do it", "Send to Claude Code", "Split with AI". 🔒 shows who holds a task. |
+| Memory | Search (by meaning when OpenAI is configured), pin core memories, edit, delete, import, export. |
 | Files | Shared workspace with full version history. |
-| Skills | Shared playbooks either AI can run. |
+| Skills | Shared playbooks any AI can run. |
 | Schedules | Cron jobs: an AI runs a prompt on a schedule, posts to chat and notifies you. |
-| Approvals | Approve or reject AI requests. |
-| Settings | Your profile, AI roles, per-project lead, models, temperature and budget, connector URLs. |
+| Approvals | Approve or reject AI requests (same as the Telegram buttons). |
+| Settings | Profile, roles, projects, connector URLs, integration status. |
 | Activity | Who did what, plus API spend. |
+| ⏸ Pause all | Kill switch (red bar + Resume while paused). |
 
-## MCP tools (40)
-`get_briefing` · tasks: `create_task` `list_tasks` `update_task` `handoff` `split_task` `work_task` `delete_task` ·
+## MCP tools (48)
+`get_briefing` `team_status` · tasks: `create_task` `list_tasks` `claim_task` `next_task` `update_task` `handoff` `split_task` `work_task` `dispatch_task` `delete_task` ·
 memory: `remember` `recall` `update_memory` `forget` `import_memories` · personalization: `get_profile` `set_profile` `set_role` `list_projects` `save_project` ·
 skills: `list_skills` `save_skill` `run_skill` · coworkers: `ask_claude` `ask_chatgpt` `debate` `review` `team_chat` `read_team_chat` ·
-files: `write_file` `read_file` `list_files` `file_history` `delete_file` · web: `web_search` `fetch_url` ·
-scheduling: `create_schedule` `list_schedules` `set_schedule_enabled` `notify_human` · oversight: `activity_log` `usage`
+files: `write_file` `read_file` `list_files` `file_history` `delete_file` · web: `web_search` `fetch_url` · n8n: `list_workflows` `trigger_workflow` ·
+scheduling: `create_schedule` `list_schedules` `set_schedule_enabled` `notify_human` · oversight: `pending_approvals` `pause_all` `activity_log` `usage`
 
-## Run
+## Run locally
 Needs Node 22.13 or newer. Data is stored in SQLite at `data/bridge.db`, with daily backups (the last 7 are kept).
 ```bash
 npm install
-BRIDGE_TOKEN=pick-a-secret ANTHROPIC_API_KEY=... OPENAI_API_KEY=... npm start
+cp .env.example .env   # fill it in, then:
+node --env-file=.env server.js
+npm test               # end-to-end tests against mock GitHub/Telegram/n8n, no keys needed
 ```
-Deploy: `render.yaml` (Render, with a persistent disk) or the `Dockerfile` (Railway, Fly.io, a VPS). Mount `/data` so data survives restarts.
 
-| Env | Purpose |
-|---|---|
-| `BRIDGE_TOKEN` | Required in production. Protects the dashboard and MCP endpoint. |
-| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | Let each AI be called by the other, and let the dashboard reach them. OpenAI also powers meaning-based memory search. |
-| `CLAUDE_MODEL`, `GPT_MODEL` | Default models (each project can override). |
-| `DAILY_BUDGET_USD` | Hard daily spend cap. `PRICES` overrides per-model prices. |
-| `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`, `DISCORD_WEBHOOK_URL`, `NOTIFY_WEBHOOK_URL` | Notifications. |
-| `REQUIRE_APPROVAL`, `MAX_AI_CALLS_PER_MIN`, `RATE_LIMIT_PER_MIN`, `TZ`, `DB_FILE`, `BACKUP_DIR` | Guard rails, rate limits, time zone and storage locations. |
-
-## Connect
-Copy the URLs from **Settings → Connect your apps**:
-- **ChatGPT:** Settings → Apps & Connectors → Advanced → Developer mode → Create connector, using `https://HOST/mcp?agent=chatgpt&token=…`
-- **Claude.ai:** Settings → Connectors → Add custom connector, using `https://HOST/mcp?agent=claude&token=…`
-- **Claude Code:** `claude mcp add --transport http bridge "https://HOST/mcp?agent=claude&token=…"`
-
-Then tell each app: *"Call get_briefing at the start of every chat."*
+## Security notes
+- The token is in the connector URLs, so keep them private. Rotate `BRIDGE_TOKEN` if one leaks.
+- `fetch_url` only reaches public addresses (no localhost, private ranges or cloud metadata), and checks each redirect.
+- GitHub webhooks are verified with HMAC. Telegram commands are accepted only from `TELEGRAM_CHAT_ID` (plus `TELEGRAM_ADMIN_IDS` in groups).
+- Claude Code opens PRs; merging stays with you. Protect your main branch so nothing lands without review.
 
 ## Limits
-- The AIs act only while you're chatting with them, or when a schedule fires. Neither runs on its own otherwise.
+- The chat apps act only while you're chatting with them. Schedules and Claude Code on GitHub keep working while you're away.
 - The apps' built-in memories aren't merged; the shared memory lives here.
-- Login uses a token in the URL, not OAuth. Keep the URLs private.

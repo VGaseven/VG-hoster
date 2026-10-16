@@ -10,3 +10,9 @@ services:
       - { key: ANTHROPIC_API_KEY, sync: false }
       - { key: OPENAI_API_KEY, sync: false }
       - { key: DAILY_BUDGET_USD, value: "5" }
+      - { key: GITHUB_TOKEN, sync: false }
+      - { key: GITHUB_REPO, sync: false }
+      - { key: GITHUB_WEBHOOK_SECRET, generateValue: true }
+      - { key: TELEGRAM_BOT_TOKEN, sync: false }
+      - { key: TELEGRAM_CHAT_ID, sync: false }
+      - { key: N8N_WORKFLOWS, sync: false }

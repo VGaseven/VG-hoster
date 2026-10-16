@@ -1,10 +1,11 @@
 {
   "name": "vg-hoster",
   "version": "1.0.0",
-  "description": "MCP bridge so ChatGPT and Claude can work together on shared tasks",
+  "description": "Team bridge: ChatGPT (Dots), Claude and Claude Code share tasks, memory and approvals over MCP",
   "main": "server.js",
   "scripts": {
-    "start": "node --no-warnings server.js"
+    "start": "node --no-warnings server.js",
+    "test": "node --test test/*.test.js"
   },
   "repository": {
     "type": "git",

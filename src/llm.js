@@ -43,6 +43,7 @@ export function teamContext(agent, project = "default") {
   return `You are ${agent === "claude" ? "Claude" : "ChatGPT"}, working as an equal coworker alongside ${other} for a human, who is the boss.
 Your role: ${roles[agent] || "general assistant"}
 ${other}'s role: ${roles[agent === "claude" ? "chatgpt" : "claude"] || "general assistant"}
+Claude Code's role: ${roles["claude-code"] || "engineer with repo access"} (give it code work by assigning tasks to "claude-code")
 Project: ${proj.name} — ${proj.description || "no description"} (lead: ${proj.lead})
 
 About the human (always respect this):

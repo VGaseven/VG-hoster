@@ -3,16 +3,48 @@ import { randomUUID } from "node:crypto";
 import { all, get, run, db } from "./db.js";
 import { ask, embed, spend, webSearch } from "./llm.js";
 import { notify } from "./notify.js";
+import { safeFetchText } from "./safefetch.js";
+import { createIssue, githubReady, REPO_RE } from "./github.js";
 
 const id = () => randomUUID().slice(0, 8);
-const now = () => new Date().toISOString().replace("T", " ").slice(0, 19);
-const APPROVAL_ACTIONS = new Set((process.env.REQUIRE_APPROVAL ?? "forget,delete_file,create_schedule,delete_task").split(",").filter(Boolean));
+const stamp = (ms) => new Date(ms).toISOString().replace("T", " ").slice(0, 19);
+const now = () => stamp(Date.now());
 const MAX_AI_CALLS_PER_MIN = Number(process.env.MAX_AI_CALLS_PER_MIN || 20);
 const callTimes = [];
 
 export function log(actor, action, detail = "") {
   run("INSERT INTO activity (actor, action, detail) VALUES (?,?,?)", actor, action, String(detail).slice(0, 500));
 }
+
+// ---------- settings & kill switch ----------
+export const getSetting = (key, fallback = null) => get("SELECT value FROM settings WHERE key = ?", key)?.value ?? fallback;
+const setSetting = (key, value) => run("INSERT INTO settings VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", key, String(value));
+export const isPaused = () => getSetting("paused") === "1";
+export function assertRunning() {
+  if (isPaused()) throw new Error("The team is paused by the human (kill switch). Only read-only tools work until the human resumes.");
+}
+// Anyone may pull the brake; only the human may release it.
+export function pauseAll({ reason = "" } = {}, actor) {
+  setSetting("paused", "1");
+  setSetting("paused_info", `${actor} at ${now()}${reason ? ": " + reason : ""}`);
+  log(actor, "pause_all", reason);
+  notify(`⛔ All AI work paused by ${actor}${reason ? ": " + reason : ""}.\nResume from the dashboard or send /resume here.`);
+  return "Paused. All AI work is stopped until the human resumes it.";
+}
+export function resumeAll(_args, actor) {
+  if (actor !== "human") throw new Error("Only the human can resume the team.");
+  setSetting("paused", "0");
+  log(actor, "resume_all");
+  notify("▶️ Team resumed.");
+  return "Resumed.";
+}
+
+// ---------- approval levels ----------
+// 🔴 red: an AI must get the human's OK first.  🟡 yellow: runs, and the human is notified.  🟢 green: just runs.
+const envSet = (name, fallback) => new Set((process.env[name] ?? fallback).split(",").map((s) => s.trim()).filter(Boolean));
+const RED = envSet("REQUIRE_APPROVAL", "forget,delete_file,create_schedule,delete_task,trigger_workflow");
+const YELLOW = envSet("NOTIFY_ACTIONS", "save_project,set_role,save_skill,import_memories,set_schedule_enabled,dispatch_task");
+export const levelOf = (name) => (RED.has(name) ? "red" : YELLOW.has(name) ? "yellow" : "green");
 
 // Stops ChatGPT and Claude from ping-ponging forever.
 function loopGuard() {
@@ -39,11 +71,51 @@ export function listTasks({ project, status, assignee } = {}) {
     (!project || t.project === project) && (!status || t.status === status) && (!assignee || t.assignee === assignee))
     .map((t) => ({ ...t, notes: all("SELECT author, note, at FROM task_notes WHERE task_id = ? ORDER BY id", t.id) }));
 }
+// A claim older than CLAIM_TTL_MIN counts as abandoned, so a stuck task can be picked up again.
+const claimCutoff = () => stamp(Date.now() - Number(process.env.CLAIM_TTL_MIN || 120) * 60_000);
+const heldByOther = (t, actor) => t.claimed_by && t.claimed_by !== actor && t.status === "in_progress" && t.claimed_at >= claimCutoff();
+
+// Atomic: of two agents claiming the same task at once, exactly one wins.
+export function claimTask({ id: tid }, actor, { override = false } = {}) {
+  const t = get("SELECT * FROM tasks WHERE id = ?", tid);
+  if (!t) throw new Error(`No task ${tid}`);
+  if (t.status === "done") throw new Error(`Task ${tid} is already done`);
+  if (heldByOther(t, actor)) throw new Error(`Task ${tid} is already claimed by ${t.claimed_by} (since ${t.claimed_at}). Pick another task.`);
+  if (!override && actor !== "human" && ![actor, "anyone"].includes(t.assignee))
+    throw new Error(`Task ${tid} is assigned to ${t.assignee}, not you. Ask for a handoff instead.`);
+  const r = run(`UPDATE tasks SET status = 'in_progress', claimed_by = ?, claimed_at = ?, updated = ?,
+      assignee = CASE WHEN ? THEN ? WHEN assignee = 'anyone' THEN ? ELSE assignee END
+    WHERE id = ? AND status != 'done' AND (claimed_by IS NULL OR claimed_by = ? OR status != 'in_progress' OR claimed_at < ?)`,
+    actor, now(), now(), override ? 1 : 0, actor, actor, tid, actor, claimCutoff());
+  if (!r.changes) {
+    const c = get("SELECT claimed_by, claimed_at FROM tasks WHERE id = ?", tid);
+    throw new Error(`Task ${tid} is already claimed by ${c.claimed_by} (since ${c.claimed_at}). Pick another task.`);
+  }
+  log(actor, "claim_task", tid);
+  return getTask(tid);
+}
+// Claim the oldest open task meant for this agent.
+export function nextTask({ project } = {}, actor) {
+  const open = all(`SELECT id FROM tasks WHERE status = 'open' AND assignee IN (?, 'anyone') ${project ? "AND project = ?" : ""} ORDER BY created, rowid`,
+    actor, ...(project ? [project] : []));
+  for (const { id: tid } of open) {
+    try { return claimTask({ id: tid }, actor); } catch { /* someone else got it first; try the next one */ }
+  }
+  return "No open tasks for you right now.";
+}
+const releaseClaim = (tid) => run("UPDATE tasks SET claimed_by = NULL, claimed_at = NULL WHERE id = ?", tid);
+
 export function updateTask({ id: tid, note, status, assignee }, actor) {
-  if (!get("SELECT id FROM tasks WHERE id = ?", tid)) throw new Error(`No task ${tid}`);
+  const t = get("SELECT * FROM tasks WHERE id = ?", tid);
+  if (!t) throw new Error(`No task ${tid}`);
+  if ((status || assignee) && actor !== "human" && heldByOther(t, actor))
+    throw new Error(`Task ${tid} is claimed by ${t.claimed_by}. You can add a note, but only ${t.claimed_by} or the human can change it.`);
+  // Starting work goes through the atomic claim, so two agents can't both start the same task.
+  if (status === "in_progress" && actor !== "human" && t.claimed_by !== actor) claimTask({ id: tid }, actor);
   if (note) run("INSERT INTO task_notes (task_id, author, note) VALUES (?,?,?)", tid, actor, note);
   if (status) run("UPDATE tasks SET status = ? WHERE id = ?", status, tid);
   if (assignee) run("UPDATE tasks SET assignee = ? WHERE id = ?", assignee, tid);
+  if (status === "open" || (assignee && assignee !== t.claimed_by)) releaseClaim(tid);
   run("UPDATE tasks SET updated = ? WHERE id = ?", now(), tid);
   log(actor, "update_task", `${tid} ${status || ""} ${assignee ? "-> " + assignee : ""} ${note || ""}`);
   if (status === "done") notify(`Task done by ${actor}: ${get("SELECT title FROM tasks WHERE id = ?", tid).title}`);
@@ -57,6 +129,83 @@ export function deleteTask({ id: tid }, actor) {
 }
 export function handoff({ id: tid, to, summary }, actor) {
   return updateTask({ id: tid, assignee: to, status: "open", note: `HANDOFF to ${to}: ${summary}` }, actor);
+}
+
+// ---------- Claude Code worker ----------
+// A task for "claude-code" becomes a GitHub issue that mentions @claude; the Claude Code GitHub Action picks it up,
+// works in the repo and opens a PR. GitHub webhooks (handleGithubEvent) report progress back onto the task.
+export async function dispatchTask({ id: tid, repo, instructions = "" }, actor) {
+  assertRunning();
+  if (!githubReady()) throw new Error("GitHub isn't set up (GITHUB_TOKEN + GITHUB_REPO). A Claude Code session can still take it with next_task.");
+  const t = getTask(tid);
+  if (!t) throw new Error(`No task ${tid}`);
+  if (t.github_url) throw new Error(`Task ${tid} was already sent to Claude Code: ${t.github_url}`);
+  const target = repo || process.env.GITHUB_REPO;
+  if (!REPO_RE.test(target)) throw new Error(`Bad repo "${target}" (expected owner/name)`);
+  claimTask({ id: tid }, "claude-code", { override: true });
+  const notes = t.notes.map((n) => `- **${n.author}:** ${n.note}`).join("\n");
+  const body = `@claude ${t.title}\n\n${t.details || ""}\n${instructions ? `\n${instructions}\n` : ""}${notes ? `\n### Notes so far\n${notes}\n` : ""}
+---
+Bridge task \`${t.id}\` (project \`${t.project}\`), sent by ${actor}.
+Do the work on a branch and open a pull request for the human to review. Never merge it yourself.
+Put "Closes #<this issue's number>" in the pull request description so the task is marked done when the human merges it.
+<!-- bridge-task:${t.id} -->`;
+  let issue;
+  try {
+    issue = await createIssue(target, { title: t.title, body, labels: ["claude-task"] });
+  } catch (e) {
+    releaseClaim(tid);
+    run("UPDATE tasks SET status = 'open' WHERE id = ?", tid);
+    throw e;
+  }
+  run("UPDATE tasks SET github_repo = ?, github_issue = ?, github_url = ? WHERE id = ?", target, issue.number, issue.url, tid);
+  updateTask({ id: tid, note: `Sent to Claude Code: ${issue.url}` }, actor);
+  notify(`🛠 Sent to Claude Code: ${t.title}\n${issue.url}`);
+  return getTask(tid);
+}
+// Called after a task is created or reassigned: tasks for claude-code go straight to GitHub when it's set up.
+export async function route(task, actor) {
+  if (task?.assignee !== "claude-code" || task.github_url || task.status === "done" || !githubReady() || process.env.AUTO_DISPATCH === "0") return task;
+  try { return await dispatchTask({ id: task.id }, actor); } catch (e) { return { ...getTask(task.id), dispatch_error: e.message }; }
+}
+
+const taskByIssue = (repo, number) => get("SELECT * FROM tasks WHERE github_repo = ? AND github_issue = ?", repo, number);
+export function handleGithubEvent(event, p) {
+  const repo = p.repository?.full_name;
+  if (event === "issue_comment" && p.action === "created" && p.comment?.user?.type === "Bot") {
+    const t = taskByIssue(repo, p.issue?.number);
+    if (!t) return "ignored";
+    updateTask({ id: t.id, note: `Claude Code: ${p.comment.body.slice(0, 1500)}\n${p.comment.html_url}` }, "claude-code");
+    return "noted";
+  }
+  if (event === "pull_request" && p.action === "opened") {
+    const body = `${p.pull_request?.body || ""}`;
+    const ids = new Set([...body.matchAll(/bridge-task:([\w-]+)/g)].map((m) => m[1]));
+    for (const m of body.matchAll(/\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)/gi)) { const t = taskByIssue(repo, Number(m[1])); if (t) ids.add(t.id); }
+    let n = 0;
+    for (const tid of ids) {
+      if (!getTask(tid)) continue;
+      updateTask({ id: tid, note: `Pull request ready for your review: ${p.pull_request.html_url}` }, "claude-code");
+      n++;
+    }
+    if (n) notify(`👀 Claude Code opened a PR for review: ${p.pull_request.title}\n${p.pull_request.html_url}`);
+    return n ? "noted" : "ignored";
+  }
+  if (event === "issues" && ["closed", "reopened"].includes(p.action)) {
+    const t = taskByIssue(repo, p.issue?.number);
+    if (!t) return "ignored";
+    if (p.action === "reopened") {
+      updateTask({ id: t.id, status: "in_progress", note: "GitHub issue reopened" }, "human");
+      return "reopened";
+    }
+    if (p.issue.state_reason === "not_planned") {
+      updateTask({ id: t.id, status: "open", assignee: "human", note: "GitHub issue closed as not planned — back to you." }, "human");
+      return "returned";
+    }
+    updateTask({ id: t.id, status: "done", note: `Finished on GitHub: ${p.issue.html_url}` }, "claude-code");
+    return "done";
+  }
+  return "ignored";
 }
 
 // ---------- memory ----------
@@ -190,6 +339,7 @@ export function deleteFile({ path, project = "default" }, actor) {
 
 // ---------- coworker calls ----------
 export async function askAgent({ agent, prompt, project = "default" }, actor) {
+  assertRunning();
   loopGuard();
   log(actor, `ask_${agent}`, prompt);
   const reply = await ask(agent, prompt, { project });
@@ -223,23 +373,37 @@ export async function review({ request, drafter = "chatgpt", project = "default"
 }
 // Ask the project lead to break a job into subtasks and assign them.
 export async function splitTask({ goal, project = "default", planner = "claude" }, actor) {
-  const reply = await askAgent({ agent: planner, project, prompt: `Break this goal into 2-8 concrete subtasks and assign each to "claude" or "chatgpt" based on their roles.
-Reply ONLY with JSON: [{"title":"...","details":"...","assignee":"claude|chatgpt"}]\n\nGoal: ${goal}` }, actor);
+  const coder = githubReady() ? `, or "claude-code" for anything that changes code or files in the GitHub repo` : "";
+  const reply = await askAgent({ agent: planner, project, prompt: `Break this goal into 2-8 concrete subtasks and assign each to "claude" or "chatgpt" based on their roles${coder}.
+Reply ONLY with JSON: [{"title":"...","details":"...","assignee":"claude|chatgpt${coder ? "|claude-code" : ""}"}]\n\nGoal: ${goal}` }, actor);
   const json = reply.match(/\[[\s\S]*\]/);
   if (!json) throw new Error(`Planner did not return a task list:\n${reply}`);
+  const valid = ["claude", "chatgpt", ...(coder ? ["claude-code"] : [])];
   const parent = createTask({ title: goal, project, assignee: "anyone" }, actor);
-  const subs = JSON.parse(json[0]).map((s) => createTask({ ...s, project, parent: parent.id }, planner));
+  const subs = [];
+  for (const s of JSON.parse(json[0])) {
+    const t = createTask({ title: String(s.title), details: String(s.details || ""), assignee: valid.includes(s.assignee) ? s.assignee : "anyone", project, parent: parent.id }, planner);
+    subs.push(await route(t, planner));
+  }
   return { parent, subtasks: subs };
 }
 // Have an agent work an assigned task now and record the result on it.
 export async function workTask({ id: tid, agent }, actor) {
   const t = getTask(tid);
   if (!t) throw new Error(`No task ${tid}`);
-  const who = agent || (t.assignee === "anyone" ? "claude" : t.assignee);
-  updateTask({ id: tid, status: "in_progress" }, who);
-  const notes = t.notes.map((n) => `- ${n.author}: ${n.note}`).join("\n");
-  const result = await askAgent({ agent: who, project: t.project, prompt: `Do this task and give the finished result.\n\nTask: ${t.title}\n${t.details}\n\nNotes so far:\n${notes || "(none)"}` }, actor);
-  return updateTask({ id: tid, status: "done", note: result }, who);
+  if (t.assignee === "claude-code" && !agent) return dispatchTask({ id: tid }, actor);
+  const who = agent || (["claude", "chatgpt"].includes(t.assignee) ? t.assignee : "claude");
+  assertRunning();
+  claimTask({ id: tid }, who, { override: actor === "human" });
+  try {
+    const notes = t.notes.map((n) => `- ${n.author}: ${n.note}`).join("\n");
+    const result = await askAgent({ agent: who, project: t.project, prompt: `Do this task and give the finished result.\n\nTask: ${t.title}\n${t.details}\n\nNotes so far:\n${notes || "(none)"}` }, actor);
+    return updateTask({ id: tid, status: "done", note: result }, who);
+  } catch (e) {
+    releaseClaim(tid);
+    run("UPDATE tasks SET status = 'open' WHERE id = ?", tid);
+    throw e;
+  }
 }
 
 // ---------- team chat ----------
@@ -263,9 +427,8 @@ export async function teamChat({ text, to = "both", project = "default" }, actor
 // ---------- web ----------
 export async function fetchUrl({ url }, actor) {
   log(actor, "fetch_url", url);
-  const r = await fetch(url, { headers: { "User-Agent": "vg-hoster-bridge" }, signal: AbortSignal.timeout(20000) });
-  const body = await r.text();
-  const text = body.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const r = await safeFetchText(url, { headers: { "User-Agent": "vg-hoster-bridge" } });
+  const text = r.text.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
   return `HTTP ${r.status}\n${text.slice(0, 20000)}`;
 }
 export async function search({ query, project = "default" }, actor) { log(actor, "web_search", query); return webSearch(query, project); }
@@ -274,31 +437,57 @@ export async function search({ query, project = "default" }, actor) { log(actor,
 export const activity = ({ limit = 100 } = {}) => all("SELECT * FROM activity ORDER BY id DESC LIMIT ?", limit);
 export const usage = () => ({ ...spend(), by_model: all("SELECT model, SUM(input_tokens) input_tokens, SUM(output_tokens) output_tokens, SUM(cost_usd) cost_usd FROM usage GROUP BY model") });
 
-const RISKY = {}; // filled by registerRisky
-export const registerRisky = (name, fn) => { RISKY[name] = fn; };
-// AI-initiated risky actions wait for the human's OK in the dashboard.
-export async function guarded(name, args, actor) {
-  if (actor !== "human" && APPROVAL_ACTIONS.has(name)) {
-    const aid = id();
-    run("INSERT INTO approvals (id, actor, action, args) VALUES (?,?,?,?)", aid, actor, name, JSON.stringify(args));
-    log(actor, "approval_requested", `${name} ${JSON.stringify(args)}`);
-    notify(`${actor} wants to run ${name}. Approve in the dashboard.`);
-    return `Needs the human's approval (request ${aid}). It will run once approved in the dashboard.`;
-  }
-  return RISKY[name](args, actor);
-}
-export const listApprovals = () => all("SELECT * FROM approvals ORDER BY at DESC LIMIT 100");
-export async function decideApproval({ id: aid, approve }) {
-  const a = get("SELECT * FROM approvals WHERE id = ? AND status = 'pending'", aid);
-  if (!a) throw new Error(`No pending approval ${aid}`);
-  let result = "rejected";
-  if (approve) result = String(await RISKY[a.action](JSON.parse(a.args), a.actor));
-  run("UPDATE approvals SET status = ?, result = ? WHERE id = ?", approve ? "approved" : "rejected", result, aid);
-  log("human", approve ? "approved" : "rejected", `${a.action} from ${a.actor}`);
+// Every MCP tool registers its handler here, so any of them can be put behind an approval (REQUIRE_APPROVAL).
+const ACTIONS = {};
+export const registerAction = (name, fn) => { ACTIONS[name] = fn; };
+
+// Runs an action for an actor, applying the approval level. The human is never gated.
+export async function runAction(name, args, actor) {
+  const fn = ACTIONS[name];
+  if (!fn) throw new Error(`Unknown action ${name}`);
+  if (actor === "human") return fn(args, actor);
+  const level = levelOf(name);
+  if (level === "red") return requestApproval(name, args, actor);
+  const result = await fn(args, actor);
+  if (level === "yellow") notify(`🟡 ${actor} ran ${name}: ${JSON.stringify(args).slice(0, 300)}`);
   return result;
 }
-registerRisky("forget", forget);
-registerRisky("delete_file", deleteFile);
-registerRisky("delete_task", deleteTask);
+
+function requestApproval(name, args, actor) {
+  const aid = id();
+  run("INSERT INTO approvals (id, actor, action, args) VALUES (?,?,?,?)", aid, actor, name, JSON.stringify(args));
+  log(actor, "approval_requested", `${name} ${JSON.stringify(args)}`);
+  notify(`🔴 ${actor} wants to run ${name}\n${JSON.stringify(args, null, 1).slice(0, 1500)}`,
+    { buttons: [[{ text: "✅ Approve", data: `ap:${aid}:y` }, { text: "❌ Reject", data: `ap:${aid}:n` }]] });
+  return `Needs the human's approval (request ${aid}). It runs as soon as they approve it in Telegram or the dashboard. Don't ask again.`;
+}
+export const listApprovals = () => all("SELECT * FROM approvals ORDER BY at DESC LIMIT 100");
+export const pendingApprovals = () => all("SELECT id, actor, action, args, at FROM approvals WHERE status = 'pending' ORDER BY at");
+// Only the human decides. The status flip is atomic, so approving twice (Telegram + dashboard) runs the action once.
+export async function decideApproval({ id: aid, approve }) {
+  const a = get("SELECT * FROM approvals WHERE id = ?", aid);
+  if (!a || !run("UPDATE approvals SET status = 'running' WHERE id = ? AND status = 'pending'", aid).changes)
+    throw new Error(a ? `Approval ${aid} was already ${a.status}` : `No approval ${aid}`);
+  let result = "rejected", status = approve ? "approved" : "rejected";
+  if (approve) {
+    try { result = await ACTIONS[a.action](JSON.parse(a.args), a.actor); result = typeof result === "string" ? result : JSON.stringify(result); }
+    catch (e) { result = `failed: ${e.message}`; status = "failed"; }
+  }
+  run("UPDATE approvals SET status = ?, result = ? WHERE id = ?", status, String(result).slice(0, 5000), aid);
+  log("human", status, `${a.action} from ${a.actor}`);
+  return result;
+}
+
+// One-glance summary for the human (Telegram /status, get_briefing).
+export function teamStatus({ project } = {}) {
+  const tasks = listTasks({ project }).filter((t) => t.status !== "done");
+  return {
+    paused: isPaused(), paused_info: isPaused() ? getSetting("paused_info") : undefined,
+    pending_approvals: pendingApprovals(),
+    in_progress: tasks.filter((t) => t.status === "in_progress").map(({ id, title, project, claimed_by, assignee, github_url }) => ({ id, title, project, by: claimed_by || assignee, github_url })),
+    open: tasks.filter((t) => t.status === "open").map(({ id, title, project, assignee }) => ({ id, title, project, assignee })),
+    spend: spend(),
+  };
+}
 
 export { db };

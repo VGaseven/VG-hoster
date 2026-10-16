@@ -31,8 +31,16 @@ CREATE TABLE IF NOT EXISTS schedules (id TEXT PRIMARY KEY, project TEXT DEFAULT 
   notify INTEGER DEFAULT 1, enabled INTEGER DEFAULT 1, last_run TEXT, last_result TEXT, created TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS approvals (id TEXT PRIMARY KEY, actor TEXT, action TEXT, args TEXT, status TEXT DEFAULT 'pending',
   result TEXT, at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
+INSERT OR IGNORE INTO roles VALUES ('claude-code', 'Engineer with repo access: builds and changes code in GitHub, opens pull requests for the human to review.');
 `);
 
 export const all = (sql, ...p) => db.prepare(sql).all(...p);
 export const get = (sql, ...p) => db.prepare(sql).get(...p);
 export const run = (sql, ...p) => db.prepare(sql).run(...p);
+
+// Columns added after the first release; existing databases get them on startup.
+const addColumn = (table, def) => {
+  if (!all(`PRAGMA table_info(${table})`).some((c) => c.name === def.split(" ")[0])) db.exec(`ALTER TABLE ${table} ADD COLUMN ${def}`);
+};
+for (const c of ["claimed_by TEXT", "claimed_at TEXT", "github_repo TEXT", "github_issue INTEGER", "github_url TEXT"]) addColumn("tasks", c);
