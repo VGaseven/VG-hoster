@@ -532,3 +532,47 @@ dialog textarea {
     transform: none;
   }
 }
+/* Communication reference: uni work / 735:219. Scoped to the project chat. */
+#chatPanel { padding:0; overflow:hidden; background:#1a1a1a; color:#f5f5f5; border:1px solid #2e2e2e; border-radius:22px; font-family:Inter,"Noto Sans Arabic",Arial,sans-serif; }
+.conversation-heading { background:#141414; display:flex; justify-content:space-between; align-items:center; gap:16px; padding:24px 26px 12px; }
+.conversation-heading .eyebrow { color:#bcb3ce; font-size:10px; }
+.conversation-heading h2 { font:600 22px/1.4 Inter,"Noto Sans Arabic",Arial,sans-serif; margin:6px 0; }
+#connection { font-size:11px; color:#b9b9b9; white-space:nowrap; }
+.participants { display:flex; flex-wrap:wrap; gap:6px; background:#141414; padding:0 26px 20px; border-bottom:1px solid #2e2e2e; }
+.participant { display:inline-flex; align-items:center; gap:7px; padding:4px 10px 4px 5px; background:#2c2c2c; border-radius:20px; font-size:12px; }
+.participant .avatar { width:20px; height:20px; font-size:9px; }
+.chat-layout { display:grid; grid-template-columns:minmax(0,1fr) 224px; }
+.chat-stream { min-width:0; }
+#chatPanel .messages { height:440px; max-height:55vh; overflow:auto; padding:24px; scrollbar-color:#555 #1a1a1a; }
+#chatPanel .message { display:flex; gap:12px; align-items:flex-start; border:0; padding:0; margin:0 0 24px; }
+.avatar { width:32px; height:32px; flex-shrink:0; object-fit:contain; border-radius:50%; }
+.avatar-initial { display:grid; place-items:center; background:#c6b5e5; color:#302342; font-size:11px; font-weight:700; }
+.message-content { width:min(360px,calc(100% - 44px)); min-width:0; }
+#chatPanel .message header { display:flex; flex-direction:column; gap:2px; font-size:12px; line-height:18px; margin-bottom:7px; }
+#chatPanel .message time { color:#aaa; font-size:11px; }
+#chatPanel .message .bubble { background:#f2f2f2; color:#0a0a0a; border-radius:16px; padding:12px 14px; margin:0; line-height:1.65; font-size:14px; white-space:pre-wrap; overflow-wrap:anywhere; }
+#chatPanel .message[data-author="chatgpt"], #chatPanel .message[data-author="human"] { flex-direction:row-reverse; }
+#chatPanel .message[data-author="chatgpt"] header, #chatPanel .message[data-author="human"] header { text-align:end; }
+#chatPanel .message[data-author="chatgpt"] .bubble { background:#2c2c2c; color:#f5f5f5; }
+#chatPanel .message[data-author="human"] .bubble { background:#e3d8fa; color:#33274a; }
+.work-panel { border-inline-start:1px solid #303030; padding:24px 18px; min-width:0; }
+.work-panel h3 { font:600 14px/1.4 Inter,Arial,sans-serif; }
+.work-hint { color:#aaa; font-size:11px; line-height:1.6; margin:8px 0 20px; }
+.work-item { border-top:1px solid #333; padding:14px 0; overflow-wrap:anywhere; }
+.work-id { color:#aaa; font-size:10px; }
+.work-item p { font-size:12px; margin:5px 0 12px; }
+.work-item small { display:block; color:#bfbfbf; font-size:10px; margin-top:8px; }
+.work-badge { font-size:10px; padding:4px 8px; border-radius:8px; background:#303030; }
+.work-badge[data-state="in_progress"] { background:#493d25; color:#ffdfa1; }
+.work-badge[data-state="done"] { background:#243e34; color:#bde4cf; }
+#chatPanel #chatForm { padding:18px 24px 22px; border-top:1px solid #2e2e2e; background:#141414; }
+#chatPanel label { font-size:12px; color:#ccc; margin-bottom:8px; }
+#chatPanel textarea { background:#2c2c2c; color:#f5f5f5; border:1px solid #464646; border-radius:18px; font-size:14px; }
+#chatPanel .compose-footer { margin-top:10px; }
+#chatPanel .muted { color:#b5b5b5; font-size:11px; }
+#chatPanel .primary { font-size:12px; background:#d9c8f3; color:#2a203a; border-color:#d9c8f3; }
+#answering { margin:0; padding:0 24px 12px; }
+#answering:empty { display:none; }
+#chatPanel .empty { border-color:#444; color:#bbb; font-size:13px; }
+#messages:focus-visible { outline:2px solid #d9c8f3; outline-offset:-3px; }
+@media(max-width:760px) { .chat-layout { grid-template-columns:1fr; } .work-panel { border-inline-start:0; border-top:1px solid #303030; padding:16px 20px; } #workStatus { display:flex; gap:16px; flex-wrap:wrap; } .work-item { flex:1 1 130px; } .work-hint { margin-bottom:8px; } #chatPanel .messages { padding:18px 14px; } .conversation-heading { flex-wrap:wrap; padding:20px 18px 12px; } .participants { padding:0 18px 16px; } #chatPanel #chatForm { padding:16px; } .conversation-heading h2 { font-size:19px; } }
