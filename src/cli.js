@@ -52,10 +52,10 @@ async function slot(fn) {
   try { return await fn(); } finally { running--; waiting.shift()?.(); }
 }
 
-function exec({ cmd, pre }, args, input, timeoutMs = TIMEOUT_MS, cwd = os.tmpdir()) {
+function exec({ cmd, pre }, args, input, timeoutMs = TIMEOUT_MS, cwd = os.tmpdir(), env = cleanEnv()) {
   const bin = path.basename(pre[0] || cmd);
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, [...pre, ...args], { env: cleanEnv(), cwd, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    const child = spawn(cmd, [...pre, ...args], { env, cwd, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
     let out = "", err = "";
     const timer = setTimeout(() => { child.kill("SIGTERM"); reject(new Error(`${bin} took longer than ${Math.round(timeoutMs / 1000)}s (is it signed in?)`)); }, timeoutMs);
     child.stdout.on("data", (d) => (out += d));
@@ -209,4 +209,24 @@ export async function checkEngines() {
     catch (e) { out[name] = { ok: false, error: e.message }; }
   }
   return out;
+}
+
+// Experimental private text-only Claude subscription adapter. Deliberately never
+// call askViaCli: its fallback can disclose a private prompt to another provider.
+export async function runPrivateClaude({system,prompt,history=[]}) {
+  if(process.env.HUB_PRIVATE_CLAUDE_CLI !== '1') throw new Error('Private Claude CLI disabled');
+  const cwd=fs.mkdtempSync(path.join(os.tmpdir(),'hub-private-'));
+  const env=Object.fromEntries(['HOME','USER','LOGNAME','PATH','TMPDIR','SystemRoot','LANG'].filter(k=>process.env[k]).map(k=>[k,process.env[k]]));
+  env.PATH=[env.PATH,...EXTRA_DIRS].filter(Boolean).join(path.delimiter);
+  try {
+    // Fail closed on older installations; help runs no agent job.
+    const help=await exec(CLAUDE_BIN,['--help'],'',10000,cwd,env);
+    const required=['--safe-mode','--restricted','--no-session-persistence','--strict-mcp-config','--disable-slash-commands','--no-chrome','--tools'];
+    if(help.code!==0||required.some(flag=>!help.out.includes(flag)))throw new Error('Private Claude CLI flags unavailable');
+    const args=['-p','--output-format','json',...required,'','--system-prompt',system];
+    const r=await slot(()=>exec(CLAUDE_BIN,args,flatten(history,prompt),TIMEOUT_MS,cwd,env));
+    let result;try{result=JSON.parse(r.out);}catch{throw new Error('Private Claude CLI failed');}
+    if(r.code!==0||result.is_error||typeof result.result!=='string')throw new Error('Private Claude CLI failed');
+    return result.result;
+  } finally {fs.rmSync(cwd,{recursive:true,force:true});}
 }

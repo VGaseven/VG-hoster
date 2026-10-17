@@ -15,7 +15,7 @@ Based on `81cc63247c070d737bf0bb63b3553f2aef9b6129`, including the remember-devi
 
 ## Deliberate integration gaps — do not call these complete
 
-Private messages default to **storage only**. An explicit checkbox can request a private text reply when the existing API-mode provider is configured. The API path supplies only that project/agent DM history, bypasses team context, memories, activity, routing and notifications, and never falls back to another provider. Status persists as working/completed/failed/interrupted. Mocked Anthropic end-to-end proof passes; no live API calls were made. Subscription-mode CLI adapters remain unavailable for private replies because their isolation/fallback contract has not been established. No native Claude/Codex session is created or awakened. Enabling new credentials or a paid API mode is a separate approval, not part of this implementation. The existing shared MCP credential does not provide a strong per-agent identity boundary; adding connector DM reads needs a separate identity design.
+Private messages default to **storage only**. An explicit checkbox can request a private text reply when the existing API-mode provider is configured. The API path supplies only that project/agent DM history, bypasses team context, memories, activity, routing and notifications, and never falls back to another provider. Status persists as working/completed/failed/interrupted. Mocked Anthropic end-to-end proof passes; no live API calls were made. A Claude-only experimental subscription adapter is implemented behind the off-by-default HUB_PRIVATE_CLAUDE_CLI flag, with tools/customizations disabled and no fallback; mocked HTTP-to-CLI-to-DM tests pass. Codex subscription replies remain unavailable because read-only does not prevent unrelated file reads. Neither adapter has been live-tested. No native Claude/Codex session is created or awakened. Enabling new credentials or a paid API mode is a separate approval, not part of this implementation. The existing shared MCP credential does not provide a strong per-agent identity boundary; adding connector DM reads needs a separate identity design.
 
 Native application chats are not automatically imported. The sessions view lists explicitly registered Bridge sessions only. Its registration API requires source/title/id; optional URLs are checked for supported syntax, not remotely proven by the server. The local preview contains the actual verified current Codex task URL and labels its status as a snapshot. No fabricated percentages or implied live presence.
 
@@ -27,7 +27,7 @@ General classification is a conservative local heuristic, not an AI classifier. 
 
 `node scripts/preview-hub.mjs` starts http://127.0.0.1:4317/#project=default using `.preview/review.db`. It binds loopback, starts no scheduler/Telegram, inherits no application credentials, and blocks external-action mutations. Group messages in preview are stored without dispatch. The seed is clearly labelled demonstration data. Do not use this mode for production.
 
-- `npm test`: 31 passed, including cookie authentication, regression coverage, private isolation, no mirror/dispatch, invalid scopes, session URL validation, same-project results and parent cycles.
+- `npm test`: 33 passed, including cookie authentication, regression coverage, private isolation, no mirror/dispatch, invalid scopes, session URL validation, same-project results and parent cycles.
 - `node test/hub-ui.mjs`: 38 browser checks passed, including warm-cache recovery, RTL/mobile geometry, composer bounds after notices, escaping, dedup/reconnect, private navigation, new-message scroll preservation, task filters and search.
 - Native Chrome inspection on the Mac performed against the loopback preview. Test screenshots contain fixtures only.
 - Content hashes updated; no dependencies or framework migration.
@@ -51,7 +51,10 @@ Do not merge or deploy this draft before Shahed reviews scope and the integratio
 - [x] Confirmed Codex task and Claude release reference choices, without silently associating a task or importing app histories.
 - [x] Optional API private reply path and persisted request status, default off; no shared-context/memory absorption or CLI fallback.
 - [x] Mock provider end-to-end reply isolation; no live provider traffic or costs.
-- [ ] Subscription/native-agent private reply adapter and native session creation: no verified isolation contract is available. API-mode replies are not native application conversations.
-- [ ] Automatic discovery of every native application session: no supported Bridge integration available; explicit registration remains required.
+- [x] Experimental Claude subscription text adapter implemented, default off and mock-tested; not live-verified.
+- [ ] Codex subscription private reply tool isolation and native session creation: see the precise transport/security findings in HUB_NATIVE_INTEGRATION_ASSESSMENT.md.
+- [ ] Native session discovery: supported CLI/protocol entry points found, but no scoped Bridge client connected; explicit registration remains required.
 - [ ] Figma exports: awaiting the separately required approval; existing assets continue to work.
 - [ ] Merge/deploy: awaiting scope review; draft remains unmerged.
+
+Detailed bounded assessment, supported interfaces, minimal next decisions and Kitchen reuse audit: [HUB_NATIVE_INTEGRATION_ASSESSMENT.md](HUB_NATIVE_INTEGRATION_ASSESSMENT.md).
