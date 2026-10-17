@@ -259,6 +259,7 @@ try {
     'document.querySelector("#projectName").textContent==="Economics notes"',
     "project navigation",
   );
+  await check('avatar("claude").tagName==="IMG" && avatar("chatgpt").tagName==="IMG" && avatar("claude-code").textContent==="CL" && avatar("codex").textContent==="CO" && avatar("local").textContent==="LO" && avatar("human").textContent==="HU" && avatar("<unknown>").textContent==="<U"', "distinct known agent icons and safe unknown initials");
   await check('document.querySelectorAll(".work-item").length===1 && !document.querySelector("#workStatus").textContent.includes("Private other project")', "task isolation and actual recorded state");
   await check('document.querySelector(".avatar").complete && document.querySelector(".avatar").naturalWidth>0', "Figma avatar loads locally");
   await check('document.querySelector(".message .avatar").getBoundingClientRect().width===32 && document.querySelector(".message .avatar").getBoundingClientRect().height===32', "Figma avatar geometry is 32 by 32");

@@ -341,7 +341,7 @@ async function route() {
 }
 const identity = (author) => {
   const key = String(author || "unknown").toLowerCase();
-  if (key === "claude" || key === "claude-code") return { key: "claude", asset: "claude", name: author };
+  if (key === "claude") return { key: "claude", asset: "claude", name: author };
   if (key === "chatgpt" || key === "dot") return { key: "chatgpt", asset: "chatgpt", name: author };
   return { key: key === "human" ? "human" : "other", name: author || "unknown" };
 };
