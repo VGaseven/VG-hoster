@@ -97,7 +97,7 @@ tool("debate", "Both AIs answer, critique each other, then a final combined answ
   { question: z.string(), rounds: z.number().min(0).max(3).default(1), project, judge: Agent.default("claude") }, (a, actor) => core.debate(a, actor));
 tool("review", "One AI drafts, the other reviews, the drafter revises.", { request: z.string(), drafter: Agent.default("chatgpt"), project },
   (a, actor) => core.review(a, actor));
-tool("team_chat", "Post to the shared group chat that the human, Bob, Claude, Codex and the Local AI all see. Write @claude, @codex, @local or @all in the text to wake them; they answer in the chat a little later.",
+tool("team_chat", "Post to the shared group chat that the human, Bob, Claude, Codex and the Local AI all see. Write @claude, @codex, @local or @all in the text to wake them; they answer in the chat a little later. Write @claude-code to have Claude Code build it on GitHub (a pull request link comes back; add repo:owner/name to pick the repository).",
   { text: z.string(), to: z.enum(["none", "claude", "codex", "chatgpt", "local", "both"]).default("none"), project },
   (a, actor) => core.teamChat(a, actor));
 tool("get_updates", "What's new in the group chat and tasks since you last checked: finished work and anything that needs the human. Bob: call this on a schedule and tell the human.",
@@ -159,7 +159,7 @@ for (const t of TOOLS) core.registerAction(t.name, t.fn);
 export const TOOL_NAMES = TOOLS.map((t) => t.name);
 
 const GROUP = `This bridge is the human's group chat with the whole team: the human, Bob (ChatGPT Dots), Claude (app and Claude Code), Codex and the Local AI. The human talks to different AIs in different apps and must never have to repeat themselves:
-- Wake a teammate by writing @codex, @claude, @local or @all in team_chat. Their answer appears in the chat a little later; check with read_team_chat or get_updates.
+- Wake a teammate by writing @codex, @claude, @local or @all in team_chat. Write @claude-code for real code/website work: it becomes a GitHub pull request the human can see. Their answer appears in the chat a little later; check with read_team_chat or get_updates.
 - When the human asks you for something, first post a one-line summary with team_chat (to "none"), e.g. "Human asked: add a FAQ page".
 - Before answering, check read_team_chat / get_briefing so you know what the human already told the others.
 - Post short progress and results with team_chat or update_task so the others (and the human, in the dashboard) can see your work.`;

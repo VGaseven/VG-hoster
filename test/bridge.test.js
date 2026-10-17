@@ -229,3 +229,16 @@ test("group chat: an @mention wakes that teammate, and Bob's get_updates shows w
   // A plain post with no @mention wakes nobody.
   assert.deepEqual((await mcp("claude", "team_chat", { text: "just a note", project: "group" })).json.answering, []);
 });
+
+test("group chat: @claude-code becomes a GitHub issue for Claude Code, and the link comes back to the chat", async () => {
+  const before = ghIssues.length;
+  const r = await api("chat", "POST", { text: "@claude-code add a FAQ section to the homepage", project: "build" });
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.answering, ["claude-code (GitHub)"], "no Codex reply when it's a build request");
+  await waitFor(() => ghIssues.length > before);
+  const issue = ghIssues.at(-1);
+  assert.equal(issue.title, "add a FAQ section to the homepage");
+  assert.match(issue.body, /^@claude add a FAQ section/);
+  const msg = await waitFor(async () => (await api("chat?project=build")).body.find((m) => /Claude Code is on it: https:\/\/github.com\/o\/r\/issues\/7/.test(m.text)));
+  assert.equal(msg.author, "claude-code");
+});

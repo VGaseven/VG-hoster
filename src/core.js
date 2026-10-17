@@ -438,10 +438,24 @@ export function postMessage({ text, project = "default" }, actor) {
 // Bob (ChatGPT Dots) and the chat apps can't be woken from here; they read new posts with get_updates.
 export const CHAT_AUTHOR = { claude: "claude", chatgpt: "codex", codex: "codex", local: "local" };
 const MENTIONS = { claude: ["claude"], codex: ["codex"], chatgpt: ["codex"], gpt: ["codex"], local: ["local"], all: ["claude", "codex"], everyone: ["claude", "codex"] };
+const BUILDER = new Set(["claude-code", "claudecode", "code", "github"]);
+const mentionWords = (text) => [...String(text).matchAll(/@([a-z][a-z-]*[a-z])/gi)].map((m) => m[1].toLowerCase());
 export function mentionsIn(text) {
   const found = new Set();
-  for (const m of String(text).matchAll(/@([a-z]+)/gi)) for (const a of MENTIONS[m[1].toLowerCase()] || []) found.add(a);
+  for (const w of mentionWords(text)) for (const a of MENTIONS[w] || []) found.add(a);
   return [...found];
+}
+// @claude-code (or @code) turns the message into real work on GitHub: Claude Code builds it on a branch and opens a pull request
+// you can open on github.com or the GitHub app. "repo:owner/name" in the message picks the repository.
+export const wantsBuilder = (text) => mentionWords(text).some((w) => BUILDER.has(w));
+function sendToBuilder({ text, project, actor }) {
+  const repo = String(text).match(/\brepo:\s*([\w.-]+\/[\w.-]+)/i)?.[1];
+  const title = clip(String(text).replace(/@[a-z][a-z-]*[a-z]/gi, "").replace(/\brepo:\s*\S+/i, "").replace(/\s+/g, " ").trim(), 90) || "Request from the team chat";
+  const t = createTask({ title, details: `From the team chat (${actor}):\n\n${text}`, assignee: "claude-code", project }, actor);
+  const job = dispatchTask({ id: t.id, repo }, actor)
+    .then((d) => postMessage({ text: `🛠️ Claude Code is on it: ${d.github_url}\nYou'll see a pull request there to check when it's done.`, project }, "claude-code"))
+    .catch((e) => postMessage({ text: `⚠️ Couldn't send "${title}" to Claude Code on GitHub: ${e.message}`, project }, "bridge"));
+  pendingReplies.add(job); job.finally(() => pendingReplies.delete(job));
 }
 const pendingReplies = new Set();
 // Wake the given agents to reply in the background, so the person or app posting never waits minutes for an answer.
@@ -464,10 +478,12 @@ export const waitForReplies = () => Promise.all([...pendingReplies]);
 export function teamChat({ text, to = "auto", project = "default" }, actor = "human") {
   if (to === "debate") { postMessage({ text, project }, actor); return debate({ question: text, project }, actor).then((r) => [postMessage({ text: r, project }, "team")]); }
   const posted = postMessage({ text, project }, actor);
+  const build = wantsBuilder(text);
+  if (build) { assertRunning(); sendToBuilder({ text, project, actor }); }
   let agents = to === "auto" || to === "none" ? mentionsIn(text) : to === "both" ? ["claude", "codex"] : [to === "chatgpt" ? "codex" : to];
-  if (to === "auto" && !agents.length && actor === "human") agents = ["codex"];
+  if (to === "auto" && !agents.length && actor === "human" && !build) agents = ["codex"];
   if (agents.length) { assertRunning(); wake(agents, { text, project, actor }); }
-  return { posted, answering: agents.map((a) => CHAT_AUTHOR[a]) };
+  return { posted, answering: [...agents.map((a) => CHAT_AUTHOR[a]), ...(build ? ["claude-code (GitHub)"] : [])] };
 }
 
 // What changed since this agent last looked. Bob calls this on a schedule and tells the human what matters.
@@ -478,7 +494,7 @@ export function getUpdates({ project } = {}, actor) {
   const last = all("SELECT MAX(id) id FROM messages")[0]?.id || since;
   setSetting(key, last);
   const others = rows.filter((m) => m.author !== actor);
-  const isDone = (m) => /^(✅|finished|done)/i.test(m.text) || /\bstatus: done\b/i.test(m.text);
+  const isDone = (m) => /^(✅|🛠️|finished|done)/i.test(m.text) || /\bstatus: done\b|pull request ready|finished on github/i.test(m.text);
   const needsYou = [
     ...pendingApprovals().map((p) => `Approval waiting: ${p.action} (requested by ${p.actor})`),
     ...all("SELECT title, project FROM tasks WHERE assignee = 'human' AND status != 'done'").map((t) => `Task for you: ${t.title} [${t.project}]`),
