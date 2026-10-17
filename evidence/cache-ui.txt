@@ -1,0 +1,27 @@
+PASS reproduces old cached JS with new HTML
+PASS private UI hidden before login
+PASS token remains absent from input and browser storage
+PASS project names rendered as text
+PASS search empty state
+PASS Arabic and language preference
+PASS 320px Arabic home has no horizontal overflow
+PASS versioned release renders translated bubbles despite cached legacy assets
+PASS project navigation
+PASS distinct known agent icons and safe unknown initials
+PASS task isolation and actual recorded state
+PASS Figma avatar loads locally
+PASS Figma avatar geometry is 32 by 32
+PASS mobile RTL conversation fits
+PASS polling deduplicates IDs and escapes message HTML
+PASS failed polling reports reconnecting
+PASS polling recovers automatically
+PASS keyboard tab navigation
+PASS HTML file preview cannot execute
+PASS 320px Arabic file view has no overflow
+PASS requested responder displayed
+PASS project chat isolation
+PASS project creation
+PASS locking clears private content
+PASS reload requires login again
+PASS auth never sent in cookies or URLs
+26 UI checks passed
