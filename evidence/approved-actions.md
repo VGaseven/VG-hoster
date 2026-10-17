@@ -23,3 +23,5 @@ Node 1:6's high-fidelity design context was translated into scoped native CSS to
 Final version-matched Codex proxy result: **blocked — initialization timed out after 10 seconds with zero response bytes**. No scoped list could be sent and no names/IDs were retrieved. This is a transport-handshake blocker, not proof of missing sessions or an authentication failure. Further work needs protocol/daemon diagnostics; no daemon restart or access change was attempted.
 
 Follow-up diagnosis: the probe sent newline JSON into a WebSocket byte tunnel. This client framing error explains the timeout; it is not evidence of daemon/auth failure. No corrected live probe or second Claude call was made. See docs/HUB_DIAGNOSTICS.md.
+
+Corrected transport follow-up: WebSocket Upgrade and RPC succeeded. Exact VG-hoster metadata listing returned 0 active and 0 archived sessions, with no IDs or source URLs to incorporate. See codex-scoped-discovery.json. This supersedes the transport-blocked result above without broadening folder scope or reading rollout files.

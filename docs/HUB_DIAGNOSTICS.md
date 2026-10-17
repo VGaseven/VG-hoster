@@ -23,3 +23,9 @@ Precise next step: use a standards-compliant WebSocket client against the existi
 ## Release recommendation
 
 The UI/workflow portion is useful as a staged release after Shahed's review: bounded chat, task rail, scoped private storage, search, decisions, correctable destination selection, metadata editors and Figma-derived styling are independently tested. Keep the experimental subscription flag unset and unverified reply integrations disabled. The UI now explicitly states that unavailable private conversations store messages only and do not contact native apps. Session registration remains explicit; do not describe it as automatic native discovery. This recommendation is not authorization to merge/deploy, and the feature set is not a completed native-agent integration.
+
+## Corrected discovery result
+
+The subsequently authorized transport correction succeeded over the existing Unix socket: HTTP 101 WebSocket Upgrade and accept-key validation, masked client frames, initialize/initialized, then `thread/list`. The exact cwd `/Users/shahed/VG-hoster` was queried with `useStateDbOnly:true`, all documented source kinds, pagination, and both archived=false and archived=true. Result: **0 active, 0 archived**. Evidence: `evidence/codex-scoped-discovery.json`.
+
+No returned IDs exist to validate or register, so no source links were generated. This result describes the connected daemon's metadata index for that exact folder; it does not claim no sessions exist in other worktrees, task workspace folders, other hosts, or unindexed histories. Scope was not broadened and rollout files were not scanned. The prior transport blocker is resolved. Automatic project/session association remains a separate product integration; the current folder-only lookup cannot infer relationships outside its approved scope. No Claude retry, agent turn, session creation, auth change or daemon restart occurred.
