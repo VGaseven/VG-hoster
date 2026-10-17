@@ -322,3 +322,33 @@ test("Telegram is the group chat: your message goes in, every teammate's reply c
   assert.ok(pushed, "Claude's reply was pushed to Telegram");
   assert.ok(tgSent.slice(sentBefore).some((m) => /In the group chat\. Answering: claude/.test(m.text || "")));
 });
+
+test("hub shell and classic dashboard coexist without exposing project data", async () => {
+  const home = await fetch(`${base}/`);
+  assert.equal(home.status, 200);
+  const html = await home.text();
+  assert.match(html, /Shahed’s Hub/);
+  assert.match(html, /id="loginForm"/);
+  assert.match(html, /src="\/hub.js"/);
+  const classic = await fetch(`${base}/classic`);
+  assert.equal(classic.status, 200);
+  assert.match(await classic.text(), /Team Bridge/);
+  assert.equal((await fetch(`${base}/hub.css`)).status, 200);
+  assert.equal((await fetch(`${base}/api/projects`)).status, 401);
+  assert.equal((await fetch(`${base}/api/files?project=hub-a`)).status, 401);
+  assert.equal((await fetch(`${base}/mcp`)).status, 405);
+});
+
+test("hub APIs isolate chat and versioned files by project", async () => {
+  await api('projects', 'POST', {name:'hub-a',description:'First project'});
+  await api('projects', 'POST', {name:'hub-b',description:'Second project'});
+  await api('chat','POST',{project:'hub-a',text:'Only project A',to:'none'});
+  await api('file','POST',{project:'hub-a',path:'notes.html',content:'<script>not executable</script>'});
+  await api('file','POST',{project:'hub-a',path:'notes.html',content:'Updated text'});
+  assert.ok((await api('chat?project=hub-a')).body.some(m=>m.text==='Only project A'));
+  assert.deepEqual((await api('chat?project=hub-b')).body,[]);
+  assert.deepEqual((await api('files?project=hub-b')).body,[]);
+  assert.equal((await api('files?project=hub-a')).body[0].version,2);
+  assert.equal((await api('file?project=hub-a&path=notes.html')).body.content,'Updated text');
+  assert.equal((await api('file?project=hub-b&path=notes.html')).status,400);
+});

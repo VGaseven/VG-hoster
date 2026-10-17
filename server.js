@@ -124,6 +124,7 @@ api.post("/notify", h((a) => notify(a.message)));
 api.post("/backup", h(() => backup()));
 app.use("/api", api);
 
+app.get("/classic", (_req, res) => res.sendFile(path.join(import.meta.dirname, "public/classic.html")));
 app.use(express.static(path.join(import.meta.dirname, "public")));
 
 // ---- Backups: daily snapshot, keep the last 7 ----

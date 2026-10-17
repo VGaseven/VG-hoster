@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team Bridge</title>
+<style>
+:root { --bg:#f7f7f5; --panel:#fff; --text:#1d1d1b; --muted:#6b6b66; --line:#e3e3de; --accent:#c96442; --claude:#c96442; --gpt:#10a37f; --human:#3b5bdb; --warn:#b7791f; }
+@media (prefers-color-scheme: dark) { :root { --bg:#191918; --panel:#232321; --text:#ecece8; --muted:#9a9a93; --line:#34342f; } }
+* { box-sizing:border-box; }
+body { margin:0; font:14px/1.5 system-ui, sans-serif; background:var(--bg); color:var(--text); }
+header { display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel); position:sticky; top:0; z-index:2; }
+header h1 { font-size:16px; margin:0 8px 0 0; }
+nav { display:flex; gap:4px; flex-wrap:wrap; }
+nav button { background:none; border:0; color:var(--muted); padding:6px 10px; border-radius:6px; cursor:pointer; font:inherit; }
+nav button.on { background:var(--bg); color:var(--text); font-weight:600; }
+.badge { background:var(--warn); color:#fff; border-radius:9px; padding:0 6px; font-size:11px; margin-left:4px; }
+main { max-width:1200px; margin:0 auto; padding:16px; }
+section { display:none; } section.on { display:block; }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:12px; }
+input, textarea, select { font:inherit; color:var(--text); background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:7px 9px; width:100%; }
+textarea { min-height:70px; resize:vertical; }
+button.b { font:inherit; background:var(--accent); color:#fff; border:0; border-radius:6px; padding:7px 12px; cursor:pointer; white-space:nowrap; }
+button.s { font:inherit; background:none; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:4px 9px; cursor:pointer; font-size:12px; }
+button:disabled { opacity:.5; }
+.row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; } .row > * { flex:1; min-width:120px; } .row > .b, .row > .s { flex:0; min-width:auto; }
+.muted { color:var(--muted); font-size:12px; }
+.msg { padding:10px 12px; border-radius:8px; margin-bottom:8px; border-left:3px solid var(--line); background:var(--panel); white-space:pre-wrap; word-wrap:break-word; }
+.msg.claude { border-color:var(--claude); } .msg.chatgpt { border-color:var(--gpt); } .msg.human { border-color:var(--human); } .msg.team { border-color:var(--warn); }
+.who { font-weight:600; font-size:12px; text-transform:capitalize; }
+#chatlog { max-height:60vh; overflow:auto; }
+.board { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; }
+.col { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px; min-height:120px; }
+.col h3 { margin:0 0 8px; font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+.col.drop { outline:2px dashed var(--accent); }
+.task { border:1px solid var(--line); border-radius:8px; padding:8px; margin-bottom:8px; background:var(--bg); cursor:grab; }
+.task .st { font-size:11px; color:var(--muted); }
+.task details { font-size:12px; white-space:pre-wrap; }
+table { width:100%; border-collapse:collapse; } td, th { text-align:left; padding:6px; border-bottom:1px solid var(--line); vertical-align:top; font-size:13px; }
+.tag { display:inline-block; font-size:11px; border:1px solid var(--line); border-radius:4px; padding:0 5px; margin-right:3px; }
+pre { white-space:pre-wrap; background:var(--bg); padding:10px; border-radius:6px; max-height:50vh; overflow:auto; }
+.grid2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px; }
+.msg.claude-code { border-color:var(--claude); }
+#pausedBar { display:none; background:#c92a2a; color:#fff; padding:8px 16px; font-weight:600; }
+#pausedBar.on { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+#pauseBtn { margin-left:auto; }
+.task a { color:var(--human); }
+@media (max-width: 600px) { main { padding:12px 16px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Team Bridge</h1>
+  <select id="project" style="width:auto"></select>
+  <nav id="nav"></nav>
+  <button class="s" id="pauseBtn" title="Kill switch: stop all AI work">⏸ Pause all</button>
+</header>
+<div id="pausedBar"><span id="pausedText">⛔ All AI work is paused.</span><button class="s" id="resumeBtn" style="background:#fff;color:#c92a2a">▶ Resume</button></div>
+<main>
+<section id="chat">
+  <div class="card"><div id="chatlog"></div>
+    <div class="row" style="margin-top:8px">
+      <textarea id="chatText" placeholder="Message the team… (Ctrl+Enter to send)"></textarea>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <select id="chatTo" style="max-width:220px"><option value="auto">@mentions (else Codex)</option><option value="codex">Codex</option><option value="claude">Claude</option><option value="local">Local AI (free, on your PC)</option><option value="both">Claude + Codex</option><option value="none">Just post</option><option value="debate">Debate → final answer</option></select>
+      <span class="muted" id="chatStatus"></span>
+      <button class="b" id="chatSend">Send</button>
+    </div>
+  </div>
+</section>
+
+<section id="tasks">
+  <div class="card row">
+    <input id="tTitle" placeholder="New task title">
+    <select id="tAssignee" style="max-width:140px"><option>anyone</option><option>claude</option><option>chatgpt</option><option>claude-code</option><option>human</option></select>
+    <button class="b" id="tAdd">Add</button>
+    <button class="s" id="tSplit" title="Have the lead break this into subtasks">Split with AI</button>
+  </div>
+  <div class="board" id="board"></div>
+</section>
+
+<section id="memory">
+  <div class="card row">
+    <input id="mText" placeholder="Remember…"><label class="muted" style="flex:0;white-space:nowrap"><input type="checkbox" id="mPin" style="width:auto"> core</label>
+    <button class="b" id="mAdd">Save</button>
+  </div>
+  <div class="card row"><input id="mQuery" placeholder="Search by meaning or keyword"><button class="s" id="mSearch">Search</button>
+    <a class="s" href="api/memories/export" style="flex:0;text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:6px;padding:4px 9px;font-size:12px">Export</a></div>
+  <div class="card"><table id="mTable"></table></div>
+  <div class="card"><b>Import</b> <span class="muted">Paste a ChatGPT memory list (one per line) or a JSON export.</span>
+    <textarea id="mImport"></textarea><div class="row" style="margin-top:8px"><input id="mSource" value="chatgpt-import" style="max-width:200px"><button class="b" id="mImportBtn">Import</button></div></div>
+</section>
+
+<section id="files">
+  <div class="grid2">
+    <div class="card"><b>Shared files</b><table id="fTable"></table></div>
+    <div class="card">
+      <input id="fPath" placeholder="path/to/file.md"><textarea id="fContent" style="min-height:300px;margin-top:8px;font-family:ui-monospace,monospace"></textarea>
+      <div class="row" style="margin-top:8px"><span class="muted" id="fInfo"></span><button class="s" id="fHist">History</button><button class="b" id="fSave">Save</button></div>
+      <pre id="fHistory" style="display:none"></pre>
+    </div>
+  </div>
+</section>
+
+<section id="skills">
+  <div class="card">
+    <div class="row"><input id="sName" placeholder="Skill name, e.g. launch-post"><input id="sDesc" placeholder="What it's for"></div>
+    <textarea id="sSteps" placeholder="Steps the AI must follow…" style="margin-top:8px"></textarea>
+    <div class="row" style="margin-top:8px"><span></span><button class="b" id="sSave">Save skill</button></div>
+  </div>
+  <div id="sList"></div>
+  <div class="card" id="sOutWrap" style="display:none"><b>Result</b><pre id="sOut"></pre></div>
+</section>
+
+<section id="schedules">
+  <div class="card">
+    <div class="row"><input id="cCron" placeholder="Cron, e.g. 0 9 * * 1-5" style="max-width:220px"><select id="cAgent" style="max-width:140px"><option>claude</option><option>chatgpt</option></select></div>
+    <textarea id="cPrompt" placeholder="What should it do each time? e.g. Summarize open tasks and suggest priorities." style="margin-top:8px"></textarea>
+    <div class="row" style="margin-top:8px"><span class="muted">Results post to team chat and your notifications.</span><button class="b" id="cAdd">Schedule</button></div>
+  </div>
+  <div class="card"><table id="cTable"></table></div>
+</section>
+
+<section id="approvals"><div class="card"><table id="aTable"></table></div></section>
+
+<section id="settings">
+  <div class="grid2">
+    <div class="card"><b>Your profile</b> <span class="muted">Both AIs always see this.</span>
+      <div id="pList"></div>
+      <div class="row" style="margin-top:8px"><input id="pKey" placeholder="e.g. tone" style="max-width:140px"><input id="pVal" placeholder="e.g. short and direct"><button class="b" id="pSave">Set</button></div>
+    </div>
+    <div class="card"><b>Roles</b>
+      <label class="muted">Claude</label><textarea id="rClaude"></textarea>
+      <label class="muted">ChatGPT (Dots)</label><textarea id="rGpt"></textarea>
+      <label class="muted">Claude Code</label><textarea id="rCode"></textarea>
+      <div class="row" style="margin-top:8px"><span></span><button class="b" id="rSave">Save roles</button></div>
+    </div>
+    <div class="card"><b>Project settings</b>
+      <input id="jName" placeholder="Project name"><input id="jDesc" placeholder="Description" style="margin-top:6px">
+      <div class="row" style="margin-top:6px"><select id="jLead"><option>anyone</option><option>claude</option><option>chatgpt</option><option>claude-code</option><option>human</option></select>
+        <input id="jTemp" placeholder="Temperature" type="number" step="0.1"><input id="jBudget" placeholder="Budget $" type="number"></div>
+      <div class="row" style="margin-top:6px"><input id="jClaude" placeholder="Claude model (default)"><input id="jGpt" placeholder="GPT model (default)"></div>
+      <div class="row" style="margin-top:8px"><span></span><button class="b" id="jSave">Save project</button></div>
+    </div>
+    <div class="card"><b>Connect your apps</b><div id="connect" class="muted"></div>
+      <div class="row" style="margin-top:8px"><input id="nMsg" placeholder="Test notification"><button class="s" id="nSend">Send</button><button class="s" id="bkp">Backup now</button></div></div>
+  </div>
+</section>
+
+<section id="activity">
+  <div class="card" id="usage"></div>
+  <div class="card"><table id="actTable"></table></div>
+</section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const tabs = ["chat", "tasks", "memory", "files", "skills", "schedules", "approvals", "settings", "activity"];
+let tab = "chat";
+const P = () => $("project").value || "default";
+
+function getToken() { return document.cookie.match(/(?:^|;\s*)bridge_token=([^;]+)/)?.[1]; }
+async function api(path, opts = {}) {
+  const r = await fetch("/api/" + path, { method: opts.method || "GET", headers: { "Content-Type": "application/json" }, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  if (r.status === 401) {
+    const t = prompt("Bridge token:");
+    if (t) { document.cookie = `bridge_token=${encodeURIComponent(t)}; path=/; max-age=31536000; SameSite=Strict`; return api(path, opts); }
+    throw new Error("unauthorized");
+  }
+  const j = await r.json();
+  if (!r.ok) { alert(j.error); throw new Error(j.error); }
+  return j;
+}
+const q = (o) => new URLSearchParams(o).toString();
+
+function renderNav(pending) {
+  $("nav").innerHTML = tabs.map((t) => `<button data-t="${t}" class="${t === tab ? "on" : ""}">${t[0].toUpperCase() + t.slice(1)}${t === "approvals" && pending ? `<span class="badge">${pending}</span>` : ""}</button>`).join("");
+}
+$("nav").onclick = (e) => { const t = e.target.closest("button")?.dataset.t; if (t) show(t); };
+function show(t) {
+  tab = t;
+  try { localStorage.setItem("tab", t); } catch {}
+  document.querySelectorAll("section").forEach((s) => s.classList.toggle("on", s.id === t));
+  refresh();
+}
+
+async function refresh() {
+  const o = await api("overview");
+  const cur = P();
+  $("project").innerHTML = o.projects.map((p) => `<option ${p.name === cur ? "selected" : ""}>${esc(p.name)}</option>`).join("") + `<option value="__new">+ New project…</option>`;
+  renderNav(o.pending);
+  $("pausedBar").classList.toggle("on", o.paused);
+  $("pausedText").textContent = `⛔ All AI work is paused (${o.paused_info || ""}).`;
+  $("pauseBtn").style.display = o.paused ? "none" : "";
+  ({ chat: loadChat, tasks: loadTasks, memory: loadMem, files: loadFiles, skills: loadSkills, schedules: loadSched, approvals: loadApprovals, settings: loadSettings, activity: loadActivity })[tab]();
+}
+$("pauseBtn").onclick = async () => { const reason = prompt("Pause all AI work. Reason (optional):"); if (reason !== null) { await api("pause", { method: "POST", body: { reason } }); refresh(); } };
+$("resumeBtn").onclick = async () => { await api("resume", { method: "POST" }); refresh(); };
+$("project").onchange = async () => {
+  if ($("project").value === "__new") {
+    const n = prompt("Project name:");
+    if (n) { await api("projects", { method: "POST", body: { name: n } }); $("project").innerHTML += `<option selected>${esc(n)}</option>`; $("project").value = n; }
+    else $("project").value = "default";
+  }
+  refresh();
+};
+
+// Chat
+async function loadChat() {
+  const msgs = await api("chat?" + q({ project: P() }));
+  $("chatlog").innerHTML = msgs.map((m) => `<div class="msg ${esc(m.author)}"><div class="who">${esc(m.author)} <span class="muted">${esc(m.at)}</span></div>${esc(m.text)}</div>`).join("") || `<p class="muted">Say hi to your team.</p>`;
+  $("chatlog").scrollTop = 1e9;
+}
+async function sendChat() {
+  const text = $("chatText").value.trim(); if (!text) return;
+  $("chatSend").disabled = true; $("chatStatus").textContent = "Thinking…";
+  $("chatlog").innerHTML += `<div class="msg human"><div class="who">human</div>${esc(text)}</div>`; $("chatlog").scrollTop = 1e9;
+  $("chatText").value = "";
+  try {
+    const r = await api("chat", { method: "POST", body: { text, to: $("chatTo").value, project: P() } });
+    const who = Array.isArray(r) ? [] : r.answering || [];
+    $("chatStatus").textContent = who.length ? `${who.join(" and ")} answering… (replies appear here)` : "";
+    // Check more often for a few minutes while someone is answering.
+    if (who.length) { let n = 0; const t = setInterval(() => { loadChat(); if (++n >= 60) { clearInterval(t); $("chatStatus").textContent = ""; } }, 5000); }
+  } finally { $("chatSend").disabled = false; loadChat(); }
+}
+$("chatSend").onclick = sendChat;
+$("chatText").onkeydown = (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) sendChat(); };
+
+// Tasks (kanban by assignee; drag to hand off)
+async function loadTasks() {
+  const ts = await api("tasks?" + q({ project: P() }));
+  const cols = ["human", "claude", "chatgpt", "claude-code", "anyone"];
+  const safeUrl = (u) => (/^https:\/\//.test(u || "") ? esc(u) : "#");
+  $("board").innerHTML = cols.map((c) => `<div class="col" data-a="${c}"><h3>${c}</h3>${ts.filter((t) => t.assignee === c).map((t) => `
+    <div class="task" draggable="true" data-id="${t.id}">
+      <div>${esc(t.title)}</div><div class="st">${t.status}${t.claimed_by && t.status === "in_progress" ? " · 🔒 " + esc(t.claimed_by) : ""}${t.parent ? " · sub of " + t.parent : ""} · ${t.id}</div>
+      ${t.github_url ? `<div class="st"><a href="${safeUrl(t.github_url)}" target="_blank" rel="noopener">GitHub issue #${esc(t.github_issue)}</a></div>` : ""}
+      ${t.details ? `<div class="muted">${esc(t.details)}</div>` : ""}
+      ${t.notes.length ? `<details><summary>${t.notes.length} notes</summary>${t.notes.map((n) => `<p><b>${esc(n.author)}:</b> ${esc(n.note)}</p>`).join("")}</details>` : ""}
+      <div class="row" style="margin-top:6px">
+        <select data-status="${t.id}">${["open", "in_progress", "done"].map((s) => `<option ${s === t.status ? "selected" : ""}>${s}</option>`).join("")}</select>
+        ${t.status !== "done" && c === "claude-code" && !t.github_url ? `<button class="s" data-dispatch="${t.id}">Send to Claude Code</button>` : ""}
+        ${t.status !== "done" && !["human", "claude-code"].includes(c) ? `<button class="s" data-work="${t.id}">Do it</button>` : ""}
+        <button class="s" data-note="${t.id}">Note</button><button class="s" data-del="${t.id}">✕</button>
+      </div></div>`).join("")}</div>`).join("");
+}
+$("tAdd").onclick = async () => { if (!$("tTitle").value) return; await api("tasks", { method: "POST", body: { title: $("tTitle").value, assignee: $("tAssignee").value, project: P() } }); $("tTitle").value = ""; loadTasks(); };
+$("tSplit").onclick = async (e) => { if (!$("tTitle").value) return alert("Type the goal first"); e.target.disabled = true; try { await api("split", { method: "POST", body: { goal: $("tTitle").value, project: P() } }); $("tTitle").value = ""; } finally { e.target.disabled = false; loadTasks(); } };
+$("board").onchange = async (e) => { const id = e.target.dataset.status; if (id) { await api("tasks/" + id, { method: "PATCH", body: { status: e.target.value } }); loadTasks(); } };
+$("board").onclick = async (e) => {
+  const d = e.target.dataset;
+  if (d.work) { e.target.disabled = true; e.target.textContent = "Working…"; try { await api(`tasks/${d.work}/work`, { method: "POST" }); } finally { loadTasks(); } }
+  if (d.dispatch) { e.target.disabled = true; e.target.textContent = "Sending…"; try { await api(`tasks/${d.dispatch}/dispatch`, { method: "POST" }); } finally { loadTasks(); } }
+  if (d.note) { const n = prompt("Note:"); if (n) { await api("tasks/" + d.note, { method: "PATCH", body: { note: n } }); loadTasks(); } }
+  if (d.del && confirm("Delete task?")) { await api("tasks/" + d.del, { method: "DELETE" }); loadTasks(); }
+};
+$("board").ondragstart = (e) => e.dataTransfer.setData("id", e.target.dataset.id);
+$("board").ondragover = (e) => { const c = e.target.closest(".col"); if (c) { e.preventDefault(); c.classList.add("drop"); } };
+$("board").ondragleave = (e) => e.target.closest(".col")?.classList.remove("drop");
+$("board").ondrop = async (e) => { const c = e.target.closest(".col"); if (!c) return; e.preventDefault();
+  await api("tasks/" + e.dataTransfer.getData("id"), { method: "PATCH", body: { assignee: c.dataset.a, note: `Handed to ${c.dataset.a} by human` } }); loadTasks(); };
+
+// Memory
+async function loadMem(query = "") {
+  const ms = await api("memories?" + q({ project: P(), query }));
+  $("mTable").innerHTML = `<tr><th>Memory</th><th>By</th><th></th></tr>` + ms.map((m) => `<tr>
+    <td>${m.pinned ? "📌 " : ""}${esc(m.text)}<br>${m.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}<span class="muted">${esc(m.project)} · ${esc(m.at)}</span></td>
+    <td>${esc(m.author)}</td>
+    <td style="white-space:nowrap"><button class="s" data-pin="${m.id}" data-v="${m.pinned ? 0 : 1}">${m.pinned ? "Unpin" : "Pin"}</button>
+    <button class="s" data-edit="${m.id}">Edit</button><button class="s" data-forget="${m.id}">✕</button></td></tr>`).join("");
+}
+$("mAdd").onclick = async () => { if (!$("mText").value) return; await api("memories", { method: "POST", body: { text: $("mText").value, pinned: $("mPin").checked, project: P() } }); $("mText").value = ""; loadMem(); };
+$("mSearch").onclick = () => loadMem($("mQuery").value);
+$("mQuery").onkeydown = (e) => { if (e.key === "Enter") loadMem($("mQuery").value); };
+$("mImportBtn").onclick = async () => { alert((await api("memories/import", { method: "POST", body: { data: $("mImport").value, source: $("mSource").value, project: P() } }))); $("mImport").value = ""; loadMem(); };
+$("mTable").onclick = async (e) => {
+  const d = e.target.dataset;
+  if (d.pin) await api("memories/" + d.pin, { method: "PATCH", body: { pinned: d.v === "1" } });
+  if (d.edit) { const t = prompt("Edit memory:", e.target.closest("tr").cells[0].firstChild.textContent.replace(/^📌 /, "")); if (t) await api("memories/" + d.edit, { method: "PATCH", body: { text: t } }); }
+  if (d.forget && confirm("Forget this?")) await api("memories/" + d.forget, { method: "DELETE" });
+  if (d.pin || d.edit || d.forget) loadMem($("mQuery").value);
+};
+
+// Files
+async function loadFiles() {
+  const fs = await api("files?" + q({ project: P() }));
+  $("fTable").innerHTML = fs.map((f) => `<tr><td><a href="#" data-open="${esc(f.path)}">${esc(f.path)}</a></td><td class="muted">v${f.version} · ${esc(f.author)} · ${f.bytes}b</td><td><button class="s" data-fdel="${esc(f.path)}">✕</button></td></tr>`).join("") || `<tr><td class="muted">No files yet.</td></tr>`;
+}
+$("fTable").onclick = async (e) => {
+  const d = e.target.dataset;
+  if (d.open) { e.preventDefault(); const f = await api("file?" + q({ path: d.open, project: P() })); $("fPath").value = f.path; $("fContent").value = f.content; $("fInfo").textContent = `v${f.version} by ${f.author}`; $("fHistory").style.display = "none"; }
+  if (d.fdel && confirm("Delete file? History is kept.")) { await api("file?" + q({ path: d.fdel, project: P() }), { method: "DELETE" }); loadFiles(); }
+};
+$("fSave").onclick = async () => { if (!$("fPath").value) return; const r = await api("file", { method: "POST", body: { path: $("fPath").value, content: $("fContent").value, project: P() } }); $("fInfo").textContent = `saved v${r.version}`; loadFiles(); };
+$("fHist").onclick = async () => { if (!$("fPath").value) return; const h = await api("file/history?" + q({ path: $("fPath").value, project: P() }));
+  $("fHistory").style.display = "block"; $("fHistory").textContent = h.map((v) => `v${v.version}  ${v.author}  ${v.at}  ${v.deleted ? "(deleted)" : v.bytes + "b"}`).join("\n"); };
+
+// Skills
+async function loadSkills() {
+  const ss = await api("skills");
+  $("sList").innerHTML = ss.map((s) => `<div class="card"><b>${esc(s.name)}</b> <span class="muted">${esc(s.description)} · by ${esc(s.author)}</span><pre>${esc(s.steps)}</pre>
+    <div class="row"><input placeholder="Input for this run" data-in="${esc(s.name)}"><select data-ag="${esc(s.name)}" style="max-width:120px"><option>claude</option><option>chatgpt</option></select>
+    <button class="b" data-run="${esc(s.name)}">Run</button><button class="s" data-sedit="${esc(s.name)}">Edit</button><button class="s" data-sdel="${esc(s.name)}">✕</button></div></div>`).join("") || `<p class="muted">No skills yet. Save a playbook above, or ask either AI to save one.</p>`;
+  $("sList")._skills = ss;
+}
+$("sSave").onclick = async () => { await api("skills", { method: "POST", body: { name: $("sName").value, description: $("sDesc").value, steps: $("sSteps").value } }); ["sName", "sDesc", "sSteps"].forEach((i) => ($(i).value = "")); loadSkills(); };
+$("sList").onclick = async (e) => {
+  const d = e.target.dataset;
+  if (d.run) { e.target.disabled = true; try { const r = await api(`skills/${encodeURIComponent(d.run)}/run`, { method: "POST", body: { input: document.querySelector(`[data-in="${d.run}"]`).value, agent: document.querySelector(`[data-ag="${d.run}"]`).value, project: P() } });
+    $("sOutWrap").style.display = "block"; $("sOut").textContent = r; } finally { e.target.disabled = false; } }
+  if (d.sedit) { const s = $("sList")._skills.find((x) => x.name === d.sedit); $("sName").value = s.name; $("sDesc").value = s.description; $("sSteps").value = s.steps; scrollTo(0, 0); }
+  if (d.sdel && confirm("Delete skill?")) { await api("skills/" + encodeURIComponent(d.sdel), { method: "DELETE" }); loadSkills(); }
+};
+
+// Schedules
+async function loadSched() {
+  const ss = await api("schedules");
+  $("cTable").innerHTML = `<tr><th>When</th><th>Who / what</th><th>Last result</th><th></th></tr>` + ss.map((s) => `<tr>
+    <td><code>${esc(s.cron)}</code><br><span class="muted">${s.enabled ? "active" : "paused"} · ${esc(s.project)}</span></td>
+    <td><b>${esc(s.agent)}</b>: ${esc(s.prompt)}</td><td class="muted">${esc(s.last_run || "never")}<br>${esc((s.last_result || "").slice(0, 300))}</td>
+    <td style="white-space:nowrap"><button class="s" data-crun="${s.id}">Run now</button> <button class="s" data-ctog="${s.id}" data-v="${s.enabled ? 0 : 1}">${s.enabled ? "Pause" : "Resume"}</button> <button class="s" data-cdel="${s.id}">✕</button></td></tr>`).join("");
+}
+$("cAdd").onclick = async () => { await api("schedules", { method: "POST", body: { cron: $("cCron").value, agent: $("cAgent").value, prompt: $("cPrompt").value, project: P() } }); $("cPrompt").value = ""; loadSched(); };
+$("cTable").onclick = async (e) => {
+  const d = e.target.dataset;
+  if (d.crun) { e.target.disabled = true; await api(`schedules/${d.crun}/run`, { method: "POST" }); }
+  if (d.ctog) await api("schedules/" + d.ctog, { method: "PATCH", body: { enabled: d.v === "1" } });
+  if (d.cdel && confirm("Delete schedule?")) await api("schedules/" + d.cdel, { method: "DELETE" });
+  if (d.crun || d.ctog || d.cdel) loadSched();
+};
+
+// Approvals
+async function loadApprovals() {
+  const as = await api("approvals");
+  $("aTable").innerHTML = `<tr><th>Who</th><th>Wants to</th><th>Status</th><th></th></tr>` + as.map((a) => `<tr><td>${esc(a.actor)}</td><td><b>${esc(a.action)}</b> <code>${esc(a.args)}</code></td>
+    <td>${esc(a.status)}${a.result ? `<br><span class="muted">${esc(a.result)}</span>` : ""}</td>
+    <td>${a.status === "pending" ? `<button class="b" data-ok="${a.id}">Approve</button> <button class="s" data-no="${a.id}">Reject</button>` : ""}</td></tr>`).join("");
+}
+$("aTable").onclick = async (e) => { const d = e.target.dataset; if (d.ok || d.no) { await api("approvals/" + (d.ok || d.no), { method: "POST", body: { approve: !!d.ok } }); refresh(); } };
+
+// Settings
+async function loadSettings() {
+  const { profile, roles } = await api("profile");
+  $("pList").innerHTML = `<table>${Object.entries(profile).map(([k, v]) => `<tr><td><b>${esc(k)}</b></td><td>${esc(v)}</td><td><button class="s" data-pdel="${esc(k)}">✕</button></td></tr>`).join("")}</table>` ||
+    "";
+  if (!Object.keys(profile).length) $("pList").innerHTML = `<p class="muted">Try: name, goals, tone, language, expertise, dislikes.</p>`;
+  $("rClaude").value = roles.claude || ""; $("rGpt").value = roles.chatgpt || ""; $("rCode").value = roles["claude-code"] || "";
+  const p = (await api("projects")).find((x) => x.name === P()) || {};
+  $("jName").value = p.name || ""; $("jDesc").value = p.description || ""; $("jLead").value = p.lead || "anyone";
+  $("jTemp").value = p.temperature ?? ""; $("jBudget").value = p.budget_usd ?? ""; $("jClaude").value = p.claude_model || ""; $("jGpt").value = p.gpt_model || "";
+  const base = location.origin + location.pathname.replace(/\/$/, "") + "/mcp";
+  const tok = getToken() ? `&token=${getToken()}` : "";
+  const h = (await api("overview")).health, ok = (b) => (b ? "✓" : "✗");
+  $("connect").innerHTML = `ChatGPT (Dots) connector URL:<pre>${esc(base)}?agent=chatgpt${esc(tok)}</pre>Claude.ai connector URL:<pre>${esc(base)}?agent=claude${esc(tok)}</pre>
+    Claude Code:<pre>claude mcp add --transport http bridge "${esc(base)}?agent=claude-code${esc(tok)}"</pre>Keep these private — they contain your token.
+    <p>${h.engine === "subscription" ? `AI: your subscriptions (Claude Code ${esc(h.engines.claude)} · Codex ${esc(h.engines.codex)} · Local AI ${esc(h.engines.local)}) <button id="engCheck">Test them</button>` : `${ok(h.claude)} Claude API · ${ok(h.chatgpt)} OpenAI API`} · ${ok(h.github)} GitHub dispatch · ${ok(h.github_webhook)} GitHub webhook · ${ok(h.telegram)} Telegram · n8n: ${h.n8n.length ? esc(h.n8n.join(", ")) : "✗"}</p>
+    <p>GitHub webhook URL (Payload: application/json; events: Issues, Issue comments, Pull requests):</p><pre>${esc(location.origin + location.pathname.replace(/\/$/, ""))}/github/webhook</pre>`;
+  const ec = $("engCheck");
+  if (ec) ec.onclick = async () => {
+    ec.disabled = true; ec.textContent = "Testing…";
+    try { const r = await api("engines/check", { method: "POST" }); alert(Object.entries(r).map(([k, v]) => `${k}: ${v.ok ? "✓ works" : "✗ " + v.error}`).join("\n")); }
+    finally { ec.disabled = false; ec.textContent = "Test them"; }
+  };
+}
+$("pList").onclick = async (e) => { if (e.target.dataset.pdel) { await api("profile", { method: "POST", body: { key: e.target.dataset.pdel, value: "" } }); loadSettings(); } };
+$("pSave").onclick = async () => { await api("profile", { method: "POST", body: { key: $("pKey").value, value: $("pVal").value } }); $("pKey").value = $("pVal").value = ""; loadSettings(); };
+$("rSave").onclick = async () => { await api("roles", { method: "POST", body: { agent: "claude", role: $("rClaude").value } }); await api("roles", { method: "POST", body: { agent: "chatgpt", role: $("rGpt").value } });
+  await api("roles", { method: "POST", body: { agent: "claude-code", role: $("rCode").value } }); alert("Roles saved"); };
+$("jSave").onclick = async () => {
+  const num = (v) => (v === "" ? null : Number(v));
+  await api("projects", { method: "POST", body: { name: $("jName").value, description: $("jDesc").value, lead: $("jLead").value, temperature: num($("jTemp").value),
+    budget_usd: num($("jBudget").value), claude_model: $("jClaude").value || null, gpt_model: $("jGpt").value || null } });
+  refresh();
+};
+$("nSend").onclick = async () => alert(await api("notify", { method: "POST", body: { message: $("nMsg").value || "Test from Team Bridge" } }));
+$("bkp").onclick = async () => alert("Saved " + (await api("backup", { method: "POST" })).file);
+
+// Activity & usage
+async function loadActivity() {
+  const [acts, o] = await Promise.all([api("activity?limit=200"), api("overview")]);
+  const u = o.usage;
+  $("usage").innerHTML = `<b>Spend today:</b> $${u.today_usd.toFixed(4)} · ${o.health.engine === "subscription" ? "AI runs on your Claude and ChatGPT subscriptions: no API cost" : `Claude ${o.health.claude ? "✓ connected" : "✗ no key"} · ChatGPT ${o.health.chatgpt ? "✓ connected" : "✗ no key"}`}
+    <table>${u.by_model.map((m) => `<tr><td>${esc(m.model)}</td><td>${m.input_tokens} in / ${m.output_tokens} out</td><td>$${m.cost_usd.toFixed(4)}</td></tr>`).join("")}</table>`;
+  $("actTable").innerHTML = acts.map((a) => `<tr><td class="muted" style="white-space:nowrap">${esc(a.at)}</td><td><b>${esc(a.actor)}</b></td><td>${esc(a.action)}</td><td>${esc(a.detail)}</td></tr>`).join("");
+}
+
+try { tab = localStorage.getItem("tab") || "chat"; } catch {}
+show(tabs.includes(tab) ? tab : "chat");
+setInterval(() => { if (tab === "chat" && !$("chatSend").disabled) loadChat(); }, 15000);
+</script>
+</body>
+</html>
