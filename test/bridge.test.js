@@ -1,7 +1,7 @@
 // End-to-end tests: starts the real server against mock GitHub, Telegram and n8n endpoints. No API keys needed.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, execSync } from "node:child_process";
 import http from "node:http";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -52,11 +52,26 @@ before(async () => {
   mockUrl = `http://127.0.0.1:${mock.address().port}`;
 
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), "bridge-test-"));
+  // A pretend GitHub: a bare repo as "origin", and a clone that plays the bridge's own folder.
+  const sh = (cmd, cwd = tmp) => execSync(cmd, { cwd, stdio: "pipe" });
+  sh("git init -q --bare -b main origin.git");
+  sh(`git clone -q origin.git live && cd live && git config user.email t@t && git config user.name t && echo hi > README.md && git add . && git commit -qm init && git push -q origin main`);
+  // Fake Codex for building: writes a file in the folder it's given and leaves a summary.
+  const fake = path.join(tmp, "codex");
+  fs.writeFileSync(fake, `#!/usr/bin/env node
+const fs = require("fs"), path = require("path"); let input = "";
+process.stdin.on("data", (d) => (input += d)).on("end", () => {
+  const a = process.argv; const dir = a[a.indexOf("--cd") + 1];
+  fs.writeFileSync(path.join(dir, "faq.html"), "<h1>FAQ</h1>");
+  fs.writeFileSync(a[a.indexOf("-o") + 1], "Added faq.html with a FAQ heading.");
+});`);
+  fs.chmodSync(fake, 0o755);
   const port = 20000 + Math.floor(Math.random() * 20000);
   base = `http://127.0.0.1:${port}`;
   bridge = spawn(process.execPath, ["--no-warnings", "server.js"], {
     cwd: path.join(import.meta.dirname, ".."),
-    env: { PATH: process.env.PATH, AI_ENGINE: "api", ANTHROPIC_API_KEY: "x", ANTHROPIC_BASE_URL: `${mockUrl}/anth`, N8N_API_URL: `${mockUrl}/n8napi`, N8N_API_KEY: "k", PORT: String(port), BRIDGE_TOKEN: TOKEN, DB_FILE: path.join(tmp, "b.db"), TRUST_PROXY: "0",
+    env: { PATH: process.env.PATH, AI_ENGINE: "api", BRIDGE_DIR: path.join(tmp, "live"), WORK_DIR: path.join(tmp, "work"), CODEX_BIN: path.join(tmp, "codex"),
+      SELF_UPDATE_NO_RESTART: "1", HOME: tmp, ANTHROPIC_API_KEY: "x", ANTHROPIC_BASE_URL: `${mockUrl}/anth`, N8N_API_URL: `${mockUrl}/n8napi`, N8N_API_KEY: "k", PORT: String(port), BRIDGE_TOKEN: TOKEN, DB_FILE: path.join(tmp, "b.db"), TRUST_PROXY: "0",
       GITHUB_TOKEN: "gh", GITHUB_REPO: "o/r", GITHUB_API_URL: `${mockUrl}/gh`, GITHUB_WEBHOOK_SECRET: HOOK_SECRET,
       TELEGRAM_BOT_TOKEN: "T", TELEGRAM_CHAT_ID: CHAT, TELEGRAM_API_URL: `${mockUrl}/tg`,
       N8N_WORKFLOWS: JSON.stringify({ ping: { url: `${mockUrl}/n8n/hook`, description: "test hook" } }) },
@@ -276,4 +291,24 @@ test("one @claude: Claude decides between answering, building on GitHub and a cl
   const list = (await mcp("claude", "list_tasks", { project: "route" })).json;
   assert.ok((Array.isArray(list) ? list : list.tasks).some((t) => t.assignee === "cloud" && t.title === "Market research"));
   assert.ok(!(await chat()).some((m) => /^ROUTE:/.test(m.text)), "routing lines never show in the chat");
+});
+
+test("build_task: Codex builds in a private branch and the pull-request link comes back", async () => {
+  const t = (await mcp("chatgpt", "create_task", { title: "Add a FAQ page", project: "buildp" })).json;
+  const r = await mcp("claude", "build_task", { id: t.id });
+  assert.ok(!r.error, r.text);
+  const msg = await waitFor(async () => (await mcp("claude", "read_team_chat", { project: "buildp" })).json.find((m) => /✅ Codex finished "Add a FAQ page"/.test(m.text)), 15000, 300);
+  assert.match(msg.text, /compare\/main\.\.\.team\//);
+  assert.match(msg.text, /Added faq.html/);
+  const branches = execSync("git branch --list 'team/*'", { cwd: path.join(tmp, "origin.git") }).toString();
+  assert.match(branches, new RegExp(`team/${t.id}`));
+});
+
+test("self_update pulls new bridge code (restart switched off in tests)", async () => {
+  execSync(`git clone -q origin.git other && cd other && git config user.email t@t && git config user.name t && echo v2 >> README.md && git commit -qam v2 && git push -q origin main`, { cwd: tmp, stdio: "pipe" });
+  const r = await mcp("claude", "self_update");
+  assert.ok(!r.error, r.text);
+  assert.equal(r.json.updated, true);
+  assert.equal(r.json.restarting, false);
+  assert.equal((await mcp("claude", "self_update")).json.updated, false, "second time: already up to date");
 });

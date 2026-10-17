@@ -100,6 +100,10 @@ tool("review", "One AI drafts, the other reviews, the drafter revises.", { reque
 tool("team_chat", "Post to the shared group chat that the human, Bob, Claude, Codex and the Local AI all see. Write @claude, @codex, @local or @all in the text to wake them; they answer in the chat a little later. Write @claude-code to have Claude Code build it on GitHub (a pull request link comes back; add repo:owner/name to pick the repository). Write @cloud to have a Claude session open in the human's Claude app (about hourly).",
   { text: z.string(), to: z.enum(["none", "claude", "codex", "chatgpt", "local", "both"]).default("none"), project },
   (a, actor) => core.teamChat(a, actor));
+tool("build_task", "Have Codex (or Claude) build a task on Shahed's computer with permission to change files, in a private branch team/<id>. The pull-request link is posted to the team chat when done.",
+  { id: z.string(), agent: z.enum(["codex", "claude"]).default("codex") }, (a, actor) => core.buildTaskById(a, actor));
+tool("self_update", "Update Team Bridge to the newest code from GitHub and restart it. Use after new bridge code is pushed, so Shahed never has to do it by hand.",
+  {}, (a, actor) => core.updateBridge(a, actor));
 tool("get_updates", "What's new in the group chat and tasks since you last checked: finished work and anything that needs the human. Bob: call this on a schedule and tell the human.",
   { project: z.string().optional() }, (a, actor) => core.getUpdates(a, actor));
 tool("read_team_chat", "Read the shared team chat.", { project, limit: z.number().default(30) }, (a) => core.listMessages(a), { readOnly: true });

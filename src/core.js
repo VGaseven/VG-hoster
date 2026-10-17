@@ -2,7 +2,8 @@
 import { randomUUID } from "node:crypto";
 import { all, get, run, db } from "./db.js";
 import { ask, embed, spend, webSearch } from "./llm.js";
-import { runCodexCloud } from "./cli.js";
+import { runCodexCloud, buildWithFallback } from "./cli.js";
+import { prepareWorkspace, publishWorkspace, selfUpdate } from "./workspace.js";
 import { notify } from "./notify.js";
 import { safeFetchText } from "./safefetch.js";
 import { createIssue, githubReady, REPO_RE } from "./github.js";
@@ -45,7 +46,7 @@ export function resumeAll(_args, actor) {
 // The env lists add to the built-in ones, so tools added later are still covered even if an older .env sets these lists.
 const envSet = (name, builtIn) => new Set([...builtIn.split(","), ...(process.env[name] ?? "").split(",")].map((s) => s.trim()).filter(Boolean));
 const RED = envSet("REQUIRE_APPROVAL", "forget,delete_file,create_schedule,delete_task,trigger_workflow,n8n_run_webhook,n8n_delete_workflow");
-const YELLOW = envSet("NOTIFY_ACTIONS", "save_project,set_role,save_skill,import_memories,set_schedule_enabled,dispatch_task,n8n_save_workflow,n8n_set_active");
+const YELLOW = envSet("NOTIFY_ACTIONS", "build_task,self_update,save_project,set_role,save_skill,import_memories,set_schedule_enabled,dispatch_task,n8n_save_workflow,n8n_set_active");
 export const levelOf = (name) => (RED.has(name) ? "red" : YELLOW.has(name) ? "yellow" : "green");
 
 // Stops ChatGPT and Claude from ping-ponging forever.
@@ -489,13 +490,57 @@ export function parseRoute(reply) {
 }
 async function startCodexTask({ text, title, project, actor }) {
   const t = createTask({ title: title || clip(cleanText(text), 90), details: `From the team chat (${actor}):\n\n${text}`, assignee: "codex", project }, actor);
-  if (!process.env.CODEX_CLOUD_ENV) {
-    // No Codex Cloud environment yet: Codex does it on the PC/Mac and writes the result on the task.
-    return route({ ...t, status: "open" }, actor);
-  }
+  if (!process.env.CODEX_CLOUD_ENV) return buildTask({ task: t, agent: "codex", text }, actor);
   const r = await runCodexCloud({ prompt: `${cleanText(text)}\n\n(Task from Shahed's team chat, project "${project}". Shahed isn't a developer: keep explanations short and plain. Open a pull request for any code change; never merge.)` });
   updateTask({ id: t.id, note: `Opened in the Codex app: ${r.url || r.text}`, status: "in_progress" }, "codex");
   postMessage({ text: `🔵 Codex opened a task in your Codex app: ${r.url || r.text}`, project }, "codex");
+}
+// Codex (or Claude) builds on this computer in a private copy (branch team/<id>), then pushes it for Shahed to review.
+export async function buildTask({ task: t, agent = "codex", text }, actor) {
+  assertRunning();
+  const who = CHAT_AUTHOR[agent] || agent;
+  const repo = String(text || t.details).match(/\brepo:\s*([\w.-]+\/[\w.-]+)/i)?.[1];
+  claimTask({ id: t.id }, agent === "claude" ? "claude" : "codex", { override: true });
+  const ws = await prepareWorkspace({ id: t.id, repo });
+  postMessage({ text: `🔨 ${who} started building "${t.title}" in a private copy (branch ${ws.branch} of ${ws.repo}). I'll post the result here.`, project: t.project }, who);
+  const prompt = `You are working in a git repository folder on Shahed's computer, on branch ${ws.branch}.
+Task from Shahed's team chat (project "${t.project}"):
+${cleanText(text || t.details)}
+
+Do the work: read the relevant files (including any docs the task names), make the changes, run the project's tests if there are any, and commit with clear messages.
+Don't push and don't switch branches; the bridge pushes your branch for Shahed to review. Shahed isn't a developer.
+Finish with a short plain summary: what you changed, how to see it, and anything left to do.`;
+  try {
+    const r = await buildWithFallback(agent === "claude" ? "claude" : "codex", { prompt, cwd: ws.dir });
+    const pub = await publishWorkspace({ ...ws, title: t.title });
+    const name = r.engine === "claude" ? "Claude" : "Codex";
+    const msg = pub.changed
+      ? `✅ ${name} finished "${t.title}" (${pub.commits} commit${pub.commits > 1 ? "s" : ""}).\nReview and create the pull request: ${pub.url}\n\n${clip(r.text, 1500)}`
+      : `✅ ${name} finished "${t.title}" with no file changes.\n\n${clip(r.text, 1500)}`;
+    updateTask({ id: t.id, status: "done", note: msg }, agent === "claude" ? "claude" : "codex");
+    postMessage({ text: msg, project: t.project }, name.toLowerCase());
+    notify(msg.split("\n").slice(0, 2).join("\n"));
+    return getTask(t.id);
+  } catch (e) {
+    releaseClaim(t.id);
+    run("UPDATE tasks SET status = 'open' WHERE id = ?", t.id);
+    postMessage({ text: `⚠️ ${who} couldn't finish "${t.title}": ${e.message}`, project: t.project }, "bridge");
+    throw e;
+  }
+}
+// Build from a task id (for agents and the dashboard).
+export const buildTaskById = ({ id: tid, agent = "codex" }, actor) => {
+  const t = getTask(tid);
+  if (!t) throw new Error(`No task ${tid}`);
+  const job = buildTask({ task: t, agent, text: `${t.title}\n${t.details}` }, actor).catch(() => {});
+  pendingReplies.add(job); job.finally(() => pendingReplies.delete(job));
+  return { started: true, task: tid, note: "Building now; the result and pull-request link will appear in the team chat." };
+};
+export async function updateBridge(_a, actor) {
+  log(actor, "self_update");
+  const r = await selfUpdate();
+  if (r.updated) notify(`🔄 Team Bridge updated ${r.from} → ${r.to} by ${actor}${r.restarting ? ", restarting" : ""}.`);
+  return r;
 }
 const cleanText = (text) => String(text).replace(/@[a-z][a-z-]*[a-z]/gi, "").replace(/\s+/g, " ").trim();
 function wake(agents, { text, project, actor }) {

@@ -77,6 +77,8 @@ api.get("/overview", h(() => ({ health: { engine: ENGINE, engines: sub ? engineS
   paused: core.isPaused(), paused_info: core.getSetting("paused_info") })));
 api.get("/status", h((a) => core.teamStatus(a)));
 api.post("/engines/check", h(() => checkEngines()));
+api.post("/update", h((a) => core.updateBridge(a, H)));
+api.post("/tasks/:id/build", h((a) => core.buildTaskById(a, H)));
 api.post("/pause", h((a) => core.pauseAll(a, H)));
 api.post("/resume", h((a) => core.resumeAll(a, H)));
 api.get("/chat", h((a) => core.listMessages(a)));

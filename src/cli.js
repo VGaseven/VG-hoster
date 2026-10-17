@@ -52,10 +52,10 @@ async function slot(fn) {
   try { return await fn(); } finally { running--; waiting.shift()?.(); }
 }
 
-function exec({ cmd, pre }, args, input, timeoutMs = TIMEOUT_MS) {
+function exec({ cmd, pre }, args, input, timeoutMs = TIMEOUT_MS, cwd = os.tmpdir()) {
   const bin = path.basename(pre[0] || cmd);
   return new Promise((resolve, reject) => {
-    const child = spawn(cmd, [...pre, ...args], { env: cleanEnv(), cwd: os.tmpdir(), stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    const child = spawn(cmd, [...pre, ...args], { env: cleanEnv(), cwd, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
     let out = "", err = "";
     const timer = setTimeout(() => { child.kill("SIGTERM"); reject(new Error(`${bin} took longer than ${Math.round(timeoutMs / 1000)}s (is it signed in?)`)); }, timeoutMs);
     child.stdout.on("data", (d) => (out += d));
@@ -99,6 +99,40 @@ export async function runCodex({ system, prompt, history = [], model, timeoutMs 
     if (r.code !== 0 || !text) throw fail("Codex", r.err || r.out);
     return text;
   } finally { fs.rmSync(path.dirname(outFile), { recursive: true, force: true }); }
+}
+
+// ---- building: Codex or Claude Code with permission to change files, inside a private copy of a repo ----
+const BUILD_TIMEOUT_MS = Number(process.env.BUILD_TIMEOUT_MIN || 45) * 60_000;
+export async function buildIn({ engine, prompt, cwd }) {
+  if (engine === "codex") {
+    const outFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "codex-")), "last.txt");
+    const args = ["exec", "--ephemeral", "--ignore-user-config", "--sandbox", "workspace-write", "-c", "sandbox_workspace_write.network_access=true",
+      "--cd", cwd, "--color", "never", "-o", outFile, "-"];
+    try {
+      const r = await slot(() => exec(CODEX_BIN, args, prompt, BUILD_TIMEOUT_MS, cwd));
+      const text = fs.existsSync(outFile) ? fs.readFileSync(outFile, "utf8").trim() : "";
+      if (r.code !== 0 && !text) throw fail("Codex", r.err || r.out);
+      return text || "(no summary)";
+    } finally { fs.rmSync(path.dirname(outFile), { recursive: true, force: true }); }
+  }
+  const args = ["-p", "--output-format", "json", "--no-session-persistence", "--strict-mcp-config", "--permission-mode", "acceptEdits",
+    "--allowedTools", "Bash,Edit,Write,Read,Glob,Grep,WebFetch,WebSearch"];
+  const r = await slot(() => exec(CLAUDE_BIN, args, prompt, BUILD_TIMEOUT_MS, cwd));
+  let j = null;
+  try { j = JSON.parse(r.out); } catch { /* not JSON */ }
+  if (r.code !== 0 || !j || j.is_error) throw fail("Claude", j?.result || r.err || r.out);
+  return String(j.result ?? "");
+}
+// Build with the agent's engine; if its plan limit is hit, the other one takes over in the same copy.
+export async function buildWithFallback(agent, opts) {
+  const first = agent === "claude" ? "claude" : "codex", second = first === "claude" ? "codex" : "claude";
+  const order = isResting(first) && !isResting(second) ? [second, first] : [first, second];
+  let lastErr;
+  for (const engine of order) {
+    try { const text = await buildIn({ ...opts, engine }); delete resting[engine]; return { text, engine }; }
+    catch (e) { lastErr = e; if (!(e instanceof LimitError)) throw e; resting[engine] = Date.now() + COOLDOWN_MS; }
+  }
+  throw lastErr;
 }
 
 // ---- Codex Cloud: a task that shows up in Shahed's Codex app (chatgpt.com/codex) ----
