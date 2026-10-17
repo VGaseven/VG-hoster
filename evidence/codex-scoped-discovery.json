@@ -1,0 +1,14 @@
+{
+  "scope": "/Users/shahed/VG-hoster",
+  "status": "succeeded",
+  "transport": "WebSocket over existing Unix socket",
+  "fields": [
+    "id",
+    "name"
+  ],
+  "counts": {
+    "active": 0,
+    "archived": 0
+  },
+  "sessions": []
+}

@@ -6,6 +6,7 @@ import path from "node:path";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { buildMcp, AGENTS } from "./src/mcp.js";
 import * as core from "./src/core.js";
+import * as hub from "./src/hub.js";
 import * as sched from "./src/scheduler.js";
 import { db, DB_FILE } from "./src/db.js";
 import { anthropic, openai, ENGINE } from "./src/llm.js";
@@ -70,6 +71,7 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 
 // ---- MCP endpoint (stateless). Use ?agent=chatgpt, ?agent=claude or ?agent=claude-code on each connector URL. ----
 app.post("/mcp", auth, async (req, res) => {
+  if (process.env.HUB_PREVIEW === "1") return res.status(403).json({error:"MCP is disabled in the isolated review preview"});
   const actor = AGENTS.includes(req.query.agent) ? req.query.agent : "unknown-agent";
   const server = buildMcp(actor);
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
@@ -83,6 +85,12 @@ app.get("/mcp", (_req, res) => res.status(405).set("Allow", "POST").end());
 const api = express.Router();
 api.post("/logout", (req, res) => res.set("Set-Cookie", deviceCookie(req, "", 0)).json({ ok: true }));
 api.use(apiAuth);
+// Explicit local review mode: no external actions, group mentions cannot wake agents.
+if (process.env.HUB_PREVIEW === '1') api.use((req,res,next)=>{
+ if(req.method==='GET'||['/direct','/sessions','/results'].includes(req.path))return next();
+ if(req.path==='/chat')return res.json({posted:core.postMessage({text:String(req.body.text||''),project:req.body.project},'human'),answering:[]});
+ return res.status(403).json({error:'Review preview: external actions disabled'});
+});
 api.post("/login", (req, res) => {
   if (!TOKEN || req.body?.remember === false) return res.json({ ok: true, remembered: false });
   const exp = String(Date.now() + DEVICE_DAYS * 86_400_000);
@@ -101,6 +109,18 @@ api.post("/update", h((a) => core.updateBridge(a, H)));
 api.post("/tasks/:id/build", h((a) => core.buildTaskById(a, H)));
 api.post("/pause", h((a) => core.pauseAll(a, H)));
 api.post("/resume", h((a) => core.resumeAll(a, H)));
+api.get('/direct', h(hub.directMessages));
+api.get('/direct-status', h(hub.directStatus));
+api.post('/direct', h(hub.sendDirect));
+api.get('/sessions', h(hub.sessions));
+api.post('/sessions', h(hub.registerSession));
+api.get('/results', h(hub.results));
+api.post('/results', h(hub.setResult));
+api.get('/decisions', h(hub.decisions));
+api.get('/search', h(hub.search));
+api.get('/chat-message', h(hub.message));
+api.get('/children', h(hub.children));
+api.post('/project-parent', h(hub.setParent));
 api.get("/chat", h((a) => core.listMessages(a)));
 api.post("/chat", h((a) => core.teamChat(a, H)));
 api.get("/tasks", h((a) => core.listTasks(a)));
@@ -162,4 +182,4 @@ setInterval(() => { try { backup(); } catch (e) { console.error("backup failed",
 // TRIAL_START: a self-update test run of new code; it only has to answer /health, so it starts no background work.
 if (!process.env.TRIAL_START) sched.startScheduler();
 if (!process.env.TRIAL_START && startTelegram()) console.log("Telegram remote control on (/status, /approvals, /pause, /resume)");
-app.listen(PORT, () => console.log(`Bridge on http://localhost:${PORT}  (dashboard /, MCP /mcp)`));
+app.listen(PORT, process.env.HOST || "0.0.0.0", () => console.log(`Bridge on http://localhost:${PORT}  (dashboard /, MCP /mcp)`));

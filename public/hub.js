@@ -143,6 +143,7 @@ let token = "",
   poll = null,
   epoch = 0,
   waiting = [];
+let conversation = "group", firstChatRender = true, sessionRows = [], resultRows = [], decisionRows = {approvals:[],tasks:[]};
 let tasks = [], connection = "syncing", taskUnavailable = false;
 const colors = [
   "#ddd2fb",
@@ -162,6 +163,7 @@ const text = (tag, value, className) => {
 };
 function notice(key) {
   $("notice").textContent = key ? t(key) : "";
+  requestAnimationFrame(sizeChat);
 }
 function stopPoll() {
   clearTimeout(poll);
@@ -177,6 +179,9 @@ function hidePrivate() {
   files = [];
   selectedFile = null;
   waiting = [];
+  $("generalChat").hidden = true;
+  if($("generalDialog").open) $("generalDialog").close();
+  $("searchResults").replaceChildren(); $("sessionList").replaceChildren(); $("decisionList").replaceChildren();
   $("home").hidden = true;
   $("project").hidden = true;
   $("login").hidden = false;
@@ -238,7 +243,7 @@ function translate() {
     renderFiles();
     renderWaiting();
     renderWork();
-    renderConnection();
+    renderConnection();renderExtras();requestAnimationFrame(sizeChat);
   }
 }
 function renderCards() {
@@ -274,6 +279,7 @@ function renderCards() {
 async function loadHome() {
   projects = await api("projects");
   authenticated = true;
+  $("generalChat").hidden = false;
   $("login").hidden = true;
   $("lock").hidden = false;
   notice("");
@@ -290,9 +296,9 @@ async function route() {
   $("message").value = "";
   let name;
   try {
-    name = location.hash.startsWith("#project=")
-      ? decodeURIComponent(location.hash.slice(9))
-      : null;
+    const params = new URLSearchParams(location.hash.slice(1));
+    name = params.get("project");
+    conversation = ["claude","codex","chatgpt","claude-code","local","bridge"].includes(params.get("conversation")) ? params.get("conversation") : "group";
   } catch {
     name = null;
   }
@@ -309,6 +315,10 @@ async function route() {
   $("projectIcon").style.background =
     colors[projects.indexOf(current) % colors.length];
   messages = [];
+  firstChatRender = true;
+  sessionRows=[];resultRows=[];decisionRows={approvals:[],tasks:[]};
+  $("searchResults").replaceChildren();$("unifiedSearch").value="";renderExtras();
+  $("newMessages").hidden = true;
   tasks = [];
   taskUnavailable = false;
   connection = "syncing";
@@ -319,15 +329,22 @@ async function route() {
   renderFiles();
   renderWaiting();
   switchTab("chat");
+  $("myProjects").hidden = !["work","uni"].includes(current.name);
+  $("childProjects").hidden = true;
+  if(matchMedia("(max-width:600px)").matches && !$("workBody").hidden) $("toggleWork").click();
+  loadExtras(version);
   try {
     const project = current.name;
     const [m, f, work] = await Promise.all([
-      api("chat?" + new URLSearchParams({ project, limit: "100" })),
+      api(chatPath(project)),
       api("files?" + new URLSearchParams({ project })),
       api("tasks?" + new URLSearchParams({ project })).catch(() => null),
     ]);
     if (version !== epoch) return;
     messages = uniqueMessages(m);
+    const target=new URLSearchParams(location.hash.slice(1)).get('message');
+    if(target){const found=await api('chat-message?'+new URLSearchParams({project,agent:conversation,id:target}));if(version!==epoch)return;messages=uniqueMessages([...messages,found]).sort((a,b)=>a.id-b.id);}
+
     tasks = (work || []).filter(t => t.project === project);
     taskUnavailable = work === null;
     connection = "connected";
@@ -336,6 +353,7 @@ async function route() {
     files = f;
     renderMessages();
     renderFiles();
+    if(target)requestAnimationFrame(()=>{const row=$('message-'+target);row?.scrollIntoView({block:'nearest'});row?.setAttribute('tabindex','-1');row?.focus({preventScroll:true});});
     schedulePoll(version);
   } catch (e) {
     if (version === epoch) { notice(e.message); connection = "reconnecting"; renderConnection(); schedulePoll(version); }
@@ -363,6 +381,7 @@ function uniqueMessages(rows) {
   const seen = new Set();
   return rows.filter(m => {
     if (current && m.project && m.project !== current.name) return false;
+    if (conversation !== "group" && m.agent !== conversation) return false;
     if (m.id == null) return true;
     if (seen.has(String(m.id))) return false;
     seen.add(String(m.id)); return true;
@@ -370,14 +389,22 @@ function uniqueMessages(rows) {
 }
 function renderConnection() { $("connection").textContent = t(connection); }
 function renderWork() {
+  const opened=new Set([...document.querySelectorAll("#workStatus details[open]")].map(e=>e.closest("article").id+":"+e.querySelector("summary").textContent));
   const box = $("workStatus"); box.replaceChildren();
   if (taskUnavailable || !tasks.length) box.append(text("p", t(taskUnavailable ? "workUnavailable" : "noWork"), "work-hint"));
-  for (const task of tasks) {
+  for (const task of tasks.filter(task => $("workFilter").value === "all" || task.status === $("workFilter").value)) {
     const item = text("article", "", "work-item");
     item.append(text("span", task.id, "work-id"), text("p", task.title));
     const status = text("span", ["open", "in_progress", "done", "blocked"].includes(task.status) ? t(task.status === "open" ? "statusOpen" : task.status) : task.status, "work-badge");
     status.dataset.state = ["open", "in_progress", "done", "blocked"].includes(task.status) ? task.status : "unknown";
-    item.append(status, text("small", task.claimed_by || task.assignee || "")); box.append(item);
+    item.id = 'task-' + task.id;
+    item.append(status, text("small", task.claimed_by || task.assignee || ""),text('small',date(task.updated)));
+    if(task.details) item.append(text('p',task.details));
+    if(task.notes?.length) { const details=document.createElement('details'); details.append(text('summary',t('activity'))); for(const n of task.notes) details.append(text('p',n.author+': '+n.note)); item.append(details); }
+    const result=document.createElement('details'); result.append(text('summary',t('result')));
+    result.append(text('p',task.status==='done' ? (task.notes?.at(-1)?.note || t('noResult')) : t('notFinished')));
+    const saved=resultRows.find(r=>r.task_id===task.id);
+    if(saved){result.replaceChildren(text('summary',t('result')),text('p',saved.summary));for(const path of saved.files){const b=text('button',path);b.onclick=()=>{switchTab('files');openFile(path);};result.append(b);}if(saved.session?.source_url){const a=text('a',t('originalSession'));a.href=saved.session.source_url;a.rel='noreferrer';result.append(a);}else result.append(text('small',t('noSessionLink')));}else result.append(text('small',t('noSessionLink'))); const edit=text('button',t('editResult'));edit.onclick=()=>editMetadata('result',saved||{task_id:task.id});result.append(edit); item.append(result); box.append(item);for(const d of item.querySelectorAll("details"))d.open=opened.has(item.id+":"+d.querySelector("summary").textContent);
   }
 }
 function renderMessages() {
@@ -385,23 +412,32 @@ function renderMessages() {
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
   const oldScroll = box.scrollTop;
   box.replaceChildren();
-  if (!messages.length) box.append(text("p", t("noMessages"), "empty"));
-  const authors = [...new Set(messages.map(m => m.author))];
+  if (!messages.length) box.append(text("p", t(conversation==='group'?'noMessages':'noDirect'), "empty"));
+  document.querySelector('[data-i18n=together]').textContent=conversation==='group'?t('together'):conversation+' · '+t('privateConversation');
+  document.querySelector('#chatForm label').textContent=conversation==='group'?t('message'):t('privateConversation');
+  document.querySelector('#chatForm [data-i18n=mention]').textContent=conversation==='group'?t('mention'):t('directHelp');
+  const authors = ["group","claude","codex","chatgpt","claude-code","local","bridge"];
   $("participants").replaceChildren();
   $("participants").setAttribute("aria-label", t("participants"));
   for (const author of authors) {
-    const chip = text("span", "", "participant"); chip.append(avatar(author), text("bdi", author)); $("participants").append(chip);
+    const chip = text("button", "", "participant"); chip.type='button'; chip.setAttribute('aria-pressed',String(author===conversation)); chip.append(avatar(author), text("bdi", author==='group'?t('group'):author)); chip.onclick=()=>{location.hash=new URLSearchParams({project:current.name,conversation:author}).toString();}; $("participants").append(chip);
   }
+  $("scopeNote").textContent = conversation === "group" ? t("groupNote") : t("privateNote");
   for (const m of messages) {
     const row = text("article", "", "message");
+    row.id = "message-"+m.id;
     row.dataset.author = identity(m.author).key;
     const content = text("div", "", "message-content");
     const header = document.createElement("header");
     header.append(text("bdi", m.author), text("time", date(m.at)));
     const bubble = text("p", m.text, "bubble"); bubble.dir = "auto";
-    content.append(header, bubble); row.append(avatar(m.author), content); box.append(row);
+    content.append(header);
+    if(m.author==='bridge'||/^(📋|📝|🛠️|☁️)/u.test(m.text)) { const detail=document.createElement('details');detail.append(text('summary',t('activity')),bubble);content.append(detail); } else content.append(bubble);
+    row.append(avatar(m.author), content); box.append(row);
   }
-  box.scrollTop = atBottom ? box.scrollHeight : oldScroll;
+  box.scrollTop = firstChatRender || atBottom ? box.scrollHeight : oldScroll;
+  $("newMessages").hidden = firstChatRender || atBottom;
+  firstChatRender = false;
 }
 function renderWaiting() {
   $("answering").textContent = waiting.length
@@ -414,7 +450,7 @@ function schedulePoll(version) {
     const project = current.name;
     try {
       const [rows, work] = await Promise.all([
-        api("chat?" + new URLSearchParams({ project, limit: "100" })),
+        api(chatPath(project)),
         api("tasks?" + new URLSearchParams({ project })).catch(() => null),
       ]);
       if (version !== epoch) return;
@@ -422,6 +458,7 @@ function schedulePoll(version) {
       if (JSON.stringify(next) !== JSON.stringify(messages)) { messages = next; renderMessages(); }
       tasks = (work || []).filter(t => t.project === project);
       taskUnavailable = work === null; renderWork();
+      loadExtras(version);
       connection = "connected"; renderConnection();
       schedulePoll(version);
     } catch (e) {
@@ -463,31 +500,19 @@ async function openFile(path) {
 }
 function switchTab(name) {
   tab = name;
-  for (const item of ["chat", "files"]) {
+  requestAnimationFrame(sizeChat);
+  for (const item of ["chat", "files", "sessions", "decisions", "search"]) {
     const active = item === name;
     $(item + "Panel").hidden = !active;
     $(item + "Tab").setAttribute("aria-selected", String(active));
     $(item + "Tab").tabIndex = active ? 0 : -1;
   }
 }
-for (const name of ["chat", "files"]) {
-  $(name + "Tab").onclick = () => switchTab(name);
-  $(name + "Tab").onkeydown = (e) => {
-    if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
-      e.preventDefault();
-      switchTab(
-        e.key === "Home"
-          ? "chat"
-          : e.key === "End"
-            ? "files"
-            : tab === "chat"
-              ? "files"
-              : "chat",
-      );
-      $(tab + "Tab").focus();
-    }
-  };
+for (const name of ['sessions','decisions','search']) {
+ const button=text('button',t(name));button.id=name+'Tab';button.dataset.i18n=name;button.setAttribute('role','tab');button.setAttribute('aria-controls',name+'Panel');button.setAttribute('aria-selected','false');button.tabIndex=-1;document.querySelector('.tabs').append(button);
 }
+const tabNames=['chat','files','sessions','decisions','search'];
+for(const name of tabNames) { $(name+'Tab').onclick=()=>switchTab(name); $(name+'Tab').onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();let i=tabNames.indexOf(tab);i=e.key==='Home'?0:e.key==='End'?4:(i+(e.key==='ArrowRight'?1:4))%5;switchTab(tabNames[i]);$(tab+'Tab').focus();}}; }
 $("language").onclick = () => {
   lang = lang === "en" ? "ar" : "en";
   try {
@@ -525,6 +550,7 @@ $("loginForm").onsubmit = async (e) => {
 };
 $("newProject").onclick = () => {
   $("projectForm").reset();
+  for(const o of $("newParent").options)o.disabled=!!o.value&&!projects.some(p=>p.name===o.value);
   $("projectError").textContent = "";
   $("projectDialog").showModal();
 };
@@ -546,6 +572,7 @@ $("projectForm").onsubmit = async (e) => {
         description: $("newDescription").value.trim(),
       }),
     });
+    if($("newParent").value) await api("project-parent",{method:"POST",body:JSON.stringify({project:name,parent:$("newParent").value})});
     projects = await api("projects");
     $("projectDialog").close();
     renderCards();
@@ -564,16 +591,16 @@ $("chatForm").onsubmit = async (e) => {
     project = current.name;
   $("send").disabled = true;
   try {
-    const result = await api("chat", {
+    const result = await api(conversation === "group" ? "chat" : "direct", {
       method: "POST",
-      body: JSON.stringify({ project, text: value, to: "none" }),
+      body: JSON.stringify({ project, text: value, to: "none", agent: conversation, ...(conversation!=="group"?{reply:!!$("requestPrivateReply")?.checked}:{}) }),
     });
     if (version !== epoch) return;
     $("message").value = "";
     waiting = result.answering || [];
     renderWaiting();
     const next = await api(
-      "chat?" + new URLSearchParams({ project, limit: "100" }),
+      chatPath(project),
     );
     if (version !== epoch) return;
     messages = uniqueMessages(next);
@@ -617,6 +644,7 @@ window.addEventListener("pagehide", () => {
   token = "";
   hidePrivate();
 });
+setupOverhaul();
 translate();
 notice("loading");
 loadHome().catch((e) => {
@@ -625,3 +653,91 @@ loadHome().catch((e) => {
   }
   notice(e.message === "invalid" ? "" : e.message);
 });
+function chatPath(project) {return (conversation==='group'?'chat':'direct')+'?'+new URLSearchParams({project,agent:conversation,limit:'200'});}
+async function loadExtras(version) {
+ const project=current?.name;if(!project)return;
+ const results=await Promise.allSettled(['sessions','decisions','results'].map(p=>api(p+'?'+new URLSearchParams({project}))));
+ if(version!==epoch)return;
+ sessionRows=results[0].status==='fulfilled'?results[0].value:null;
+ decisionRows=results[1].status==='fulfilled'?results[1].value:null;
+ resultRows=results[2].status==='fulfilled'?results[2].value:[];
+ renderExtras();renderWork();await refreshPrivateStatus(version);
+}
+function renderExtras() {
+ const sessions=$('sessionList');sessions.replaceChildren();const add=text('button',t('addSession'));add.onclick=()=>editMetadata('session',{});sessions.append(add);
+ if(!sessionRows?.length)sessions.append(text('p',t(sessionRows?'noSessions':'error')));
+ for(const s of sessionRows||[]) {const item=text('article','','work-item');item.id='session-'+s.id;item.append(text('h3',s.title),text('p',s.summary),text('p',s.status),text('small',date(s.updated)));if(s.source_url){const link=text('a',t('originalSession'));link.href=s.source_url;link.rel='noreferrer';item.append(link);}else item.append(text('p',t('noSessionLink')));const edit=text('button',t('editMetadata'));edit.onclick=()=>editMetadata('session',s);item.append(edit);sessions.append(item);}
+ const decisions=$('decisionList');decisions.replaceChildren();
+ if(!decisionRows){decisions.append(text('p',t('error')));return;}
+ if(!decisionRows.approvals.length&&!decisionRows.tasks.length)decisions.append(text('p',t('noDecisions')));
+ for(const a of decisionRows.approvals){const item=text('article','','decision');item.append(text('h3',a.action),text('p',a.actor),text('pre',a.args));for(const approve of [true,false]){const b=text('button',t(approve?'approve':'reject'));b.onclick=async()=>{b.disabled=true;try{await api('approvals/'+encodeURIComponent(a.id),{method:'POST',body:JSON.stringify({approve})});await loadExtras(epoch);}catch{notice('error');b.disabled=false;}};item.append(b);}decisions.append(item);}
+ for(const task of decisionRows.tasks){const b=text('button',task.title+' · '+t(task.status==='blocked'?'blocked':'waitingUser'),'file-row');b.onclick=()=>{switchTab('chat');$('workFilter').value='all';renderWork();$('task-'+task.id)?.scrollIntoView({block:'nearest'});};decisions.append(b);}
+}
+function setupOverhaul(){
+ Object.assign(copy.en,{private_auth_required:'Sign-in is required; no retry was sent.',private_permission_denied:'Access was denied; no retry was sent.',private_rate_limited:'The provider reported a usage limit.',private_timeout:'The reply timed out.',private_unavailable:'The reply program is unavailable.',private_unsupported_cli:'The installed CLI lacks required options.',private_network_error:'The provider connection failed.',private_invalid_response:'The reply format could not be read.',private_provider_error:'The reply failed; no further detail was retained.'});
+ Object.assign(copy.ar,{private_auth_required:'يلزم تسجيل الدخول؛ لم تُعد المحاولة.',private_permission_denied:'رُفض الوصول؛ لم تُعد المحاولة.',private_rate_limited:'أبلغ المزوّد عن حدّ للاستخدام.',private_timeout:'انتهت مهلة انتظار الرد.',private_unavailable:'برنامج الرد غير متاح.',private_unsupported_cli:'نسخة البرنامج لا تدعم الخيارات المطلوبة.',private_network_error:'تعذّر الاتصال بالمزوّد.',private_invalid_response:'تعذّرت قراءة صيغة الرد.',private_provider_error:'تعذّر الرد؛ لم تُحفظ تفاصيل إضافية.'});
+
+ Object.assign(copy.en,{replySubscription:'Experimental Claude subscription reply · no tools or native app session; consumes plan allowance.',knownSessions:'Confirmed source references · choose to register',requestReply:'Request a private reply',replyUnavailable:'Private replies are disabled or unavailable here. Messages are stored only; no native app is contacted.',replyAvailable:'Private API text replies · may use the configured API budget. No native app session is created.',replyState:'Latest reply request'});
+ Object.assign(copy.ar,{replySubscription:'رد تجريبي باشتراك Claude · بلا أدوات أو جلسة تطبيق أصلية؛ يستهلك حصة الاشتراك.',knownSessions:'مراجع مصادر مؤكدة · اختاري للتسجيل',requestReply:'طلب رد خاص',replyUnavailable:'الرد الخاص معطّل أو غير متاح هنا. تُحفظ الرسائل فقط دون التواصل مع التطبيق الأصلي.',replyAvailable:'رد نصي خاص عبر API · قد يستخدم ميزانية API المضبوطة. لا تُنشأ جلسة داخل التطبيق الأصلي.',replyState:'آخر طلب رد'});
+
+ Object.assign(copy.en,{addSession:'Add session',editMetadata:'Edit session',editResult:'Edit result',saveMetadata:'Save',source:'Source',status:'Status',unlinked:'No task association',linkHelp:'Paste an actual original URL, or leave blank. URL format is checked; access and remote existence are not verified. Status is a manually recorded snapshot.',metadataError:'Could not save. Check the source URL and project items.',state_unknown:'Unknown',state_working:'Working',state_waiting_for_user:'Waiting for you',state_blocked:'Blocked',state_completed:'Completed'});
+ Object.assign(copy.ar,{addSession:'إضافة جلسة',editMetadata:'تعديل الجلسة',editResult:'تعديل النتيجة',saveMetadata:'حفظ',source:'المصدر',status:'الحالة',unlinked:'دون ربط بمهمة',linkHelp:'ألصقي الرابط الأصلي الفعلي أو اتركيه فارغًا. يُفحص تنسيق الرابط فقط، وليس وجود الجلسة أو صلاحية الوصول. الحالة لقطة مسجّلة يدويًا.',metadataError:'تعذّر الحفظ. تحققي من رابط المصدر وعناصر المشروع.',state_unknown:'غير معروفة',state_working:'يعمل',state_waiting_for_user:'بانتظارك',state_blocked:'متعطّل',state_completed:'مكتمل'});
+
+ Object.assign(copy.en,{workspace:'Workspace',topLevel:'Top level',privateConversation:'Private conversation',directHelp:'Private storage. Available reply options appear below.',noDirect:'No messages in this private conversation yet.',originalSession:'Original session',group:'Group',groupNote:'Shared with this project’s team.',privateNote:'Private conversation · messages stay out of the group and external notifications.',tasks:'Tasks',filter:'Filter',all:'All',compact:'Compact messages',newMessages:'New messages ↓',sessions:'Sessions',decisions:'Needs your decision',search:'Search',sessionNote:'Only registered sessions appear here. Native app chats are not imported automatically.',noSessions:'No linked sessions are registered for this project.',noSessionLink:'Original session link unavailable',noDecisions:'Nothing needs your decision here.',activity:'Technical activity · expand',result:'Result',noResult:'Marked complete; no result summary was attached.',notFinished:'No completed result yet.',generalChat:'✦ General chat',destination:'Destination project',routeNote:'Check the destination before sending. Private conversations currently store messages without waking an agent.',myProjects:'My projects',unifiedSearch:'Search this project and selected conversation',searchNote:'Tasks, files, registered sessions and messages in this conversation. Up to 100 matching items.',approve:'Approve operation',reject:'Reject',waitingUser:'Waiting for you',choose:'Choose a destination',uncertain:'Please choose the workspace and project. Nothing has been sent.',suggested:'Suggested destination — you can change it:',groupConfirm:'This message will be shared with the selected project’s team.',privateConfirm:'This message will be stored in the selected private conversation.'});
+ Object.assign(copy.ar,{workspace:'المساحة',topLevel:'المستوى الرئيسي',privateConversation:'محادثة خاصة',directHelp:'تُحفظ بشكل خاص. خيارات الرد المتاحة أدناه.',noDirect:'لا توجد رسائل في هذه المحادثة الخاصة بعد.',originalSession:'الجلسة الأصلية',group:'المجموعة',groupNote:'مشتركة مع فريق هذا المشروع.',privateNote:'محادثة خاصة · تبقى الرسائل خارج المجموعة والإشعارات الخارجية.',tasks:'المهام',filter:'تصفية',all:'الكل',compact:'رسائل مختصرة',newMessages:'رسائل جديدة ↓',sessions:'الجلسات',decisions:'يحتاج قرارك',search:'بحث',sessionNote:'تظهر الجلسات المسجّلة فقط. لا تُستورد محادثات التطبيقات تلقائيًا.',noSessions:'لا توجد جلسات مرتبطة مسجّلة لهذا المشروع.',noSessionLink:'رابط الجلسة الأصلية غير متاح',noDecisions:'لا يوجد قرار مطلوب هنا.',activity:'نشاط تقني · عرض التفاصيل',result:'النتيجة',noResult:'مكتملة في السجل؛ لم يُرفق ملخص للنتيجة.',notFinished:'لا توجد نتيجة مكتملة بعد.',generalChat:'✦ محادثة عامة',destination:'المشروع المستقبِل',routeNote:'راجعي الوجهة قبل الإرسال. المحادثة الخاصة تحفظ الرسائل حاليًا دون تشغيل الوكيل.',myProjects:'مشاريعي',unifiedSearch:'ابحثي في المشروع والمحادثة المحددة',searchNote:'المهام والملفات والجلسات المسجّلة ورسائل المحادثة. حتى ١٠٠ نتيجة مطابقة.',approve:'الموافقة على العملية',reject:'رفض',waitingUser:'بانتظارك',choose:'اختاري الوجهة',uncertain:'اختاري المساحة والمشروع. لم تُرسل أي رسالة.',suggested:'وجهة مقترحة — يمكنك تغييرها:',groupConfirm:'ستُشارك الرسالة مع فريق المشروع المحدد.',privateConfirm:'ستُحفظ الرسالة في المحادثة الخاصة المحددة.'});
+ $('toggleWork').onclick=()=>{const hidden=!$('workBody').hidden;$('workBody').hidden=hidden;$('toggleWork').setAttribute('aria-expanded',String(!hidden));document.querySelector('.chat-layout').classList.toggle('collapsed',hidden);};
+ $('workFilter').onchange=renderWork;
+ $('compact').onchange=()=>document.querySelector('#chatPanel').classList.toggle('compact',$('compact').checked);
+ $('newMessages').onclick=()=>{$('messages').scrollTop=$('messages').scrollHeight;$('newMessages').hidden=true;};
+ $('messages').onscroll=()=>{if($('messages').scrollHeight-$('messages').scrollTop-$('messages').clientHeight<40)$('newMessages').hidden=true;};
+ $('myProjects').onclick=async()=>{const version=epoch;try{const rows=await api('children?'+new URLSearchParams({project:current.name}));if(version!==epoch)return;const list=$('childProjects');list.replaceChildren();list.hidden=false;if(!rows.length)list.append(text('p',t('noProjects')));for(const p of rows){const b=text('button',p.name);b.onclick=()=>location.hash='project='+encodeURIComponent(p.name);list.append(b);}}catch{notice('error');}};
+ let searchVersion=0;
+ $('unifiedSearch').oninput=async()=>{const v=++searchVersion,version=epoch,q=$('unifiedSearch').value;const box=$('searchResults');box.replaceChildren();if(q.trim().length<2)return;try{const results=await api('search?'+new URLSearchParams({project:current.name,agent:conversation,q}));if(v!==searchVersion||version!==epoch)return;if(!results.length)box.append(text('p',t('noMatches')));for(const r of results){const b=text('button',r.kind+' · '+r.title,'file-row');b.onclick=()=>{if(r.kind==='file'){switchTab('files');openFile(r.id);}else if(r.kind==='message'){location.hash=new URLSearchParams({project:current.name,conversation,message:r.id}).toString();}else{switchTab(r.kind==='session'?'sessions':'chat');if(r.kind==='task'){$('workFilter').value='all';renderWork();}$(r.kind+'-'+r.id)?.scrollIntoView({block:'nearest'});}};box.append(b);}}catch{if(v===searchVersion)box.append(text('p',t('error')));}};
+ $('generalChat').onclick=()=>{$('generalForm').reset();$('generalError').textContent='';$('classification').textContent=t('uncertain');$('destination').replaceChildren();const empty=text('option',t('choose'));empty.value='';$('destination').append(empty);for(const p of projects){const o=text('option',p.name);o.value=p.name;$('destination').append(o);}$('generalDialog').showModal();};
+ $('closeGeneral').onclick=()=>$('generalDialog').close();
+ let manuallyChosen=false;
+ $('destination').onchange=()=>{manuallyChosen=true;};
+ $('generalText').oninput=()=>{if(manuallyChosen)return;const value=$('generalText').value.toLowerCase();const named=projects.filter(p=>!['uni','work','personal','default'].includes(p.name)&&value.includes(p.name.toLowerCase()));if(named.length===1){$('destination').value=named[0].name;$('classification').textContent=t('suggested')+' '+named[0].name;return;}const scopes=[['uni',/\b(university|course|exam|assignment)\b|جامعة|اختبار|واجب/],['work',/\b(work|client|meeting)\b|عمل|عميل|اجتماع/],['personal',/\b(family|health|personal)\b|عائلة|صحة|شخصي/],['default',/\b(hub|bridge)\b/]].filter(([p,re])=>re.test(value)&&projects.some(x=>x.name===p));$('destination').value=scopes.length===1?scopes[0][0]:'';$('classification').textContent=scopes.length===1?t('suggested')+' '+scopes[0][0]:t('uncertain');};
+ $('generalAgent').onchange=()=>{$('classification').textContent=t($('generalAgent').value==='group'?'groupConfirm':'privateConfirm');};
+ $('generalDialog').addEventListener('close',()=>{manuallyChosen=false;});
+ $('generalForm').onsubmit=async e=>{e.preventDefault();const project=$('destination').value,agent=$('generalAgent').value,value=$('generalText').value.trim();if(!project||!value)return;e.submitter.disabled=true;try{await api(agent==='group'?'chat':'direct',{method:'POST',body:JSON.stringify({project,agent,text:value,to:'none'})});$('generalDialog').close();location.hash=new URLSearchParams({project,conversation:agent}).toString();notice('sent');}catch{$('generalError').textContent=t('sendFailed');}finally{e.submitter.disabled=false;}};
+}
+
+function sizeChat(){if(!current||tab!=='chat')return;const panel=$('chatPanel');panel.style.height=Math.max(260,Math.min(640,window.innerHeight-panel.getBoundingClientRect().top-(innerWidth<761?72:22)))+'px';}
+window.addEventListener('resize',sizeChat);
+
+function editMetadata(kind, record) {
+ const project=current.name, dialog=document.createElement('dialog'), form=document.createElement('form');
+ dialog.append(form);form.append(text('h2',t(kind==='session'?'editMetadata':'editResult')));
+ const fields={};
+ function field(key,label,value,options){const id='metadata-'+key;const lab=text('label',label);lab.htmlFor=id;const input=document.createElement(options?'select':key==='summary'?'textarea':'input');input.id=id;input.name=key;if(options)for(const [value,title] of options){const o=text('option',title);o.value=value;input.append(o);}input.value=value||'';form.append(lab,input);fields[key]=input;return input;}
+ if(kind==='session'){
+  field('title',t('name'),record.title).required=true;
+  field('source',t('source'),record.source||'codex',[['codex','Codex'],['claude','Claude']]);
+  field('source_url',t('originalSession'),record.source_url);
+  if(project==='default'&&!record.id){const known=field('known',t('knownSessions'),'',[
+   ['',t('choose')],['codex://threads/01a149af-d095-7648-a9f5-4c2817a78021','Codex · Upgrade Hub workspace experience'],['https://claude.ai/code/session_018772VAxW2wNFY9g45HkBpz','Claude · remember-device release (81cc632)']]);known.onchange=()=>{if(!known.value)return;fields.source_url.value=known.value;fields.source.value=known.value.startsWith('codex:')?'codex':'claude';fields.title.value=known.selectedOptions[0].textContent;};}
+form.append(text('small',t('linkHelp')));
+  field('task_id',t('tasks'),record.task_id,[['',t('unlinked')],...tasks.map(x=>[x.id,x.title])]);
+  field('status',t('status'),record.status||'unknown',['unknown','working','waiting_for_user','blocked','completed'].map(x=>[x,t('state_'+x)]));
+ } else {
+  field('session_id',t('originalSession'),record.session_id,[['',t('noSessionLink')],...(sessionRows||[]).map(x=>[x.id,x.title])]);
+  const list=field('files',t('savedFiles'),'',files.map(x=>[x.path,x.path]));list.multiple=true;for(const o of list.options)o.selected=(record.files||[]).includes(o.value);
+ }
+ field('summary',t('description'),record.summary).required=kind==='result';
+ const error=text('p','');error.setAttribute('role','alert');const cancel=text('button',t('cancel'));cancel.type='button';cancel.onclick=()=>dialog.close();const save=text('button',t('saveMetadata'));save.type='submit';form.append(error,cancel,save);
+ form.onsubmit=async e=>{e.preventDefault();save.disabled=true;try{const payload={project,...Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,v.value.trim()]))};if(kind==='session')payload.id=record.id||crypto.randomUUID();else{payload.task_id=record.task_id;payload.files=[...fields.files.selectedOptions].map(o=>o.value);}await api(kind==='session'?'sessions':'results',{method:'POST',body:JSON.stringify(payload)});dialog.close();if(current?.name===project)await loadExtras(epoch);}catch{error.textContent=t('metadataError');}finally{save.disabled=false;}};
+ dialog.addEventListener('close',()=>dialog.remove());document.body.append(dialog);dialog.showModal();
+}
+
+async function refreshPrivateStatus(version){
+ let controls=$('privateReplyControls');if(!controls){controls=document.createElement('div');controls.id='privateReplyControls';$('chatForm').append(controls);}
+ if(conversation==='group'){controls.hidden=true;return;}controls.hidden=false;
+ const scope=conversation;
+ try{const state=await api('direct-status?'+new URLSearchParams({project:current.name,agent:scope}));if(version!==epoch||scope!==conversation)return;
+ const checked=$('requestPrivateReply')?.checked&&controls.dataset.scope===scope;controls.dataset.scope=scope;controls.replaceChildren();
+ const label=text('label',t('requestReply'));const check=document.createElement('input');check.type='checkbox';check.id='requestPrivateReply';check.disabled=!state.capability.available||state.request?.state==='working';check.checked=!!checked&&!check.disabled;label.prepend(check);controls.append(label,text('small',t(state.capability.available?(state.capability.provider==='claude-subscription-experimental'?'replySubscription':'replyAvailable'):'replyUnavailable')));
+ if(state.request)controls.append(text('small',t('replyState')+': '+state.request.state+' · '+date(state.request.updated)));
+ if(state.request?.state==='failed'){const key='private_'+state.request.error_category;controls.append(text('small',t(Object.hasOwn(copy.en,key)?key:'private_provider_error')));}
+ }catch{if(version===epoch){controls.replaceChildren(text('small',t('replyUnavailable')));}}
+}
