@@ -21,7 +21,17 @@ const fs = require("fs"); let input = ""; process.stdin.on("data", (d) => (input
 const state = path.join(dir, "state");
 fs.writeFileSync(state, "ok");
 Object.assign(process.env, { CLAUDE_BIN: claude, CODEX_BIN: codex, CLAUDE_STATE: state, ANTHROPIC_API_KEY: "secret", OPENAI_API_KEY: "secret" });
+import http from "node:http";
+// Fake Ollama for the local AI.
+const ollama = http.createServer((req, res) => { let b = ""; req.on("data", (d) => (b += d)).on("end", () => {
+  const j = JSON.parse(b); res.writeHead(200, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ message: { content: `<think>hmm</think>local says hi to ${j.messages.at(-1).content} with ${j.model}` } }));
+}); }).listen(0);
+await new Promise((r) => ollama.once("listening", r));
+process.env.OLLAMA_URL = `http://127.0.0.1:${ollama.address().port}`;
 const { askViaCli, engineStatus } = await import("../src/cli.js");
+import { after } from "node:test";
+after(() => ollama.close());
 
 test("each agent answers on its own subscription, with API keys hidden", async () => {
   const c = await askViaCli("claude", { system: "be nice", prompt: "hi" });
@@ -41,6 +51,17 @@ test("when Claude hits its plan limit, Codex answers and Claude rests", async ()
   fs.writeFileSync(state, "ok");
   const r2 = await askViaCli("claude", { prompt: "hi" });
   assert.equal(r2.engine, "codex");
+});
+
+test("the local AI answers its own jobs, and covers when both plans are resting", async () => {
+  process.env.LOCAL_MODEL = "tiny";
+  const r = await askViaCli("local", { prompt: "you" });
+  assert.equal(r.engine, "local"); assert.equal(r.text, "local says hi to you with tiny");
+  fs.writeFileSync(state, "limit");
+  // Claude is still resting from the earlier test; Codex is fine, so Codex answers first.
+  assert.equal((await askViaCli("claude", { prompt: "x" })).engine, "codex");
+  delete process.env.LOCAL_MODEL;
+  fs.writeFileSync(state, "ok");
 });
 
 test("Windows npm .cmd launchers are run through Node", async () => {

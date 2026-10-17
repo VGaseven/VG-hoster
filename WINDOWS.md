@@ -64,9 +64,20 @@ Check: `curl http://localhost:3000/health` → `{"ok":true}`.
 
 Nothing else changes: the Claude, ChatGPT and Bob connectors and the GitHub webhook all use the same addresses.
 
+## 7b. The free Local AI on the PC's graphics card
+A third teammate for small jobs (summaries, rewording, sorting). Free, no plan limits, nothing leaves the PC.
+1. `winget install -e --id Ollama.Ollama` (it starts by itself with Windows).
+2. Find the graphics card and its memory (VRAM): `nvidia-smi` for NVIDIA, otherwise
+   `Get-CimInstance Win32_VideoController | Select Name, AdapterRAM`.
+3. Pick the best current general model from https://ollama.com/library that fits: roughly 7–8B for 8 GB VRAM,
+   12–14B for 12–16 GB, around 30B for 24 GB or more. No dedicated GPU: a 3–4B model on the CPU.
+   `ollama pull <model>` and test it with `ollama run <model> "say hi"`.
+4. In `.env`: `LOCAL_MODEL=<model>` (and `OLLAMA_URL=http://127.0.0.1:11434` if it isn't the default). Restart the bridge.
+5. Tell Shahed which card he has and which model you chose, in one line.
+
 ## 8. Final check
 - `https://bridge.shahed.win/health` answers from the phone.
-- Dashboard → **Settings → Test both** shows `claude: ✓ works` and `codex: ✓ works`.
+- Dashboard → **Settings → Test them** shows `claude: ✓ works`, `codex: ✓ works` and `local: ✓ works`.
 - Post a message to Claude in team chat; the reply arrives with no API spend.
 
 Then tell Shahed in three lines: what works, what (if anything) he still needs to click, and that the Mac no longer needs to stay on.

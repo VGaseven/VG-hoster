@@ -27,7 +27,8 @@ By default (`AI_ENGINE=subscription`) every "ask Claude", "ask ChatGPT", debate,
 - **Sign in once** on that computer: `claude` → `/login` (choose your Claude account), and `codex login` → **Sign in with ChatGPT**.
 - **API keys are hidden** from Claude Code and Codex, so they can't bill the API by accident even if `.env` still has them.
 - **Automatic switch:** if one hits its plan limit, the other answers (the reply says so), and the tired one rests for `LIMIT_COOLDOWN_MIN`.
-- **Check it:** dashboard → Settings → **Test both**.
+- **Local AI (optional):** set `LOCAL_MODEL` to an Ollama model and a free AI on the computer's GPU joins as a third teammate (`ask_local`, team chat → Local AI). It also answers when both plans are resting.
+- **Check it:** dashboard → Settings → **Test them**.
 - Memory search uses keywords in this mode (meaning-based search needs the OpenAI API).
 - Set `AI_ENGINE=api` to go back to paying per message.
 

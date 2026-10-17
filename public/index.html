@@ -63,7 +63,7 @@ pre { white-space:pre-wrap; background:var(--bg); padding:10px; border-radius:6p
       <textarea id="chatText" placeholder="Message the team… (Ctrl+Enter to send)"></textarea>
     </div>
     <div class="row" style="margin-top:8px">
-      <select id="chatTo" style="max-width:220px"><option value="both">Both answer</option><option value="claude">Claude</option><option value="chatgpt">ChatGPT</option><option value="debate">Debate → final answer</option></select>
+      <select id="chatTo" style="max-width:220px"><option value="both">Both answer</option><option value="claude">Claude</option><option value="chatgpt">ChatGPT</option><option value="local">Local AI (free, on your PC)</option><option value="debate">Debate → final answer</option></select>
       <span class="muted" id="chatStatus"></span>
       <button class="b" id="chatSend">Send</button>
     </div>
@@ -350,13 +350,13 @@ async function loadSettings() {
   const h = (await api("overview")).health, ok = (b) => (b ? "✓" : "✗");
   $("connect").innerHTML = `ChatGPT (Dots) connector URL:<pre>${esc(base)}?agent=chatgpt${esc(tok)}</pre>Claude.ai connector URL:<pre>${esc(base)}?agent=claude${esc(tok)}</pre>
     Claude Code:<pre>claude mcp add --transport http bridge "${esc(base)}?agent=claude-code${esc(tok)}"</pre>Keep these private — they contain your token.
-    <p>${h.engine === "subscription" ? `AI: your subscriptions (Claude Code ${esc(h.engines.claude)} · Codex ${esc(h.engines.codex)}) <button id="engCheck">Test both</button>` : `${ok(h.claude)} Claude API · ${ok(h.chatgpt)} OpenAI API`} · ${ok(h.github)} GitHub dispatch · ${ok(h.github_webhook)} GitHub webhook · ${ok(h.telegram)} Telegram · n8n: ${h.n8n.length ? esc(h.n8n.join(", ")) : "✗"}</p>
+    <p>${h.engine === "subscription" ? `AI: your subscriptions (Claude Code ${esc(h.engines.claude)} · Codex ${esc(h.engines.codex)} · Local AI ${esc(h.engines.local)}) <button id="engCheck">Test them</button>` : `${ok(h.claude)} Claude API · ${ok(h.chatgpt)} OpenAI API`} · ${ok(h.github)} GitHub dispatch · ${ok(h.github_webhook)} GitHub webhook · ${ok(h.telegram)} Telegram · n8n: ${h.n8n.length ? esc(h.n8n.join(", ")) : "✗"}</p>
     <p>GitHub webhook URL (Payload: application/json; events: Issues, Issue comments, Pull requests):</p><pre>${esc(location.origin + location.pathname.replace(/\/$/, ""))}/github/webhook</pre>`;
   const ec = $("engCheck");
   if (ec) ec.onclick = async () => {
     ec.disabled = true; ec.textContent = "Testing…";
     try { const r = await api("engines/check", { method: "POST" }); alert(Object.entries(r).map(([k, v]) => `${k}: ${v.ok ? "✓ works" : "✗ " + v.error}`).join("\n")); }
-    finally { ec.disabled = false; ec.textContent = "Test both"; }
+    finally { ec.disabled = false; ec.textContent = "Test them"; }
   };
 }
 $("pList").onclick = async (e) => { if (e.target.dataset.pdel) { await api("profile", { method: "POST", body: { key: e.target.dataset.pdel, value: "" } }); loadSettings(); } };

@@ -37,6 +37,7 @@ function checkBudget(project) {
   if (p?.budget_usd && s.project_usd >= p.budget_usd) throw new Error(`Project budget of $${p.budget_usd} reached`);
 }
 
+const DISPLAY = { claude: "Claude", chatgpt: "ChatGPT", local: "the Local AI (a free model on Shahed's own PC)" };
 export function teamContext(agent, project = "default") {
   const other = agent === "claude" ? "ChatGPT" : "Claude";
   const profile = all("SELECT key, value FROM profile").map((r) => `- ${r.key}: ${r.value}`).join("\n") || "(not set)";
@@ -45,7 +46,7 @@ export function teamContext(agent, project = "default") {
   const pinned = all("SELECT text FROM memories WHERE pinned = 1 AND project IN (?, 'default')", project);
   const recent = all("SELECT id, author, text FROM memories WHERE pinned = 0 AND project = ? ORDER BY at DESC LIMIT 30", project);
   const tasks = all("SELECT id, title, assignee, status FROM tasks WHERE project = ? AND status != 'done' ORDER BY updated DESC LIMIT 20", project);
-  return `You are ${agent === "claude" ? "Claude" : "ChatGPT"}, working as an equal coworker alongside ${other} for a human, who is the boss.
+  return `You are ${DISPLAY[agent] || agent}, working as an equal coworker alongside ${other} for a human, who is the boss.
 Your role: ${roles[agent] || "general assistant"}
 ${other}'s role: ${roles[agent === "claude" ? "chatgpt" : "claude"] || "general assistant"}
 Claude Code's role: ${roles["claude-code"] || "engineer with repo access"} (give it code work by assigning tasks to "claude-code")
@@ -69,13 +70,15 @@ If you learn something worth keeping long-term, end your reply with lines like "
 export async function ask(agent, prompt, { project = "default", system, history = [] } = {}) {
   const proj = get("SELECT * FROM projects WHERE name = ?", project) || {};
   const sys = system || teamContext(agent, project);
+  if (agent === "local" && USE_API) throw new Error("The local AI only works with AI_ENGINE=subscription");
   if (!USE_API) {
     // Project gpt_model is an API model name, so Codex only takes CODEX_MODEL.
     const model = agent === "claude" ? proj.claude_model || process.env.CLAUDE_MODEL : process.env.CODEX_MODEL;
     const r = await askViaCli(agent, { system: sys, prompt, history, model });
     track(project, `${r.engine}-subscription`, 0, 0);
-    const name = r.engine === "claude" ? "Claude" : "Codex";
-    return r.switched ? `(${name} answered: the other one hit its plan limit.)\n\n${r.text}` : r.text;
+    const name = { claude: "Claude", codex: "Codex", local: "The local AI" }[r.engine];
+    const why = agent === "local" ? "the local AI isn't running" : "the plan limits were hit";
+    return r.switched ? `(${name} answered: ${why}.)\n\n${r.text}` : r.text;
   }
   checkBudget(project);
   if (agent === "claude") {

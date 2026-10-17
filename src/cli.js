@@ -101,16 +101,42 @@ export async function runCodex({ system, prompt, history = [], model, timeoutMs 
   } finally { fs.rmSync(path.dirname(outFile), { recursive: true, force: true }); }
 }
 
+// ---- a free AI on this computer's own GPU (Ollama) ----
+// Set LOCAL_MODEL (e.g. one you pulled with `ollama pull`) to turn it on. No plan limits; nothing leaves the computer.
+const OLLAMA_URL = (process.env.OLLAMA_URL || "http://127.0.0.1:11434").replace(/\/$/, "");
+export const localEnabled = () => !!process.env.LOCAL_MODEL;
+export async function runLocal({ system, prompt, history = [], timeoutMs = TIMEOUT_MS }) {
+  if (!localEnabled()) throw new Error("The local AI is off (set LOCAL_MODEL)");
+  const messages = [...(system ? [{ role: "system", content: system }] : []),
+    ...history.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: typeof m.content === "string" ? m.content : JSON.stringify(m.content) })),
+    { role: "user", content: prompt }];
+  let r;
+  try {
+    r = await fetch(`${OLLAMA_URL}/api/chat`, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: process.env.LOCAL_MODEL, messages, stream: false }), signal: AbortSignal.timeout(timeoutMs) });
+  } catch (e) { throw new Error(`Local AI isn't running (${e.message}). Start Ollama on this computer.`); }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.error) throw new Error(`Local AI: ${j.error || r.status}`);
+  return String(j.message?.content || "").replace(/<think>[\s\S]*?<\/think>\s*/g, "").trim();
+}
+
 // ---- who answers, and switching when a plan runs out ----
 const resting = {}; // engine -> time its limit is expected to be over
 const isResting = (e) => (resting[e] || 0) > Date.now();
-const ENGINES = { claude: runClaude, codex: runCodex };
-export const engineFor = (agent) => (agent === "claude" ? "claude" : "codex");
+const ENGINES = { claude: runClaude, codex: runCodex, local: runLocal };
+export const engineFor = (agent) => (agent === "claude" ? "claude" : agent === "local" ? "local" : "codex");
 
-// Ask the engine for this agent; if its plan limit is hit, the other one answers instead.
+// Ask the engine for this agent. If its plan limit is hit, the other plan answers; if both are resting, the local AI does.
+// A job given to the local AI goes to Codex, then Claude, if the local AI isn't running.
 export async function askViaCli(agent, opts) {
-  const first = engineFor(agent), second = first === "claude" ? "codex" : "claude";
-  const order = isResting(first) && !isResting(second) ? [second, first] : [first, second];
+  const first = engineFor(agent);
+  let order;
+  if (first === "local") order = ["local", "codex", "claude"];
+  else {
+    const second = first === "claude" ? "codex" : "claude";
+    order = isResting(first) && !isResting(second) ? [second, first] : [first, second];
+    if (localEnabled()) order.push("local");
+  }
   let lastErr;
   for (const engine of order) {
     try {
@@ -119,22 +145,22 @@ export async function askViaCli(agent, opts) {
       return { text, engine, switched: engine !== first };
     } catch (e) {
       lastErr = e;
-      if (!(e instanceof LimitError)) throw e;
-      resting[engine] = Date.now() + COOLDOWN_MS;
+      const localDown = engine === "local" && first === "local";
+      if (!(e instanceof LimitError) && !localDown) throw e;
+      if (e instanceof LimitError) resting[engine] = Date.now() + COOLDOWN_MS;
     }
   }
   throw lastErr;
 }
 
-export const engineStatus = () => ({
-  claude: isResting("claude") ? `resting until ${new Date(resting.claude).toLocaleTimeString()}` : "ready",
-  codex: isResting("codex") ? `resting until ${new Date(resting.codex).toLocaleTimeString()}` : "ready",
-});
+const restText = (e) => (isResting(e) ? `resting until ${new Date(resting[e]).toLocaleTimeString()}` : "ready");
+export const engineStatus = () => ({ claude: restText("claude"), codex: restText("codex"), local: localEnabled() ? `on (${process.env.LOCAL_MODEL})` : "off" });
 
-// Quick check that both CLIs are installed and signed in. Costs one tiny message each.
+// Quick check that each engine is installed and signed in. Costs one tiny message each.
 export async function checkEngines() {
   const out = {};
   for (const [name, fn] of Object.entries(ENGINES)) {
+    if (name === "local" && !localEnabled()) continue;
     try { out[name] = { ok: true, reply: (await fn({ prompt: "Reply with just: ok", timeoutMs: 120_000 })).slice(0, 40) }; }
     catch (e) { out[name] = { ok: false, error: e.message }; }
   }

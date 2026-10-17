@@ -10,7 +10,7 @@ const { listWorkflows, triggerWorkflow } = n8n;
 import { githubReady } from "./github.js";
 
 export const AGENTS = ["claude", "chatgpt", "claude-code"];
-const Agent = z.enum(["claude", "chatgpt"]); // agents the bridge can call through their APIs
+const Agent = z.enum(["claude", "chatgpt", "local"]); // agents the bridge can call; local = free AI on the PC's GPU
 const Member = z.enum(AGENTS);
 const Assignee = z.enum([...AGENTS, "anyone", "human"]);
 const Status = z.enum(["open", "in_progress", "done"]);
@@ -91,12 +91,14 @@ tool("ask_claude", "Ask your coworker Claude. It sees shared memory, profile and
   (a, actor) => core.askAgent({ ...a, agent: "claude" }, actor));
 tool("ask_chatgpt", "Ask your coworker ChatGPT. It sees shared memory, profile and tasks.", { prompt: z.string(), project },
   (a, actor) => core.askAgent({ ...a, agent: "chatgpt" }, actor));
+tool("ask_local", "Ask the Local AI, a free model on Shahed's PC. Use it for small jobs (summaries, rewording, sorting) to save Claude's and ChatGPT's limits.",
+  { prompt: z.string(), project }, (a, actor) => core.askAgent({ ...a, agent: "local" }, actor));
 tool("debate", "Both AIs answer, critique each other, then a final combined answer.",
   { question: z.string(), rounds: z.number().min(0).max(3).default(1), project, judge: Agent.default("claude") }, (a, actor) => core.debate(a, actor));
 tool("review", "One AI drafts, the other reviews, the drafter revises.", { request: z.string(), drafter: Agent.default("chatgpt"), project },
   (a, actor) => core.review(a, actor));
 tool("team_chat", "Post to the shared team chat the human sees in the dashboard. to=none just posts.",
-  { text: z.string(), to: z.enum(["none", "claude", "chatgpt", "both"]).default("none"), project },
+  { text: z.string(), to: z.enum(["none", "claude", "chatgpt", "local", "both"]).default("none"), project },
   (a, actor) => (a.to === "none" ? core.postMessage(a, actor) : core.teamChat(a, actor)));
 tool("read_team_chat", "Read the shared team chat.", { project, limit: z.number().default(30) }, (a) => core.listMessages(a), { readOnly: true });
 
