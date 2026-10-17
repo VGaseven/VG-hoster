@@ -242,3 +242,11 @@ test("group chat: @claude-code becomes a GitHub issue for Claude Code, and the l
   const msg = await waitFor(async () => (await api("chat?project=build")).body.find((m) => /Claude Code is on it: https:\/\/github.com\/o\/r\/issues\/7/.test(m.text)));
   assert.equal(msg.author, "claude-code");
 });
+
+test("group chat: @cloud queues a task for a Claude app session", async () => {
+  const r = await api("chat", "POST", { text: "@cloud write a study plan for my exams", project: "cloudq" });
+  assert.deepEqual(r.body.answering, ["claude (cloud session, within the hour)"]);
+  const tasks = (await mcp("claude", "list_tasks", { project: "cloudq" })).json;
+  const t = (Array.isArray(tasks) ? tasks : tasks.tasks || []).find((x) => x.assignee === "cloud");
+  assert.equal(t.title, "write a study plan for my exams");
+});

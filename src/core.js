@@ -439,11 +439,21 @@ export function postMessage({ text, project = "default" }, actor) {
 export const CHAT_AUTHOR = { claude: "claude", chatgpt: "codex", codex: "codex", local: "local" };
 const MENTIONS = { claude: ["claude"], codex: ["codex"], chatgpt: ["codex"], gpt: ["codex"], local: ["local"], all: ["claude", "codex"], everyone: ["claude", "codex"] };
 const BUILDER = new Set(["claude-code", "claudecode", "code", "github"]);
+const CLOUD = new Set(["cloud", "claude-cloud"]);
 const mentionWords = (text) => [...String(text).matchAll(/@([a-z][a-z-]*[a-z])/gi)].map((m) => m[1].toLowerCase());
 export function mentionsIn(text) {
   const found = new Set();
   for (const w of mentionWords(text)) for (const a of MENTIONS[w] || []) found.add(a);
   return [...found];
+}
+// @cloud queues the message for a Claude Code session in Shahed's Claude app. A scheduled check (about hourly) opens one session
+// per queued task; the session works on GitHub and reports back here.
+export const wantsCloud = (text) => mentionWords(text).some((w) => CLOUD.has(w));
+function queueForCloud({ text, project, actor }) {
+  const title = clip(String(text).replace(/@[a-z][a-z-]*[a-z]/gi, "").replace(/\s+/g, " ").trim(), 90) || "Request from the team chat";
+  const t = createTask({ title, details: `From the team chat (${actor}):\n\n${text}`, assignee: "cloud", project }, actor);
+  postMessage({ text: `☁️ Queued for Claude in your Claude app (task ${t.id}). A session opens there within about an hour.`, project }, "bridge");
+  return t;
 }
 // @claude-code (or @code) turns the message into real work on GitHub: Claude Code builds it on a branch and opens a pull request
 // you can open on github.com or the GitHub app. "repo:owner/name" in the message picks the repository.
@@ -478,12 +488,13 @@ export const waitForReplies = () => Promise.all([...pendingReplies]);
 export function teamChat({ text, to = "auto", project = "default" }, actor = "human") {
   if (to === "debate") { postMessage({ text, project }, actor); return debate({ question: text, project }, actor).then((r) => [postMessage({ text: r, project }, "team")]); }
   const posted = postMessage({ text, project }, actor);
-  const build = wantsBuilder(text);
+  const build = wantsBuilder(text), cloud = wantsCloud(text);
   if (build) { assertRunning(); sendToBuilder({ text, project, actor }); }
+  if (cloud) queueForCloud({ text, project, actor });
   let agents = to === "auto" || to === "none" ? mentionsIn(text) : to === "both" ? ["claude", "codex"] : [to === "chatgpt" ? "codex" : to];
-  if (to === "auto" && !agents.length && actor === "human" && !build) agents = ["codex"];
+  if (to === "auto" && !agents.length && actor === "human" && !build && !cloud) agents = ["codex"];
   if (agents.length) { assertRunning(); wake(agents, { text, project, actor }); }
-  return { posted, answering: [...agents.map((a) => CHAT_AUTHOR[a]), ...(build ? ["claude-code (GitHub)"] : [])] };
+  return { posted, answering: [...agents.map((a) => CHAT_AUTHOR[a]), ...(build ? ["claude-code (GitHub)"] : []), ...(cloud ? ["claude (cloud session, within the hour)"] : [])] };
 }
 
 // What changed since this agent last looked. Bob calls this on a schedule and tells the human what matters.
