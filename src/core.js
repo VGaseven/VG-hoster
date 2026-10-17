@@ -169,6 +169,13 @@ Put "Closes #<this issue's number>" in the pull request description so the task 
 }
 // Called after a task is created or reassigned: tasks for claude-code go straight to GitHub when it's set up.
 export async function route(task, actor) {
+  if (["claude", "codex", "local"].includes(task?.assignee) && task.status === "open" && process.env.AUTO_WORK !== "0" && process.env.AI_ENGINE !== "api") {
+    const job = workTask({ id: task.id }, actor)
+      .then((t) => postMessage({ text: `✅ ${CHAT_AUTHOR[task.assignee]} finished "${t.title}". Result is on the task.`, project: t.project }, CHAT_AUTHOR[task.assignee]))
+      .catch((e) => postMessage({ text: `⚠️ ${CHAT_AUTHOR[task.assignee]} couldn't do "${task.title}": ${e.message}`, project: task.project }, "bridge"));
+    pendingReplies.add(job); job.finally(() => pendingReplies.delete(job));
+    return { ...task, note: `${CHAT_AUTHOR[task.assignee]} started on it now. You'll see "✅ finished" in the team chat.` };
+  }
   if (task?.assignee !== "claude-code" || task.github_url || task.status === "done" || !githubReady() || process.env.AUTO_DISPATCH === "0") return task;
   try { return await dispatchTask({ id: task.id }, actor); } catch (e) { return { ...getTask(task.id), dispatch_error: e.message }; }
 }
@@ -399,7 +406,7 @@ export async function workTask({ id: tid, agent }, actor) {
   const t = getTask(tid);
   if (!t) throw new Error(`No task ${tid}`);
   if (t.assignee === "claude-code" && !agent) return dispatchTask({ id: tid }, actor);
-  const who = agent || (["claude", "chatgpt"].includes(t.assignee) ? t.assignee : "claude");
+  const who = agent || (["claude", "chatgpt", "codex", "local"].includes(t.assignee) ? t.assignee : "claude");
   assertRunning();
   claimTask({ id: tid }, who, { override: actor === "human" });
   try {
@@ -425,15 +432,64 @@ export function postMessage({ text, project = "default" }, actor) {
   run("INSERT INTO messages (project, author, text) VALUES (?,?,?)", project, actor, text);
   return listMessages({ project, limit: 1 })[0];
 }
-// Chat in one space: the human talks, chosen agent(s) reply with the thread as context.
-export async function teamChat({ text, to = "both", project = "default" }, actor = "human") {
-  postMessage({ text, project }, actor);
-  if (to === "debate") { const r = await debate({ question: text, project }, actor); return [postMessage({ text: r, project }, "team")]; }
-  const thread = listMessages({ project, limit: 30 }).slice(0, -1).map((m) => `${m.author}: ${m.text}`).join("\n\n");
-  const prompt = `Team chat so far:\n${thread || "(start)"}\n\n${actor}: ${text}\n\nReply as yourself in the team chat.`;
-  const agents = to === "both" ? ["claude", "chatgpt"] : [to];
-  const replies = await Promise.all(agents.map((a) => askAgent({ agent: a, prompt, project, feed: false }, actor).catch((e) => `(error: ${e.message})`)));
-  return agents.map((a, i) => postMessage({ text: replies[i], project }, a));
+// ---------- group chat ----------
+// One shared chat for the human, Bob, the Claude app, Claude Code, Codex and the Local AI. Whoever is talked to, everyone sees it.
+// Mention someone to wake them: @claude, @codex, @local, or @all. They answer on the PC (subscriptions, no API cost).
+// Bob (ChatGPT Dots) and the chat apps can't be woken from here; they read new posts with get_updates.
+export const CHAT_AUTHOR = { claude: "claude", chatgpt: "codex", codex: "codex", local: "local" };
+const MENTIONS = { claude: ["claude"], codex: ["codex"], chatgpt: ["codex"], gpt: ["codex"], local: ["local"], all: ["claude", "codex"], everyone: ["claude", "codex"] };
+export function mentionsIn(text) {
+  const found = new Set();
+  for (const m of String(text).matchAll(/@([a-z]+)/gi)) for (const a of MENTIONS[m[1].toLowerCase()] || []) found.add(a);
+  return [...found];
+}
+const pendingReplies = new Set();
+// Wake the given agents to reply in the background, so the person or app posting never waits minutes for an answer.
+function wake(agents, { text, project, actor }) {
+  for (const a of agents) {
+    const job = (async () => {
+      const thread = listMessages({ project, limit: 30 }).map((m) => `${m.author}: ${m.text}`).join("\n\n");
+      const prompt = `Team chat so far:\n${thread || "(start)"}\n\nYou were mentioned by ${actor}. Reply as yourself in the team chat. ` +
+        `If they asked for work, do it and give the result. Keep it short.`;
+      try { postMessage({ text: await askAgent({ agent: a, prompt, project, feed: false }, actor), project }, CHAT_AUTHOR[a]); }
+      catch (e) { postMessage({ text: `(${CHAT_AUTHOR[a]} couldn't answer: ${e.message})`, project }, "bridge"); }
+    })();
+    pendingReplies.add(job);
+    job.finally(() => pendingReplies.delete(job));
+  }
+}
+export const waitForReplies = () => Promise.all([...pendingReplies]);
+// to: "auto" = whoever is @mentioned (the human's own messages go to Codex when nobody is), "none" = just post,
+// or a name ("claude", "codex"/"chatgpt", "local", "both") to wake them directly.
+export function teamChat({ text, to = "auto", project = "default" }, actor = "human") {
+  if (to === "debate") { postMessage({ text, project }, actor); return debate({ question: text, project }, actor).then((r) => [postMessage({ text: r, project }, "team")]); }
+  const posted = postMessage({ text, project }, actor);
+  let agents = to === "auto" || to === "none" ? mentionsIn(text) : to === "both" ? ["claude", "codex"] : [to === "chatgpt" ? "codex" : to];
+  if (to === "auto" && !agents.length && actor === "human") agents = ["codex"];
+  if (agents.length) { assertRunning(); wake(agents, { text, project, actor }); }
+  return { posted, answering: agents.map((a) => CHAT_AUTHOR[a]) };
+}
+
+// What changed since this agent last looked. Bob calls this on a schedule and tells the human what matters.
+export function getUpdates({ project } = {}, actor) {
+  const key = `cursor:${actor}`;
+  const since = Number(getSetting(key, "0"));
+  const rows = all("SELECT * FROM messages WHERE id > ? ORDER BY id LIMIT 200", since).filter((m) => !project || m.project === project);
+  const last = all("SELECT MAX(id) id FROM messages")[0]?.id || since;
+  setSetting(key, last);
+  const others = rows.filter((m) => m.author !== actor);
+  const isDone = (m) => /^(✅|finished|done)/i.test(m.text) || /\bstatus: done\b/i.test(m.text);
+  const needsYou = [
+    ...pendingApprovals().map((p) => `Approval waiting: ${p.action} (requested by ${p.actor})`),
+    ...all("SELECT title, project FROM tasks WHERE assignee = 'human' AND status != 'done'").map((t) => `Task for you: ${t.title} [${t.project}]`),
+    ...others.filter((m) => /@(bob|shahed|human|you)\b/i.test(m.text)).map((m) => `${m.author} asked: ${clip(m.text, 200)}`),
+  ];
+  return {
+    new_messages: others.map((m) => `[${m.project}] ${m.author}: ${clip(m.text, 300)}`),
+    finished: others.filter(isDone).map((m) => `[${m.project}] ${clip(m.text, 200)}`),
+    needs_the_human: needsYou,
+    tip: others.length ? "Tell the human the finished items and anything that needs them, in a few short lines." : "Nothing new. Don't notify the human.",
+  };
 }
 
 // ---------- web ----------

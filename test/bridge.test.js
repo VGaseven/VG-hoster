@@ -213,3 +213,19 @@ test("agents build, switch on and run n8n workflows through the bridge", async (
   assert.match((await mcp("claude", "n8n_delete_workflow", { id: "w1" })).text, /Needs the human's approval/);
   assert.ok((await mcp("claude", "n8n_run_webhook", { path: "../etc" })).text.includes("approval"), "path check runs after approval");
 });
+
+test("group chat: an @mention wakes that teammate, and Bob's get_updates shows what's new", async () => {
+  await mcp("chatgpt", "get_updates", { project: "group" }); // start Bob's cursor here
+  const r = await mcp("claude", "team_chat", { text: "Shahed wants a FAQ page. @claude can you outline it?", project: "group" });
+  assert.ok(!r.error, r.text);
+  assert.deepEqual(r.json.answering, ["claude"]);
+  const reply = await waitFor(async () => (await api("chat?project=group")).body.find((m) => m.author === "claude" && /Happy to help/.test(m.text)));
+  assert.ok(reply);
+  const u = (await mcp("chatgpt", "get_updates", { project: "group" })).json;
+  assert.ok(u.new_messages.some((m) => /FAQ page/.test(m)));
+  assert.ok(u.new_messages.some((m) => /Happy to help/.test(m)));
+  const again = (await mcp("chatgpt", "get_updates", { project: "group" })).json;
+  assert.equal(again.new_messages.length, 0, "nothing new the second time");
+  // A plain post with no @mention wakes nobody.
+  assert.deepEqual((await mcp("claude", "team_chat", { text: "just a note", project: "group" })).json.answering, []);
+});

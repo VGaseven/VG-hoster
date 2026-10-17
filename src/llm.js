@@ -37,9 +37,9 @@ function checkBudget(project) {
   if (p?.budget_usd && s.project_usd >= p.budget_usd) throw new Error(`Project budget of $${p.budget_usd} reached`);
 }
 
-const DISPLAY = { claude: "Claude", chatgpt: "ChatGPT", local: "the Local AI (a free model on Shahed's own PC)" };
+const DISPLAY = { claude: "Claude", chatgpt: "Codex (ChatGPT)", codex: "Codex (ChatGPT)", local: "the Local AI (a free model on Shahed's own PC)" };
 export function teamContext(agent, project = "default") {
-  const other = agent === "claude" ? "ChatGPT" : "Claude";
+  const other = agent === "claude" ? "Codex (ChatGPT)" : "Claude";
   const profile = all("SELECT key, value FROM profile").map((r) => `- ${r.key}: ${r.value}`).join("\n") || "(not set)";
   const roles = Object.fromEntries(all("SELECT agent, role FROM roles").map((r) => [r.agent, r.role]));
   const proj = get("SELECT * FROM projects WHERE name = ?", project) || { name: project, description: "", lead: "anyone" };
@@ -47,7 +47,7 @@ export function teamContext(agent, project = "default") {
   const recent = all("SELECT id, author, text FROM memories WHERE pinned = 0 AND project = ? ORDER BY at DESC LIMIT 30", project);
   const tasks = all("SELECT id, title, assignee, status FROM tasks WHERE project = ? AND status != 'done' ORDER BY updated DESC LIMIT 20", project);
   return `You are ${DISPLAY[agent] || agent}, working as an equal coworker alongside ${other} for a human, who is the boss.
-Your role: ${roles[agent] || "general assistant"}
+Your role: ${roles[agent] || roles[agent === "codex" ? "chatgpt" : ""] || "general assistant"}
 ${other}'s role: ${roles[agent === "claude" ? "chatgpt" : "claude"] || "general assistant"}
 Claude Code's role: ${roles["claude-code"] || "engineer with repo access"} (give it code work by assigning tasks to "claude-code")
 Project: ${proj.name} — ${proj.description || "no description"} (lead: ${proj.lead})

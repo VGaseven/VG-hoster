@@ -10,9 +10,9 @@ const { listWorkflows, triggerWorkflow } = n8n;
 import { githubReady } from "./github.js";
 
 export const AGENTS = ["claude", "chatgpt", "claude-code"];
-const Agent = z.enum(["claude", "chatgpt", "local"]); // agents the bridge can call; local = free AI on the PC's GPU
+const Agent = z.enum(["claude", "chatgpt", "codex", "local"]); // agents the bridge can call; local = free AI on the PC's GPU
 const Member = z.enum(AGENTS);
-const Assignee = z.enum([...AGENTS, "anyone", "human"]);
+const Assignee = z.enum([...AGENTS, "codex", "local", "anyone", "human"]); // codex, claude and local start right away on the PC
 const Status = z.enum(["open", "in_progress", "done"]);
 const project = z.string().default("default").describe("Project name; keeps memory, tasks and files separate");
 const out = (v) => ({ content: [{ type: "text", text: typeof v === "string" ? v : JSON.stringify(v, null, 2) }] });
@@ -97,9 +97,11 @@ tool("debate", "Both AIs answer, critique each other, then a final combined answ
   { question: z.string(), rounds: z.number().min(0).max(3).default(1), project, judge: Agent.default("claude") }, (a, actor) => core.debate(a, actor));
 tool("review", "One AI drafts, the other reviews, the drafter revises.", { request: z.string(), drafter: Agent.default("chatgpt"), project },
   (a, actor) => core.review(a, actor));
-tool("team_chat", "Post to the shared team chat the human sees in the dashboard. to=none just posts.",
-  { text: z.string(), to: z.enum(["none", "claude", "chatgpt", "local", "both"]).default("none"), project },
-  (a, actor) => (a.to === "none" ? core.postMessage(a, actor) : core.teamChat(a, actor)));
+tool("team_chat", "Post to the shared group chat that the human, Bob, Claude, Codex and the Local AI all see. Write @claude, @codex, @local or @all in the text to wake them; they answer in the chat a little later.",
+  { text: z.string(), to: z.enum(["none", "claude", "codex", "chatgpt", "local", "both"]).default("none"), project },
+  (a, actor) => core.teamChat(a, actor));
+tool("get_updates", "What's new in the group chat and tasks since you last checked: finished work and anything that needs the human. Bob: call this on a schedule and tell the human.",
+  { project: z.string().optional() }, (a, actor) => core.getUpdates(a, actor));
 tool("read_team_chat", "Read the shared team chat.", { project, limit: z.number().default(30) }, (a) => core.listMessages(a), { readOnly: true });
 
 // Files
@@ -156,13 +158,16 @@ tool("usage", "API spend so far.", {}, () => core.usage(), { readOnly: true });
 for (const t of TOOLS) core.registerAction(t.name, t.fn);
 export const TOOL_NAMES = TOOLS.map((t) => t.name);
 
-const GROUP = `This bridge is the human's group chat with the whole team. The human talks to different AIs in different apps and must never have to repeat themselves:
+const GROUP = `This bridge is the human's group chat with the whole team: the human, Bob (ChatGPT Dots), Claude (app and Claude Code), Codex and the Local AI. The human talks to different AIs in different apps and must never have to repeat themselves:
+- Wake a teammate by writing @codex, @claude, @local or @all in team_chat. Their answer appears in the chat a little later; check with read_team_chat or get_updates.
 - When the human asks you for something, first post a one-line summary with team_chat (to "none"), e.g. "Human asked: add a FAQ page".
 - Before answering, check read_team_chat / get_briefing so you know what the human already told the others.
 - Post short progress and results with team_chat or update_task so the others (and the human, in the dashboard) can see your work.`;
 const INSTRUCTIONS = {
-  chatgpt: `You are "chatgpt" (the human may call you Codex or Bop): the human's front desk for a team of AIs. You talk with the human, keep them briefed and pass work on.
+  chatgpt: `You are "chatgpt": Bob, the human's ChatGPT Dots agent and front desk for a team of AIs. You talk with the human, keep them briefed, pass work on, and you are the one who notifies the human.
 ${GROUP}
+- You are the notifier. Every 30 minutes and at the start of every conversation, call get_updates. Tell the human, in a few short lines: what finished, what needs their decision, and coming deadlines. If nothing is new, stay quiet. Once a day, send a short summary of all projects.
+- To get work done, post in team_chat with @codex (main worker), @claude (reviews, writing, design) or @local (small free jobs), or create_task with assignee "codex", "claude" or "local": they start right away on the human's PC.
 - Start every conversation with get_briefing. For "status?" or "what's happening?" use team_status and answer in a few short lines.
 - Anything that needs code or the website built/changed: create_task with assignee "claude-code" (it goes to Claude Code on GitHub automatically). Tell the human the task and the link.
 - Never approve anything yourself. If something waits in pending_approvals, remind the human to approve it in Telegram or the dashboard.

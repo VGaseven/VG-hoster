@@ -63,7 +63,7 @@ pre { white-space:pre-wrap; background:var(--bg); padding:10px; border-radius:6p
       <textarea id="chatText" placeholder="Message the team… (Ctrl+Enter to send)"></textarea>
     </div>
     <div class="row" style="margin-top:8px">
-      <select id="chatTo" style="max-width:220px"><option value="both">Both answer</option><option value="claude">Claude</option><option value="chatgpt">ChatGPT</option><option value="local">Local AI (free, on your PC)</option><option value="debate">Debate → final answer</option></select>
+      <select id="chatTo" style="max-width:220px"><option value="auto">@mentions (else Codex)</option><option value="codex">Codex</option><option value="claude">Claude</option><option value="local">Local AI (free, on your PC)</option><option value="both">Claude + Codex</option><option value="none">Just post</option><option value="debate">Debate → final answer</option></select>
       <span class="muted" id="chatStatus"></span>
       <button class="b" id="chatSend">Send</button>
     </div>
@@ -218,7 +218,13 @@ async function sendChat() {
   $("chatSend").disabled = true; $("chatStatus").textContent = "Thinking…";
   $("chatlog").innerHTML += `<div class="msg human"><div class="who">human</div>${esc(text)}</div>`; $("chatlog").scrollTop = 1e9;
   $("chatText").value = "";
-  try { await api("chat", { method: "POST", body: { text, to: $("chatTo").value, project: P() } }); } finally { $("chatSend").disabled = false; $("chatStatus").textContent = ""; loadChat(); }
+  try {
+    const r = await api("chat", { method: "POST", body: { text, to: $("chatTo").value, project: P() } });
+    const who = Array.isArray(r) ? [] : r.answering || [];
+    $("chatStatus").textContent = who.length ? `${who.join(" and ")} answering… (replies appear here)` : "";
+    // Check more often for a few minutes while someone is answering.
+    if (who.length) { let n = 0; const t = setInterval(() => { loadChat(); if (++n >= 60) { clearInterval(t); $("chatStatus").textContent = ""; } }, 5000); }
+  } finally { $("chatSend").disabled = false; loadChat(); }
 }
 $("chatSend").onclick = sendChat;
 $("chatText").onkeydown = (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) sendChat(); };
