@@ -83,7 +83,8 @@ export function claimTask({ id: tid }, actor, { override = false } = {}) {
   if (!t) throw new Error(`No task ${tid}`);
   if (t.status === "done") throw new Error(`Task ${tid} is already done`);
   if (heldByOther(t, actor)) throw new Error(`Task ${tid} is already claimed by ${t.claimed_by} (since ${t.claimed_at}). Pick another task.`);
-  if (!override && actor !== "human" && ![actor, "anyone"].includes(t.assignee))
+  // "cloud" tasks are done by Claude sessions in the Claude app, which connect as "claude".
+  if (!override && actor !== "human" && ![actor, "anyone"].includes(t.assignee) && !(actor === "claude" && t.assignee === "cloud"))
     throw new Error(`Task ${tid} is assigned to ${t.assignee}, not you. Ask for a handoff instead.`);
   const r = run(`UPDATE tasks SET status = 'in_progress', claimed_by = ?, claimed_at = ?, updated = ?,
       assignee = CASE WHEN ? THEN ? WHEN assignee = 'anyone' THEN ? ELSE assignee END
@@ -473,8 +474,9 @@ function wake(agents, { text, project, actor }) {
   for (const a of agents) {
     const job = (async () => {
       const thread = listMessages({ project, limit: 30 }).map((m) => `${m.author}: ${m.text}`).join("\n\n");
-      const prompt = `Team chat so far:\n${thread || "(start)"}\n\nYou were mentioned by ${actor}. Reply as yourself in the team chat. ` +
-        `If they asked for work, do it and give the result. Keep it short.`;
+      const prompt = `Team chat so far:\n${thread || "(start)"}\n\nYou were mentioned by ${actor}. Write your reply to the team chat. ` +
+        `If they asked for work, do it and give the result. Keep it short. Your reply is posted to the chat for you, so just write the message itself; ` +
+        `don't mention tools or posting.`;
       try { postMessage({ text: await askAgent({ agent: a, prompt, project, feed: false }, actor), project }, CHAT_AUTHOR[a]); }
       catch (e) { postMessage({ text: `(${CHAT_AUTHOR[a]} couldn't answer: ${e.message})`, project }, "bridge"); }
     })();

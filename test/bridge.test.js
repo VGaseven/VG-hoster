@@ -250,3 +250,12 @@ test("group chat: @cloud queues a task for a Claude app session", async () => {
   const t = (Array.isArray(tasks) ? tasks : tasks.tasks || []).find((x) => x.assignee === "cloud");
   assert.equal(t.title, "write a study plan for my exams");
 });
+
+test("a Claude app session (actor claude) can claim an @cloud task", async () => {
+  await api("chat", "POST", { text: "@cloud tidy my notes", project: "cloudclaim" });
+  const list = (await mcp("claude", "list_tasks", { project: "cloudclaim" })).json;
+  const t = (Array.isArray(list) ? list : list.tasks).find((x) => x.assignee === "cloud");
+  const c = await mcp("claude", "claim_task", { id: t.id });
+  assert.ok(!c.error, c.text);
+  assert.ok((await mcp("chatgpt", "claim_task", { id: t.id })).error, "others still can't take it");
+});
