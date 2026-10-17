@@ -121,6 +121,8 @@ api.get('/search', h(hub.search));
 api.get('/chat-message', h(hub.message));
 api.get('/children', h(hub.children));
 api.post('/project-parent', h(hub.setParent));
+api.get('/project-meta', h(hub.projectMeta));
+api.post('/project-meta', h(hub.setProjectMeta));
 api.get("/chat", h((a) => core.listMessages(a)));
 api.post("/chat", h((a) => core.teamChat(a, H)));
 api.get("/tasks", h((a) => core.listTasks(a)));

@@ -451,3 +451,21 @@ test('Failed private replies expose only safe state and reject unavailable adapt
  assert.equal((await api('direct','POST',{project:'dm-reply-test',agent:'local',text:'do not store unavailable reply',reply:true})).status,400);
  assert.equal((await api('direct?project=dm-reply-test&agent=local')).body.length,before);
 });
+
+test("hub sections and project details: recorded status, last step and safe links only", async () => {
+  for (const name of ["work", "gaming", "vct-2027", "aim-chaos"]) await api("projects", "POST", { name, description: name });
+  await api("project-parent", "POST", { project: "vct-2027", parent: "work" });
+  await api("project-parent", "POST", { project: "aim-chaos", parent: "gaming" });
+  const saved = await api("project-meta", "POST", { project: "aim-chaos", status: "paused", last_step: "Server and touch UI merged", remaining: "Studio playtest",
+    links: [{ label: "Repo", url: "https://github.com/o/r" }] });
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.status, "paused");
+  assert.equal(saved.body.parent, "gaming");
+  const rows = (await api("project-meta")).body;
+  assert.equal(rows.find((r) => r.project === "vct-2027").status, "unknown", "no invented status");
+  assert.equal(rows.find((r) => r.project === "vct-2027").parent, "work");
+  assert.deepEqual(rows.find((r) => r.project === "aim-chaos").links, [{ label: "Repo", url: "https://github.com/o/r" }]);
+  assert.equal((await api("project-meta", "POST", { project: "aim-chaos", status: "50%" })).status, 400);
+  assert.equal((await api("project-meta", "POST", { project: "aim-chaos", links: [{ label: "x", url: "javascript:alert(1)" }] })).status, 400);
+  assert.equal((await api("project-meta", "POST", { project: "nope", status: "active" })).status, 400);
+});
