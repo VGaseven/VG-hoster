@@ -4,7 +4,7 @@ import http from "node:http";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawn } from "node:child_process";
+import { spawn, execFileSync } from "node:child_process";
 import assert from "node:assert/strict";
 const root = path.resolve(import.meta.dirname, "..");
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "hub-ui-"));
@@ -16,6 +16,7 @@ let calls = 0;
 let failChat = false;
 const pending = new Map();
 const requests = [];
+const legacyAssets = Object.fromEntries(["hub.js", "hub.css"].map(file => [file, execFileSync("git", ["show", "036a4d024e8e42927904a652ceb7c4f5faa0ec65:public/" + file], {cwd: root})]));
 let projects = [
   { name: "Economics notes", description: "A quiet place to study." },
   { name: "Creative <studio>", description: "Films and ideas" },
@@ -91,6 +92,15 @@ const server = http.createServer((req, res) => {
           version: 2,
         });
       return send(404, {});
+    }
+    if (u.pathname === "/stale.html") {
+      res.writeHead(200, {"Content-Type":"text/html", "Cache-Control":"no-store"});
+      return res.end(fs.readFileSync(path.join(root,"public/index.html"),"utf8").replace(/\?v=[a-f0-9]+/g,""));
+    }
+    const asset = u.pathname.slice(1);
+    if (legacyAssets[asset] && !u.search) {
+      res.writeHead(200, {"Content-Type":asset.endsWith(".js")?"text/javascript":"text/css", "Cache-Control":"public, max-age=14400"});
+      return res.end(legacyAssets[asset]);
     }
     const file = path.join(
       root,
@@ -205,6 +215,14 @@ try {
     deviceScaleFactor: 1,
     mobile: false,
   });
+  // Reproduce the customer's warm cache before loading the repaired release.
+  await send("Page.navigate", { url: base + "/stale.html" });
+  await wait('document.querySelector("#login") && !document.querySelector("#login").hidden');
+  await evaluate('document.querySelector("#token").value="fixture-token";document.querySelector("#loginForm").requestSubmit(document.querySelector("#loginForm button"))');
+  await wait('document.querySelectorAll(".card").length===2');
+  await evaluate('document.querySelector(".card").click()');
+  await wait('document.querySelectorAll(".message").length===1');
+  await check('document.querySelector("[data-i18n=conversation]").textContent==="conversation" && !document.querySelector(".message .avatar")', "reproduces old cached JS with new HTML");
   await send("Page.navigate", { url: base });
   await wait(
     'document.querySelector("#login") && !document.querySelector("#login").hidden',
@@ -255,6 +273,7 @@ try {
   );
   await evaluate('document.querySelector(".card").click()');
   await wait('document.querySelectorAll(".message").length===1');
+  await check('document.querySelector("[data-i18n=conversation]").textContent!=="conversation" && document.querySelector(".message .bubble")!==null && getComputedStyle(document.querySelector(".bubble")).borderRadius==="16px"', "versioned release renders translated bubbles despite cached legacy assets");
   await check(
     'document.querySelector("#projectName").textContent==="Economics notes"',
     "project navigation",
