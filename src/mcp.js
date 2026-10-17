@@ -105,7 +105,8 @@ tool("build_task", "Have Codex (or Claude) build a task on Shahed's computer wit
 tool("self_update", "Update Team Bridge to the newest code from GitHub and restart it. Use after new bridge code is pushed, so Shahed never has to do it by hand.",
   {}, (a, actor) => core.updateBridge(a, actor));
 tool("get_updates", "What's new in the group chat and tasks since you last checked: finished work and anything that needs the human. Bob: call this on a schedule and tell the human.",
-  { project: z.string().optional() }, (a, actor) => core.getUpdates(a, actor));
+  { project: z.string().optional(), peek: z.boolean().default(false).describe("true = look without marking as seen"),
+    since: z.number().optional().describe("message id to start after (doesn't move your checkpoint)") }, (a, actor) => core.getUpdates(a, actor));
 tool("read_team_chat", "Read the shared team chat.", { project, limit: z.number().default(30) }, (a) => core.listMessages(a), { readOnly: true });
 
 // Files

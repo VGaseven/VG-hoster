@@ -585,12 +585,12 @@ export function teamChat({ text, to = "auto", project = "default" }, actor = "hu
 }
 
 // What changed since this agent last looked. Bob calls this on a schedule and tells the human what matters.
-export function getUpdates({ project } = {}, actor) {
+export function getUpdates({ project, peek = false, since: from } = {}, actor) {
   const key = `cursor:${actor}`;
-  const since = Number(getSetting(key, "0"));
+  const since = from != null ? Number(from) : Number(getSetting(key, "0"));
   const rows = all("SELECT * FROM messages WHERE id > ? ORDER BY id LIMIT 200", since).filter((m) => !project || m.project === project);
   const last = all("SELECT MAX(id) id FROM messages")[0]?.id || since;
-  setSetting(key, last);
+  if (!peek && from == null) setSetting(key, last);
   const others = rows.filter((m) => m.author !== actor);
   const isDone = (m) => /^(✅|🛠️|finished|done)/i.test(m.text) || /\bstatus: done\b|pull request ready|finished on github/i.test(m.text);
   const needsYou = [
@@ -602,6 +602,7 @@ export function getUpdates({ project } = {}, actor) {
     new_messages: others.map((m) => `[${m.project}] ${m.author}: ${clip(m.text, 300)}`),
     finished: others.filter(isDone).map((m) => `[${m.project}] ${clip(m.text, 200)}`),
     needs_the_human: needsYou,
+    last_id: last,
     tip: others.length ? "Tell the human the finished items and anything that needs them, in a few short lines." : "Nothing new. Don't notify the human.",
   };
 }
