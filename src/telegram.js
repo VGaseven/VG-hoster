@@ -11,6 +11,18 @@ async function tg(method, body, timeoutMs = 15000) {
 }
 const say = (chat_id, text, buttons) => tg("sendMessage", { chat_id, text: text.slice(0, 4000),
   ...(buttons ? { reply_markup: { inline_keyboard: buttons } } : {}) });
+const HELP = `This is your team group chat 💬
+Just type: everything goes to the group chat, and every teammate's reply comes here.
+• @claude …: Claude answers, builds, or opens a session
+• @codex …: Codex answers or builds
+• @local …: the free AI on your computer
+• @all …: Claude + Codex
+• No @: Codex answers
+• Start with uni: / work: to pick a project
+
+/status: what everyone is doing
+/approvals: things waiting for your OK
+/pause or "stop": stop all AI work · /resume: start again`;
 const approvalButtons = (aid) => [[{ text: "✅ Approve", callback_data: `ap:${aid}:y` }, { text: "❌ Reject", callback_data: `ap:${aid}:n` }]];
 
 // Who may press buttons / send commands.
@@ -57,7 +69,13 @@ export async function handleUpdate(u) {
     for (const a of p) await say(chat, `🔴 ${a.actor} wants to run ${a.action}\n${a.args.slice(0, 1500)}`, approvalButtons(a.id));
     return;
   }
-  return say(chat, "Commands:\n/status — what everyone is doing\n/approvals — things waiting for your OK\n/pause [reason] or \"stop\" — stop all AI work\n/resume — start again\n\nTo give the team work, talk to Dots (ChatGPT).");
+  if (cmd === "/help" || cmd === "/start") return say(chat, HELP);
+  // Anything else is a message to the group chat. "uni: …" / "work: …" picks the project; @claude, @codex, @local, @all wake teammates.
+  const pm = /^([a-z][\w-]{1,30}):\s+/i.exec(text);
+  const project = pm && core.listProjects().some((p) => p.name === pm[1].toLowerCase()) ? pm[1].toLowerCase() : "default";
+  const r = core.teamChat({ text, to: "auto", project }, "human");
+  const who = r.answering?.length ? r.answering.join(", ") : "nobody (just posted)";
+  return say(chat, `📨 In the group chat${project !== "default" ? ` [${project}]` : ""}. Answering: ${who}`);
 }
 
 export function startTelegram() {

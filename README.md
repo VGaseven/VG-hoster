@@ -33,6 +33,7 @@ By default (`AI_ENGINE=subscription`) every "ask Claude", "ask ChatGPT", debate,
 - Set `AI_ENGINE=api` to go back to paying per message.
 
 ## Group chat: everyone sees everything
+- **Telegram is the group chat on your phone:** type anything to the bot and it goes into the group chat (`@claude`, `@codex`, `uni: …` all work). Every teammate's reply is pushed to Telegram the moment it's written. (`TELEGRAM_MIRROR=0` turns the pushes off.)
 One chat for you, Bob (ChatGPT Dots), the Claude app, Claude Code, Codex and the Local AI.
 - **One @ each:** `@claude` decides by itself: a quick answer, a GitHub build (pull request) or a new session in your Claude app. `@codex` answers, or for real work opens a task in your **Codex app** (needs `CODEX_CLOUD_ENV`; without it Codex does the task on this computer). `@claude-code` and `@cloud` still force a path.
 - **Wake someone:** write `@codex`, `@claude`, `@local` or `@all` in a message (dashboard, Bob, Claude app, anywhere). They answer in the chat a minute later, on your subscriptions. In the dashboard, a message with no @mention goes to Codex.

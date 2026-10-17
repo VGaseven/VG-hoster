@@ -431,8 +431,15 @@ const clip = (s, n) => (String(s).length > n ? String(s).slice(0, n) + "…" : S
 function feedEvent(project, actor, text) {
   if (actor !== "human") postMessage({ text, project }, actor);
 }
+// Every teammate's message is also pushed to Shahed's Telegram right away, so the group chat comes to her (TELEGRAM_MIRROR=0 turns it off).
+const ICON = { claude: "🟣 Claude", codex: "🔵 Codex", chatgpt: "🤖 Bob", local: "🟢 Local AI", "claude-code": "🛠️ Claude Code", bridge: "🌉 Bridge", team: "👥 Team" };
+function mirror(project, actor, text) {
+  if (actor === "human" || process.env.TELEGRAM_MIRROR === "0" || /^📝 Note on/.test(text)) return;
+  notify(`${ICON[actor] || actor}${project !== "default" ? ` [${project}]` : ""}: ${clip(text, 3500)}`).catch(() => {});
+}
 export function postMessage({ text, project = "default" }, actor) {
   run("INSERT INTO messages (project, author, text) VALUES (?,?,?)", project, actor, text);
+  mirror(project, actor, text);
   return listMessages({ project, limit: 1 })[0];
 }
 // ---------- group chat ----------

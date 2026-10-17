@@ -312,3 +312,13 @@ test("self_update pulls new bridge code (restart switched off in tests)", async 
   assert.equal(r.json.restarting, false);
   assert.equal((await mcp("claude", "self_update")).json.updated, false, "second time: already up to date");
 });
+
+test("Telegram is the group chat: your message goes in, every teammate's reply comes back to Telegram", async () => {
+  const sentBefore = tgSent.length;
+  tgText("@claude hello from my phone");
+  const reply = await waitFor(async () => (await mcp("chatgpt", "read_team_chat", { project: "default", limit: 10 })).json.find((m) => m.author === "claude" && /Happy to help/.test(m.text)), 8000, 300);
+  assert.ok(reply);
+  const pushed = await waitFor(() => tgSent.slice(sentBefore).find((m) => m.method === "sendMessage" && /^🟣 Claude: Of course/.test(m.text)), 8000, 200);
+  assert.ok(pushed, "Claude's reply was pushed to Telegram");
+  assert.ok(tgSent.slice(sentBefore).some((m) => /In the group chat\. Answering: claude/.test(m.text || "")));
+});
