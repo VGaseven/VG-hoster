@@ -329,7 +329,7 @@ test("hub shell and classic dashboard coexist without exposing project data", as
   const html = await home.text();
   assert.match(html, /Shahed’s Hub/);
   assert.match(html, /id="loginForm"/);
-  assert.match(html, /src="\/hub.js"/);
+  assert.match(html, /src="\/hub\.js\?v=[a-f0-9]{16}"/);
   const classic = await fetch(`${base}/classic`);
   assert.equal(classic.status, 200);
   assert.match(await classic.text(), /Team Bridge/);

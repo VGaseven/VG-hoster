@@ -1,0 +1,40 @@
+
+> vg-hoster@1.0.0 test
+> node --test test/*.test.js
+
+Telegram remote control on (/status, /approvals, /pause, /resume)
+Bridge on http://localhost:30655  (dashboard /, MCP /mcp)
+✔ rejects missing or wrong tokens (600.686708ms)
+✔ two agents claiming one task: exactly one wins (56.147667ms)
+✔ next_task never hands the same task to two agents (46.329584ms)
+✔ red actions wait for approval; Telegram buttons approve once; strangers are ignored (221.593583ms)
+✔ kill switch: anyone can pause, AIs are stopped, only the human resumes (275.065875ms)
+✔ n8n workflows need approval, then run with the payload (9.09725ms)
+✔ claude-code tasks become GitHub issues and webhooks report back (21.769625ms)
+✔ fetch_url refuses private and internal addresses (22.1545ms)
+✔ the team chat shows AI-to-AI messages and agent activity (15.725583ms)
+✔ agents build, switch on and run n8n workflows through the bridge (17.264834ms)
+✔ group chat: an @mention wakes that teammate, and Bob's get_updates shows what's new (67.394667ms)
+✔ group chat: @claude-code becomes a GitHub issue for Claude Code, and the link comes back to the chat (55.454125ms)
+✔ group chat: @cloud queues a task for a Claude app session (5.634208ms)
+✔ a Claude app session (actor claude) can claim an @cloud task (9.350375ms)
+✔ one @claude: Claude decides between answering, building on GitHub and a cloud session (566.371083ms)
+✔ build_task: Codex builds in a private branch and the pull-request link comes back (951.548584ms)
+✔ self_update pulls new bridge code (restart switched off in tests) (1063.388417ms)
+✔ Telegram is the group chat: your message goes in, every teammate's reply comes back to Telegram (312.058792ms)
+✔ hub shell and classic dashboard coexist without exposing project data (12.481084ms)
+✔ hub APIs isolate chat and versioned files by project (13.536792ms)
+✔ self_update rolls back when the new version can't start (573.33775ms)
+✔ each agent answers on its own subscription, with API keys hidden (673.010291ms)
+✔ when Claude hits its plan limit, Codex answers and Claude rests (303.8475ms)
+✔ the local AI answers its own jobs, and covers when both plans are resting (114.823042ms)
+✔ Windows npm .cmd launchers are run through Node (89.581958ms)
+✔ Hub HTML references the current content version of every application asset (3.019708ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5434.272042
