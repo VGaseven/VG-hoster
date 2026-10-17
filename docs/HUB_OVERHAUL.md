@@ -15,7 +15,7 @@ Based on `81cc63247c070d737bf0bb63b3553f2aef9b6129`, including the remember-devi
 
 ## Deliberate integration gaps — do not call these complete
 
-Private messages default to **storage only**. An explicit checkbox can request a private text reply when the existing API-mode provider is configured. The API path supplies only that project/agent DM history, bypasses team context, memories, activity, routing and notifications, and never falls back to another provider. Status persists as working/completed/failed/interrupted. Mocked Anthropic end-to-end proof passes; no live API calls were made. A Claude-only experimental subscription adapter is implemented behind the off-by-default HUB_PRIVATE_CLAUDE_CLI flag, with tools/customizations disabled and no fallback; mocked HTTP-to-CLI-to-DM tests pass. Codex subscription replies remain unavailable because read-only does not prevent unrelated file reads. Neither adapter has been live-tested. No native Claude/Codex session is created or awakened. Enabling new credentials or a paid API mode is a separate approval, not part of this implementation. The existing shared MCP credential does not provide a strong per-agent identity boundary; adding connector DM reads needs a separate identity design.
+Private messages default to **storage only**. An explicit checkbox can request a private text reply when the existing API-mode provider is configured. The API path supplies only that project/agent DM history, bypasses team context, memories, activity, routing and notifications, and never falls back to another provider. Status persists as working/completed/failed/interrupted. Mocked Anthropic end-to-end proof passes; no live API calls were made. A Claude-only experimental subscription adapter is implemented behind the off-by-default HUB_PRIVATE_CLAUDE_CLI flag, with tools/customizations disabled and no fallback; mocked HTTP-to-CLI-to-DM tests pass. Codex subscription replies remain unavailable because read-only does not prevent unrelated file reads. One subsequently approved Claude smoke request failed without a reply; no second live message was sent. See evidence/approved-actions.md. No native Claude/Codex session is created or awakened. Enabling new credentials or a paid API mode is a separate approval, not part of this implementation. The existing shared MCP credential does not provide a strong per-agent identity boundary; adding connector DM reads needs a separate identity design.
 
 Native application chats are not automatically imported. The sessions view lists explicitly registered Bridge sessions only. Its registration API requires source/title/id; optional URLs are checked for supported syntax, not remotely proven by the server. The local preview contains the actual verified current Codex task URL and labels its status as a snapshot. No fabricated percentages or implied live presence.
 
@@ -34,7 +34,7 @@ General classification is a conservative local heuristic, not an AI classifier. 
 
 ## Design references and licensing
 
-Separate review design: https://www.figma.com/design/GUyxttaB4nhl8BElW81fl2 (desktop 1:2, mobile 1:26). Existing study file `Ak5doJUqcOB4qSC8KNb7JO` was read only; its Communication frame informed the dark surface, bubbles and fixed header/scroll regions. Existing local avatar assets are reused. No new Figma assets were exported into code; export requires the requested separate approval.
+Separate review design: https://www.figma.com/design/GUyxttaB4nhl8BElW81fl2 (desktop 1:2, mobile 1:26). Existing study file `Ak5doJUqcOB4qSC8KNb7JO` was read only; its Communication frame informed the dark surface, bubbles and fixed header/scroll regions. Existing local avatar assets are reused. Figma export was approved at 12:30 UTC. Desktop/mobile renders are in evidence/figma-approved; the file contains no independent image/SVG assets. Its design values are integrated as scoped CSS tokens, with renders kept as reference evidence.
 
 https://github.com/LitenApe/Kitchen is an abandoned alpha React 17/Framer Motion 4/CRA 4 sandbox, with no license file or package license established from the inspected root/package metadata. No source copied or dependencies adopted.
 
@@ -54,7 +54,7 @@ Do not merge or deploy this draft before Shahed reviews scope and the integratio
 - [x] Experimental Claude subscription text adapter implemented, default off and mock-tested; not live-verified.
 - [ ] Codex subscription private reply tool isolation and native session creation: see the precise transport/security findings in HUB_NATIVE_INTEGRATION_ASSESSMENT.md.
 - [ ] Native session discovery: supported CLI/protocol entry points found, but no scoped Bridge client connected; explicit registration remains required.
-- [ ] Figma exports: awaiting the separately required approval; existing assets continue to work.
+- [x] Approved Figma renders exported and native design tokens integrated; no standalone image/SVG assets exist in the new design.
 - [ ] Merge/deploy: awaiting scope review; draft remains unmerged.
 
 Detailed bounded assessment, supported interfaces, minimal next decisions and Kitchen reuse audit: [HUB_NATIVE_INTEGRATION_ASSESSMENT.md](HUB_NATIVE_INTEGRATION_ASSESSMENT.md).

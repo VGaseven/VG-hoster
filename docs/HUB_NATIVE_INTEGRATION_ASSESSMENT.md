@@ -39,3 +39,7 @@ These are concrete supported entry points, not a claim that no native integratio
 - [dqnamo Kitchen](https://www.dqnamo.com/kitchen): inspected named studies include Tactile Button, Dynamic Button, Scroll Fade List and Hold to Confirm. No reuse license was established. **Zero components, code or assets copied.**
 - Actual Hub implementation uses independently written native buttons, `<dialog>`, `<details>`, CSS overflow/viewport sizing, state labels and reduced-motion handling. Compact controls and readable overflow were general design references. It does **not** implement Kitchen's compressible tactile face, animated width morph, scroll-fade mask or hold-to-confirm interaction. Existing 150ms project-card hover motion predates this overhaul. Thus “Kitchen-inspired” must not be presented as component reuse or as new bespoke animation work.
 - The separate Figma file remains the visual review deliverable. No Figma export was performed; approval remains pending.
+
+## Subsequent approved checks
+
+The three checks were approved at 12:30 UTC. See [actual results](../evidence/approved-actions.md). The earlier assessment above describes the pre-approval state; the one live Claude attempt failed and no retry was sent. Figma export is now completed, with native CSS integration rather than rasterized controls.

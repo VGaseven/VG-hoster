@@ -279,7 +279,7 @@ try {
   );
   await evaluate('document.querySelector(".card").click()');
   await wait('document.querySelectorAll(".message").length===1');
-  await check('document.querySelector("[data-i18n=conversation]").textContent!=="conversation" && document.querySelector(".message .bubble")!==null && getComputedStyle(document.querySelector(".bubble")).borderRadius==="16px"', "versioned release renders translated bubbles despite cached legacy assets");
+  await check('document.querySelector("[data-i18n=conversation]").textContent!=="conversation" && document.querySelector(".message .bubble")!==null && getComputedStyle(document.querySelector(".bubble")).borderRadius==="14px"', "versioned release renders translated bubbles despite cached legacy assets");
   await check(
     'document.querySelector("#projectName").textContent==="Economics notes"',
     "project navigation",
