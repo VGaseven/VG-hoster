@@ -61,6 +61,7 @@ const server = http.createServer((req, res) => {
         }
         return send(200, projects);
       }
+      if(u.pathname==='/api/direct-status')return send(200,{capability:{available:false,reason:'provider_unavailable'},request:null});
       if(u.pathname==='/api/sessions'||u.pathname==='/api/results'||u.pathname==='/api/children')return send(200,[]);
       if(u.pathname==='/api/decisions')return send(200,{approvals:[],tasks:[]});
       if(u.pathname==='/api/search')return send(200,[{kind:'file',id:'notes.html',title:'notes.html'}]);
@@ -361,6 +362,11 @@ try {
   await evaluate('document.querySelector("#searchResults button").click()');
   await wait('!document.querySelector("#filePreview").hidden');
   await check('document.querySelector("#fileName").textContent==="notes.html"','unified search opens actual file preview');
+  await evaluate('document.querySelector("#sessionsTab").click();document.querySelector("#sessionList button").click()');
+  await check('document.querySelector("#metadata-source_url") && document.querySelector("#metadata-status").value==="unknown"','session editor starts with unknown status and explicit original link');
+  await evaluate('document.querySelector("dialog[open]").close();document.querySelector("#chatTab").click();document.querySelector("#workStatus details:last-of-type").open=true;document.querySelector("#workStatus details:last-of-type button").click()');
+  await check('document.querySelector("#metadata-files").multiple && document.querySelector("#metadata-session_id").value===""','result editor selects actual deliverables and leaves missing session unavailable');
+  await evaluate('document.querySelector("dialog[open]").close()');
   await evaluate('document.querySelector("#generalChat").click()');
   await check('document.querySelector("#generalDialog").open && document.querySelector("#destination").value==="" && document.querySelector("#generalAgent").value!=="group"','general chat asks destination and defaults private');
   await evaluate('document.querySelector("#closeGeneral").click();document.querySelector("#back").click()');

@@ -641,3 +641,7 @@ select {font:inherit;max-width:100%;padding:10px;border-radius:10px;}
 @media(max-width:480px){.chat-layout{grid-template-columns:minmax(0,1fr) 128px}.chat-layout.collapsed{grid-template-columns:minmax(0,1fr) 58px}#chatPanel .message{display:block}#chatPanel .message>.avatar{display:none}.message-content{width:100%}.conversation-heading .eyebrow{display:none}.work-item p{font-size:11px}.work-panel{padding:6px}.topbar nav{gap:4px}.topbar nav button{font-size:11px;padding:7px}#scopeNote{font-size:10px;padding:5px 12px}}
 #chatPanel {min-height:0;}
 @media(min-width:761px){body:has(#project:not([hidden])) .topbar{padding-block:12px;}}
+#privateReplyControls { display:grid; gap:.35rem; font-size:.8rem; }
+#privateReplyControls label { display:flex; align-items:center; gap:.5rem; }
+#privateReplyControls input { width:auto; margin:0; }
+dialog select[multiple] { min-height:6rem; }

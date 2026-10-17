@@ -11,6 +11,7 @@ import path from "node:path";
 const TOKEN = "test-token", HOOK_SECRET = "hook-secret", CHAT = "42";
 const tgQueue = [], tgSent = [], ghIssues = [], n8nCalls = [], n8nStore = [];
 let mock, bridge, base, mockUrl, tmp, updateId = 1;
+const privatePrompts=[];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function waitFor(fn, ms = 5000, every = 50) {
@@ -28,6 +29,8 @@ before(async () => {
       if (req.url === "/gh/repos/o/r/issues") { ghIssues.push(b); return json(201, { number: 7, html_url: "https://github.com/o/r/issues/7" }); }
       if (req.url === "/anth/v1/messages") {
         const last = JSON.stringify(b.messages.at(-1).content);
+        if(last.includes("DM-ONLY-SENTINEL"))privatePrompts.push(b);
+        if(last.includes("DM-FAIL-SECRET"))return json(400,{type:"error",error:{type:"invalid_request_error",message:"DM-FAIL-SECRET"}});
         const text = /please research markets/.test(last) ? "ROUTE: SESSION Market research" : /please build the faq/.test(last) ? "ROUTE: BUILD Add a FAQ page" : "Of course! Happy to help the team.";
         return json(200, { id: "m1", type: "message", role: "assistant", model: b.model, stop_reason: "end_turn",
           content: [{ type: "text", text }], usage: { input_tokens: 10, output_tokens: 5 } });
@@ -420,4 +423,31 @@ test('Hub session provenance, deliverables and nested project integrity',async()
  assert.equal((await api('results?project=hub-child')).body[0].files[0],'result.txt');
  assert.equal((await api('search?project=hub-child&q=Safe')).body[0].kind,'file');
  assert.ok((await api('decisions?project=hub-child')).body.tasks.some(x=>x.id===task.id));
+});
+
+test('Private API replies remain scoped and omit shared context and external events',async()=>{
+ await api('projects','POST',{name:'dm-reply-test'});
+ await api('direct','POST',{project:'dm-reply-test',agent:'codex',text:'OTHER-DM-SECRET'});
+ const before=tgSent.length;
+ const response=await api('direct','POST',{project:'dm-reply-test',agent:'claude',text:'DM-ONLY-SENTINEL',reply:true});
+ assert.equal(response.status,200);assert.equal(response.body.delivery,'reply_requested');
+ for(let i=0;i<40;i++){if((await api('direct-status?project=dm-reply-test&agent=claude')).body.request?.state!=='working')break;await sleep(25);}
+ const state=(await api('direct-status?project=dm-reply-test&agent=claude')).body;
+ assert.equal(state.request.state,'completed');assert.equal(privatePrompts.length,1);
+ assert.equal(privatePrompts[0].messages.length,1);assert.ok(!JSON.stringify(privatePrompts[0]).includes('OTHER-DM-SECRET'));assert.ok(!privatePrompts[0].system.includes('Core memories:'));
+ const messages=(await api('direct?project=dm-reply-test&agent=claude')).body;assert.equal(messages.length,2);assert.equal(messages[1].author,'claude');
+ assert.equal((await api('chat?project=dm-reply-test')).body.length,0);
+ assert.equal((await api('search?project=dm-reply-test&agent=group&q=SENTINEL')).body.length,0);
+ assert.ok(!(await mcp('claude','get_updates',{project:'dm-reply-test',peek:true,since:0})).text.includes('DM-ONLY-SENTINEL'));assert.equal(tgSent.length,before);
+ assert.equal((await api('direct','POST',{project:'dm-reply-test',agent:'bridge',text:'no fallback',reply:true})).status,400);
+});
+
+test('Failed private replies expose only safe state and reject unavailable adapters before storing',async()=>{
+ const sent=await api('direct','POST',{project:'dm-reply-test',agent:'claude',text:'DM-FAIL-SECRET',reply:true});assert.equal(sent.status,200);
+ for(let i=0;i<40;i++){if((await api('direct-status?project=dm-reply-test&agent=claude')).body.request?.state!=='working')break;await sleep(25);}
+ const status=(await api('direct-status?project=dm-reply-test&agent=claude')).body;assert.equal(status.request.state,'failed');assert.ok(!JSON.stringify(status).includes('DM-FAIL-SECRET'));
+ assert.equal((await api('search?project=dm-reply-test&agent=group&q=DM-FAIL')).body.length,0);
+ const before=(await api('direct?project=dm-reply-test&agent=local')).body.length;
+ assert.equal((await api('direct','POST',{project:'dm-reply-test',agent:'local',text:'do not store unavailable reply',reply:true})).status,400);
+ assert.equal((await api('direct?project=dm-reply-test&agent=local')).body.length,before);
 });

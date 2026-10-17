@@ -1,6 +1,7 @@
 // Human Hub read models. Private messages never enter the legacy group/event tables.
 import { all, get, run, db } from './db.js';
 import * as core from './core.js';
+import { askPrivate, privateReplyCapability } from './llm.js';
 const agents = new Set(['claude','codex','chatgpt','claude-code','local','bridge']);
 db.exec(`CREATE TABLE IF NOT EXISTS direct_messages (
  id INTEGER PRIMARY KEY, project TEXT NOT NULL, agent TEXT NOT NULL,
@@ -20,11 +21,35 @@ const limitOf = n => Math.max(1,Math.min(200,Number(n)||100));
 export function directMessages(a) {
  return all('SELECT * FROM direct_messages WHERE project=? AND agent=? ORDER BY id DESC LIMIT ?',project(a.project),agent(a.agent),limitOf(a.limit)).reverse();
 }
+db.exec(`CREATE TABLE IF NOT EXISTS direct_requests (message_id INTEGER PRIMARY KEY, project TEXT NOT NULL, agent TEXT NOT NULL, state TEXT NOT NULL, updated TEXT DEFAULT CURRENT_TIMESTAMP);`);
+// A restart cannot resume an in-flight external request safely. Do not auto-retry.
+run("UPDATE direct_requests SET state='interrupted',updated=CURRENT_TIMESTAMP WHERE state='working'");
+const privateJobs = new Map();
+export function directStatus(a) {
+ const p=project(a.project), who=agent(a.agent);
+ return { capability: privateReplyCapability(who), request:get('SELECT message_id,state,updated FROM direct_requests WHERE project=? AND agent=? ORDER BY message_id DESC LIMIT 1',p,who)||null };
+}
 export function sendDirect(a) {
  const p=project(a.project), who=agent(a.agent);
  if(typeof a.text!=='string'||!a.text.trim()||a.text.length>20000) throw new Error('Invalid message');
+ if(a.reply !== undefined && typeof a.reply !== 'boolean') throw new Error('Invalid reply choice');
+ const scope=JSON.stringify([p,who]);
+ if(a.reply){core.assertRunning();if(!privateReplyCapability(who).available)throw new Error('Private reply provider unavailable');if(privateJobs.has(scope))throw new Error('A private reply is already working');}
  const r=run('INSERT INTO direct_messages(project,agent,author,text) VALUES(?,?,?,?)',p,who,'human',a.text.trim());
- return {posted:get('SELECT * FROM direct_messages WHERE id=?',r.lastInsertRowid),answering:[],delivery:'stored',integration:'Agent replies are not connected to private conversations yet.'};
+ const posted=get('SELECT * FROM direct_messages WHERE id=?',r.lastInsertRowid);
+ if(a.reply){
+  const history=directMessages({project:p,agent:who,limit:30}).map(m=>({role:m.author==='human'?'user':'assistant',content:m.text}));
+  run("INSERT INTO direct_requests(message_id,project,agent,state) VALUES(?,?,?,'working')",posted.id,p,who);
+  const job=(async()=>{try{
+   const reply=await askPrivate(who,history,p);
+   run('INSERT INTO direct_messages(project,agent,author,text) VALUES(?,?,?,?)',p,who,who,reply);
+   run("UPDATE direct_requests SET state='completed',updated=CURRENT_TIMESTAMP WHERE message_id=?",posted.id);
+  }catch{
+   // Provider errors may echo private prompts; neither store nor log the raw error.
+   run("UPDATE direct_requests SET state='failed',updated=CURRENT_TIMESTAMP WHERE message_id=?",posted.id);
+  }finally{privateJobs.delete(scope);}})();privateJobs.set(scope,job);
+ }
+ return {posted,answering:a.reply?[who]:[],delivery:a.reply?'reply_requested':'stored'};
 }
 export function sessions(a) { return all('SELECT * FROM hub_sessions WHERE project=? ORDER BY updated DESC',project(a.project)); }
 export function children(a) {

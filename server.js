@@ -87,7 +87,7 @@ api.post("/logout", (req, res) => res.set("Set-Cookie", deviceCookie(req, "", 0)
 api.use(apiAuth);
 // Explicit local review mode: no external actions, group mentions cannot wake agents.
 if (process.env.HUB_PREVIEW === '1') api.use((req,res,next)=>{
- if(req.method==='GET'||req.path==='/direct')return next();
+ if(req.method==='GET'||['/direct','/sessions','/results'].includes(req.path))return next();
  if(req.path==='/chat')return res.json({posted:core.postMessage({text:String(req.body.text||''),project:req.body.project},'human'),answering:[]});
  return res.status(403).json({error:'Review preview: external actions disabled'});
 });
@@ -110,6 +110,7 @@ api.post("/tasks/:id/build", h((a) => core.buildTaskById(a, H)));
 api.post("/pause", h((a) => core.pauseAll(a, H)));
 api.post("/resume", h((a) => core.resumeAll(a, H)));
 api.get('/direct', h(hub.directMessages));
+api.get('/direct-status', h(hub.directStatus));
 api.post('/direct', h(hub.sendDirect));
 api.get('/sessions', h(hub.sessions));
 api.post('/sessions', h(hub.registerSession));

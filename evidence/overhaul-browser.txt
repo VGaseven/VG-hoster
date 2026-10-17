@@ -28,10 +28,12 @@ PASS new message indicator returns to latest
 PASS task rail expands on mobile
 PASS task filter uses actual status
 PASS unified search opens actual file preview
+PASS session editor starts with unknown status and explicit original link
+PASS result editor selects actual deliverables and leaves missing session unavailable
 PASS general chat asks destination and defaults private
 PASS project chat isolation
 PASS project creation
 PASS locking clears private content
 PASS reload requires login again
 PASS auth never sent in cookies or URLs
-36 UI checks passed
+38 UI checks passed

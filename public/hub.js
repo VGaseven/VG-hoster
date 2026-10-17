@@ -404,7 +404,7 @@ function renderWork() {
     const result=document.createElement('details'); result.append(text('summary',t('result')));
     result.append(text('p',task.status==='done' ? (task.notes?.at(-1)?.note || t('noResult')) : t('notFinished')));
     const saved=resultRows.find(r=>r.task_id===task.id);
-    if(saved){result.replaceChildren(text('summary',t('result')),text('p',saved.summary));for(const path of saved.files){const b=text('button',path);b.onclick=()=>{switchTab('files');openFile(path);};result.append(b);}if(saved.session?.source_url){const a=text('a',t('originalSession'));a.href=saved.session.source_url;a.rel='noreferrer';result.append(a);}else result.append(text('small',t('noSessionLink')));}else result.append(text('small',t('noSessionLink'))); item.append(result); box.append(item);for(const d of item.querySelectorAll("details"))d.open=opened.has(item.id+":"+d.querySelector("summary").textContent);
+    if(saved){result.replaceChildren(text('summary',t('result')),text('p',saved.summary));for(const path of saved.files){const b=text('button',path);b.onclick=()=>{switchTab('files');openFile(path);};result.append(b);}if(saved.session?.source_url){const a=text('a',t('originalSession'));a.href=saved.session.source_url;a.rel='noreferrer';result.append(a);}else result.append(text('small',t('noSessionLink')));}else result.append(text('small',t('noSessionLink'))); const edit=text('button',t('editResult'));edit.onclick=()=>editMetadata('result',saved||{task_id:task.id});result.append(edit); item.append(result); box.append(item);for(const d of item.querySelectorAll("details"))d.open=opened.has(item.id+":"+d.querySelector("summary").textContent);
   }
 }
 function renderMessages() {
@@ -593,7 +593,7 @@ $("chatForm").onsubmit = async (e) => {
   try {
     const result = await api(conversation === "group" ? "chat" : "direct", {
       method: "POST",
-      body: JSON.stringify({ project, text: value, to: "none", agent: conversation }),
+      body: JSON.stringify({ project, text: value, to: "none", agent: conversation, ...(conversation!=="group"?{reply:!!$("requestPrivateReply")?.checked}:{}) }),
     });
     if (version !== epoch) return;
     $("message").value = "";
@@ -661,12 +661,12 @@ async function loadExtras(version) {
  sessionRows=results[0].status==='fulfilled'?results[0].value:null;
  decisionRows=results[1].status==='fulfilled'?results[1].value:null;
  resultRows=results[2].status==='fulfilled'?results[2].value:[];
- renderExtras();renderWork();
+ renderExtras();renderWork();await refreshPrivateStatus(version);
 }
 function renderExtras() {
- const sessions=$('sessionList');sessions.replaceChildren();
+ const sessions=$('sessionList');sessions.replaceChildren();const add=text('button',t('addSession'));add.onclick=()=>editMetadata('session',{});sessions.append(add);
  if(!sessionRows?.length)sessions.append(text('p',t(sessionRows?'noSessions':'error')));
- for(const s of sessionRows||[]) {const item=text('article','','work-item');item.id='session-'+s.id;item.append(text('h3',s.title),text('p',s.summary),text('p',s.status),text('small',date(s.updated)));if(s.source_url){const link=text('a',t('originalSession'));link.href=s.source_url;link.rel='noreferrer';item.append(link);}else item.append(text('p',t('noSessionLink')));sessions.append(item);}
+ for(const s of sessionRows||[]) {const item=text('article','','work-item');item.id='session-'+s.id;item.append(text('h3',s.title),text('p',s.summary),text('p',s.status),text('small',date(s.updated)));if(s.source_url){const link=text('a',t('originalSession'));link.href=s.source_url;link.rel='noreferrer';item.append(link);}else item.append(text('p',t('noSessionLink')));const edit=text('button',t('editMetadata'));edit.onclick=()=>editMetadata('session',s);item.append(edit);sessions.append(item);}
  const decisions=$('decisionList');decisions.replaceChildren();
  if(!decisionRows){decisions.append(text('p',t('error')));return;}
  if(!decisionRows.approvals.length&&!decisionRows.tasks.length)decisions.append(text('p',t('noDecisions')));
@@ -674,8 +674,14 @@ function renderExtras() {
  for(const task of decisionRows.tasks){const b=text('button',task.title+' · '+t(task.status==='blocked'?'blocked':'waitingUser'),'file-row');b.onclick=()=>{switchTab('chat');$('workFilter').value='all';renderWork();$('task-'+task.id)?.scrollIntoView({block:'nearest'});};decisions.append(b);}
 }
 function setupOverhaul(){
- Object.assign(copy.en,{workspace:'Workspace',topLevel:'Top level',privateConversation:'Private conversation',directHelp:'Stored privately. Automatic agent replies are not connected.',noDirect:'No messages in this private conversation yet.',originalSession:'Original session',group:'Group',groupNote:'Shared with this project’s team.',privateNote:'Private record · agent replies are not connected yet. Messages stay out of the group and external notifications.',tasks:'Tasks',filter:'Filter',all:'All',compact:'Compact messages',newMessages:'New messages ↓',sessions:'Sessions',decisions:'Needs your decision',search:'Search',sessionNote:'Only registered sessions appear here. Native app chats are not imported automatically.',noSessions:'No linked sessions are registered for this project.',noSessionLink:'Original session link unavailable',noDecisions:'Nothing needs your decision here.',activity:'Technical activity · expand',result:'Result',noResult:'Marked complete; no result summary was attached.',notFinished:'No completed result yet.',generalChat:'✦ General chat',destination:'Destination project',routeNote:'Check the destination before sending. Private conversations currently store messages without waking an agent.',myProjects:'My projects',unifiedSearch:'Search this project and selected conversation',searchNote:'Tasks, files, registered sessions and messages in this conversation. Up to 100 matching items.',approve:'Approve operation',reject:'Reject',waitingUser:'Waiting for you',choose:'Choose a destination',uncertain:'Please choose the workspace and project. Nothing has been sent.',suggested:'Suggested destination — you can change it:',groupConfirm:'This message will be shared with the selected project’s team.',privateConfirm:'This message will be stored in the selected private conversation.'});
- Object.assign(copy.ar,{workspace:'المساحة',topLevel:'المستوى الرئيسي',privateConversation:'محادثة خاصة',directHelp:'تُحفظ بشكل خاص. الردود الآلية غير متصلة.',noDirect:'لا توجد رسائل في هذه المحادثة الخاصة بعد.',originalSession:'الجلسة الأصلية',group:'المجموعة',groupNote:'مشتركة مع فريق هذا المشروع.',privateNote:'سجل خاص · الردود الآلية غير متصلة بعد. تبقى الرسائل خارج المجموعة والإشعارات الخارجية.',tasks:'المهام',filter:'تصفية',all:'الكل',compact:'رسائل مختصرة',newMessages:'رسائل جديدة ↓',sessions:'الجلسات',decisions:'يحتاج قرارك',search:'بحث',sessionNote:'تظهر الجلسات المسجّلة فقط. لا تُستورد محادثات التطبيقات تلقائيًا.',noSessions:'لا توجد جلسات مرتبطة مسجّلة لهذا المشروع.',noSessionLink:'رابط الجلسة الأصلية غير متاح',noDecisions:'لا يوجد قرار مطلوب هنا.',activity:'نشاط تقني · عرض التفاصيل',result:'النتيجة',noResult:'مكتملة في السجل؛ لم يُرفق ملخص للنتيجة.',notFinished:'لا توجد نتيجة مكتملة بعد.',generalChat:'✦ محادثة عامة',destination:'المشروع المستقبِل',routeNote:'راجعي الوجهة قبل الإرسال. المحادثة الخاصة تحفظ الرسائل حاليًا دون تشغيل الوكيل.',myProjects:'مشاريعي',unifiedSearch:'ابحثي في المشروع والمحادثة المحددة',searchNote:'المهام والملفات والجلسات المسجّلة ورسائل المحادثة. حتى ١٠٠ نتيجة مطابقة.',approve:'الموافقة على العملية',reject:'رفض',waitingUser:'بانتظارك',choose:'اختاري الوجهة',uncertain:'اختاري المساحة والمشروع. لم تُرسل أي رسالة.',suggested:'وجهة مقترحة — يمكنك تغييرها:',groupConfirm:'ستُشارك الرسالة مع فريق المشروع المحدد.',privateConfirm:'ستُحفظ الرسالة في المحادثة الخاصة المحددة.'});
+ Object.assign(copy.en,{knownSessions:'Confirmed source references · choose to register',requestReply:'Request a private API reply',replyUnavailable:'Private replies unavailable here. Subscription adapters are not isolated; this conversation stores messages only.',replyAvailable:'Private API text replies · may use the configured API budget. No native app session is created.',replyState:'Latest reply request'});
+ Object.assign(copy.ar,{knownSessions:'مراجع مصادر مؤكدة · اختاري للتسجيل',requestReply:'طلب رد خاص عبر API',replyUnavailable:'الرد الخاص غير متاح هنا. موصلات الاشتراك غير معزولة؛ تُحفظ الرسائل فقط.',replyAvailable:'رد نصي خاص عبر API · قد يستخدم ميزانية API المضبوطة. لا تُنشأ جلسة داخل التطبيق الأصلي.',replyState:'آخر طلب رد'});
+
+ Object.assign(copy.en,{addSession:'Add session',editMetadata:'Edit session',editResult:'Edit result',saveMetadata:'Save',source:'Source',status:'Status',unlinked:'No task association',linkHelp:'Paste an actual original URL, or leave blank. URL format is checked; access and remote existence are not verified. Status is a manually recorded snapshot.',metadataError:'Could not save. Check the source URL and project items.',state_unknown:'Unknown',state_working:'Working',state_waiting_for_user:'Waiting for you',state_blocked:'Blocked',state_completed:'Completed'});
+ Object.assign(copy.ar,{addSession:'إضافة جلسة',editMetadata:'تعديل الجلسة',editResult:'تعديل النتيجة',saveMetadata:'حفظ',source:'المصدر',status:'الحالة',unlinked:'دون ربط بمهمة',linkHelp:'ألصقي الرابط الأصلي الفعلي أو اتركيه فارغًا. يُفحص تنسيق الرابط فقط، وليس وجود الجلسة أو صلاحية الوصول. الحالة لقطة مسجّلة يدويًا.',metadataError:'تعذّر الحفظ. تحققي من رابط المصدر وعناصر المشروع.',state_unknown:'غير معروفة',state_working:'يعمل',state_waiting_for_user:'بانتظارك',state_blocked:'متعطّل',state_completed:'مكتمل'});
+
+ Object.assign(copy.en,{workspace:'Workspace',topLevel:'Top level',privateConversation:'Private conversation',directHelp:'Private storage. Available reply options appear below.',noDirect:'No messages in this private conversation yet.',originalSession:'Original session',group:'Group',groupNote:'Shared with this project’s team.',privateNote:'Private conversation · messages stay out of the group and external notifications.',tasks:'Tasks',filter:'Filter',all:'All',compact:'Compact messages',newMessages:'New messages ↓',sessions:'Sessions',decisions:'Needs your decision',search:'Search',sessionNote:'Only registered sessions appear here. Native app chats are not imported automatically.',noSessions:'No linked sessions are registered for this project.',noSessionLink:'Original session link unavailable',noDecisions:'Nothing needs your decision here.',activity:'Technical activity · expand',result:'Result',noResult:'Marked complete; no result summary was attached.',notFinished:'No completed result yet.',generalChat:'✦ General chat',destination:'Destination project',routeNote:'Check the destination before sending. Private conversations currently store messages without waking an agent.',myProjects:'My projects',unifiedSearch:'Search this project and selected conversation',searchNote:'Tasks, files, registered sessions and messages in this conversation. Up to 100 matching items.',approve:'Approve operation',reject:'Reject',waitingUser:'Waiting for you',choose:'Choose a destination',uncertain:'Please choose the workspace and project. Nothing has been sent.',suggested:'Suggested destination — you can change it:',groupConfirm:'This message will be shared with the selected project’s team.',privateConfirm:'This message will be stored in the selected private conversation.'});
+ Object.assign(copy.ar,{workspace:'المساحة',topLevel:'المستوى الرئيسي',privateConversation:'محادثة خاصة',directHelp:'تُحفظ بشكل خاص. خيارات الرد المتاحة أدناه.',noDirect:'لا توجد رسائل في هذه المحادثة الخاصة بعد.',originalSession:'الجلسة الأصلية',group:'المجموعة',groupNote:'مشتركة مع فريق هذا المشروع.',privateNote:'محادثة خاصة · تبقى الرسائل خارج المجموعة والإشعارات الخارجية.',tasks:'المهام',filter:'تصفية',all:'الكل',compact:'رسائل مختصرة',newMessages:'رسائل جديدة ↓',sessions:'الجلسات',decisions:'يحتاج قرارك',search:'بحث',sessionNote:'تظهر الجلسات المسجّلة فقط. لا تُستورد محادثات التطبيقات تلقائيًا.',noSessions:'لا توجد جلسات مرتبطة مسجّلة لهذا المشروع.',noSessionLink:'رابط الجلسة الأصلية غير متاح',noDecisions:'لا يوجد قرار مطلوب هنا.',activity:'نشاط تقني · عرض التفاصيل',result:'النتيجة',noResult:'مكتملة في السجل؛ لم يُرفق ملخص للنتيجة.',notFinished:'لا توجد نتيجة مكتملة بعد.',generalChat:'✦ محادثة عامة',destination:'المشروع المستقبِل',routeNote:'راجعي الوجهة قبل الإرسال. المحادثة الخاصة تحفظ الرسائل حاليًا دون تشغيل الوكيل.',myProjects:'مشاريعي',unifiedSearch:'ابحثي في المشروع والمحادثة المحددة',searchNote:'المهام والملفات والجلسات المسجّلة ورسائل المحادثة. حتى ١٠٠ نتيجة مطابقة.',approve:'الموافقة على العملية',reject:'رفض',waitingUser:'بانتظارك',choose:'اختاري الوجهة',uncertain:'اختاري المساحة والمشروع. لم تُرسل أي رسالة.',suggested:'وجهة مقترحة — يمكنك تغييرها:',groupConfirm:'ستُشارك الرسالة مع فريق المشروع المحدد.',privateConfirm:'ستُحفظ الرسالة في المحادثة الخاصة المحددة.'});
  $('toggleWork').onclick=()=>{const hidden=!$('workBody').hidden;$('workBody').hidden=hidden;$('toggleWork').setAttribute('aria-expanded',String(!hidden));document.querySelector('.chat-layout').classList.toggle('collapsed',hidden);};
  $('workFilter').onchange=renderWork;
  $('compact').onchange=()=>document.querySelector('#chatPanel').classList.toggle('compact',$('compact').checked);
@@ -696,3 +702,38 @@ function setupOverhaul(){
 
 function sizeChat(){if(!current||tab!=='chat')return;const panel=$('chatPanel');panel.style.height=Math.max(260,Math.min(640,window.innerHeight-panel.getBoundingClientRect().top-(innerWidth<761?72:22)))+'px';}
 window.addEventListener('resize',sizeChat);
+
+function editMetadata(kind, record) {
+ const project=current.name, dialog=document.createElement('dialog'), form=document.createElement('form');
+ dialog.append(form);form.append(text('h2',t(kind==='session'?'editMetadata':'editResult')));
+ const fields={};
+ function field(key,label,value,options){const id='metadata-'+key;const lab=text('label',label);lab.htmlFor=id;const input=document.createElement(options?'select':key==='summary'?'textarea':'input');input.id=id;input.name=key;if(options)for(const [value,title] of options){const o=text('option',title);o.value=value;input.append(o);}input.value=value||'';form.append(lab,input);fields[key]=input;return input;}
+ if(kind==='session'){
+  field('title',t('name'),record.title).required=true;
+  field('source',t('source'),record.source||'codex',[['codex','Codex'],['claude','Claude']]);
+  field('source_url',t('originalSession'),record.source_url);
+  if(project==='default'&&!record.id){const known=field('known',t('knownSessions'),'',[
+   ['',t('choose')],['codex://threads/01a149af-d095-7648-a9f5-4c2817a78021','Codex · Upgrade Hub workspace experience'],['https://claude.ai/code/session_018772VAxW2wNFY9g45HkBpz','Claude · remember-device release (81cc632)']]);known.onchange=()=>{if(!known.value)return;fields.source_url.value=known.value;fields.source.value=known.value.startsWith('codex:')?'codex':'claude';fields.title.value=known.selectedOptions[0].textContent;};}
+form.append(text('small',t('linkHelp')));
+  field('task_id',t('tasks'),record.task_id,[['',t('unlinked')],...tasks.map(x=>[x.id,x.title])]);
+  field('status',t('status'),record.status||'unknown',['unknown','working','waiting_for_user','blocked','completed'].map(x=>[x,t('state_'+x)]));
+ } else {
+  field('session_id',t('originalSession'),record.session_id,[['',t('noSessionLink')],...(sessionRows||[]).map(x=>[x.id,x.title])]);
+  const list=field('files',t('savedFiles'),'',files.map(x=>[x.path,x.path]));list.multiple=true;for(const o of list.options)o.selected=(record.files||[]).includes(o.value);
+ }
+ field('summary',t('description'),record.summary).required=kind==='result';
+ const error=text('p','');error.setAttribute('role','alert');const cancel=text('button',t('cancel'));cancel.type='button';cancel.onclick=()=>dialog.close();const save=text('button',t('saveMetadata'));save.type='submit';form.append(error,cancel,save);
+ form.onsubmit=async e=>{e.preventDefault();save.disabled=true;try{const payload={project,...Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,v.value.trim()]))};if(kind==='session')payload.id=record.id||crypto.randomUUID();else{payload.task_id=record.task_id;payload.files=[...fields.files.selectedOptions].map(o=>o.value);}await api(kind==='session'?'sessions':'results',{method:'POST',body:JSON.stringify(payload)});dialog.close();if(current?.name===project)await loadExtras(epoch);}catch{error.textContent=t('metadataError');}finally{save.disabled=false;}};
+ dialog.addEventListener('close',()=>dialog.remove());document.body.append(dialog);dialog.showModal();
+}
+
+async function refreshPrivateStatus(version){
+ let controls=$('privateReplyControls');if(!controls){controls=document.createElement('div');controls.id='privateReplyControls';$('chatForm').append(controls);}
+ if(conversation==='group'){controls.hidden=true;return;}controls.hidden=false;
+ const scope=conversation;
+ try{const state=await api('direct-status?'+new URLSearchParams({project:current.name,agent:scope}));if(version!==epoch||scope!==conversation)return;
+ const checked=$('requestPrivateReply')?.checked&&controls.dataset.scope===scope;controls.dataset.scope=scope;controls.replaceChildren();
+ const label=text('label',t('requestReply'));const check=document.createElement('input');check.type='checkbox';check.id='requestPrivateReply';check.disabled=!state.capability.available||state.request?.state==='working';check.checked=!!checked&&!check.disabled;label.prepend(check);controls.append(label,text('small',t(state.capability.available?'replyAvailable':'replyUnavailable')));
+ if(state.request)controls.append(text('small',t('replyState')+': '+state.request.state+' · '+date(state.request.updated)));
+ }catch{if(version===epoch){controls.replaceChildren(text('small',t('replyUnavailable')));}}
+}
