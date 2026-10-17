@@ -580,8 +580,16 @@ export function teamChat({ text, to = "auto", project = "default" }, actor = "hu
   if (cloud) queueForCloud({ text, project, actor });
   let agents = to === "auto" || to === "none" ? mentionsIn(text) : to === "both" ? ["claude", "codex"] : [to === "chatgpt" ? "codex" : to];
   if (to === "auto" && !agents.length && actor === "human" && !build && !cloud) agents = ["codex"];
+  // Shahed's choice: every message to Claude opens its own chat in her Claude app (CLAUDE_CHAT_MODE=quick answers in the chat instead).
+  // Claude's own posts never open new chats, so sessions can't spawn each other.
+  let session = false;
+  if (agents.includes("claude") && process.env.CLAUDE_CHAT_MODE !== "quick" && actor !== "claude" && !cloud) {
+    agents = agents.filter((a) => a !== "claude");
+    queueForCloud({ text, project, actor });
+    session = true;
+  }
   if (agents.length) { assertRunning(); wake(agents, { text, project, actor }); }
-  return { posted, answering: [...agents.map((a) => CHAT_AUTHOR[a]), ...(build ? ["claude-code (GitHub)"] : []), ...(cloud ? ["claude (cloud session, within the hour)"] : [])] };
+  return { posted, answering: [...agents.map((a) => CHAT_AUTHOR[a]), ...(build ? ["claude-code (GitHub)"] : []), ...(cloud || session ? ["claude (cloud session, within the hour)"] : [])] };
 }
 
 // What changed since this agent last looked. Bob calls this on a schedule and tells the human what matters.

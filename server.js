@@ -139,6 +139,7 @@ function backup() {
 }
 setInterval(() => { try { backup(); } catch (e) { console.error("backup failed", e.message); } }, 24 * 3600_000).unref();
 
-sched.startScheduler();
-if (startTelegram()) console.log("Telegram remote control on (/status, /approvals, /pause, /resume)");
+// TRIAL_START: a self-update test run of new code; it only has to answer /health, so it starts no background work.
+if (!process.env.TRIAL_START) sched.startScheduler();
+if (!process.env.TRIAL_START && startTelegram()) console.log("Telegram remote control on (/status, /approvals, /pause, /resume)");
 app.listen(PORT, () => console.log(`Bridge on http://localhost:${PORT}  (dashboard /, MCP /mcp)`));

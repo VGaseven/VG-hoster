@@ -35,6 +35,8 @@ By default (`AI_ENGINE=subscription`) every "ask Claude", "ask ChatGPT", debate,
 ## Group chat: everyone sees everything
 - **Telegram is the group chat on your phone:** type anything to the bot and it goes into the group chat (`@claude`, `@codex`, `uni: …` all work). Every teammate's reply is pushed to Telegram the moment it's written. (`TELEGRAM_MIRROR=0` turns the pushes off.)
 One chat for you, Bob (ChatGPT Dots), the Claude app, Claude Code, Codex and the Local AI.
+- **Every @claude opens its own chat** in your Claude app (a cloud session, started by the hourly check). Set `CLAUDE_CHAT_MODE=quick` to get short answers in the chat instead.
+- **Safe updates:** `self_update` first starts the new version on a spare port; if it doesn't answer, it goes back to the old version and nothing goes down.
 - **One @ each:** `@claude` decides by itself: a quick answer, a GitHub build (pull request) or a new session in your Claude app. `@codex` answers, or for real work opens a task in your **Codex app** (needs `CODEX_CLOUD_ENV`; without it Codex does the task on this computer). `@claude-code` and `@cloud` still force a path.
 - **Wake someone:** write `@codex`, `@claude`, `@local` or `@all` in a message (dashboard, Bob, Claude app, anywhere). They answer in the chat a minute later, on your subscriptions. In the dashboard, a message with no @mention goes to Codex.
 - **Codex builds for real:** when `@codex` decides a request is a task, Codex works on this computer with permission to change files, in a private copy on branch `team/<id>` (folder `~/team-work`), then the bridge pushes it and posts a link to open the pull request. Any agent can also call `build_task`.

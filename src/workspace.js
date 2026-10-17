@@ -58,25 +58,52 @@ export async function selfUpdate({ restart = process.env.SELF_UPDATE_NO_RESTART 
   const after = await git(["rev-parse", "--short", "HEAD"], BRIDGE_DIR);
   if (before === after) return { updated: false, version: after, note: "Already up to date." };
   const changed = await git(["diff", "--name-only", before, after], BRIDGE_DIR);
-  if (/package(-lock)?\.json/.test(changed)) {
-    const npm = path.join(path.dirname(process.execPath), process.platform === "win32" ? "npm.cmd" : "npm");
-    execFileSync(fs.existsSync(npm) ? npm : "npm", ["install", "--omit=dev"], { cwd: BRIDGE_DIR, stdio: "ignore", shell: process.platform === "win32" });
+  try {
+    if (/package(-lock)?\.json/.test(changed)) {
+      const npm = path.join(path.dirname(process.execPath), process.platform === "win32" ? "npm.cmd" : "npm");
+      execFileSync(fs.existsSync(npm) ? npm : "npm", ["install", "--omit=dev"], { cwd: BRIDGE_DIR, stdio: "ignore", shell: process.platform === "win32" });
+    }
+    await trialStart(); // the new code must start and answer /health before we switch to it
+  } catch (e) {
+    await git(["reset", "--keep", before], BRIDGE_DIR).catch(() => {});
+    return { updated: false, rolled_back: true, from: before, tried: after, error: `The new version didn't start, so I went back to ${before}: ${e.message}` };
   }
   if (restart) setTimeout(restartSelf, 1500);
   return { updated: true, from: before, to: after, changed_files: changed.split("\n").length, restarting: restart };
 }
 
+// Start the new code on a spare port for a few seconds (no Telegram, same settings) and check it answers.
+function trialStart() {
+  const port = 20000 + Math.floor(Math.random() * 20000);
+  const envFile = path.join(BRIDGE_DIR, ".env");
+  const args = [...(fs.existsSync(envFile) ? [`--env-file=${envFile}`] : []), "server.js"];
+  const child = spawn(process.execPath, args, { cwd: BRIDGE_DIR, env: { ...process.env, PORT: String(port), TELEGRAM_POLL: "0", TRIAL_START: "1" },
+    stdio: ["ignore", "ignore", "pipe"], windowsHide: true });
+  let err = "";
+  child.stderr.on("data", (d) => (err += d));
+  return new Promise((resolve, reject) => {
+    const end = Date.now() + 20_000;
+    const done = (ok, msg) => { clearInterval(t); child.kill(); ok ? resolve() : reject(new Error(msg)); };
+    child.on("exit", (code) => done(false, `exited with code ${code}: ${err.trim().slice(-300)}`));
+    const t = setInterval(async () => {
+      try { if ((await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(2000) })).ok) done(true); } catch { /* not up yet */ }
+      if (Date.now() > end) done(false, "it didn't answer within 20 seconds");
+    }, 500);
+  });
+}
+
 function restartSelf() {
   const label = process.env.XPC_SERVICE_NAME; // set when launchd (Mac login item) started the bridge
+  const start = `cd "${BRIDGE_DIR}" && exec "${process.execPath}" --env-file=.env server.js >> bridge.log 2>&1`;
   const detach = (cmd, args) => spawn(cmd, args, { detached: true, stdio: "ignore", cwd: BRIDGE_DIR, windowsHide: true }).unref();
-  if (process.platform === "darwin" && label && label !== "0") {
-    detach("launchctl", ["kickstart", "-k", `gui/${process.getuid()}/${label}`]);
-    return; // launchd stops this process and starts the new code
-  }
   if (process.platform === "win32") {
     detach("cmd", ["/c", "timeout /t 3 >nul & schtasks /run /tn \"Team Bridge\""]);
+  } else if (process.platform === "darwin" && label && label !== "0") {
+    // Ask launchd to restart the job; if that fails, start the new code ourselves once the port is free.
+    detach("sh", ["-c", `sleep 2; launchctl kickstart -k "gui/$(id -u)/${label}" || { sleep 3; ${start}; }`]);
+    return;
   } else {
-    detach("sh", ["-c", `sleep 3; cd "${BRIDGE_DIR}" && exec "${process.execPath}" --env-file=.env server.js >> bridge.log 2>&1`]);
+    detach("sh", ["-c", `sleep 3; ${start}`]);
   }
   setTimeout(() => process.exit(0), 500);
 }

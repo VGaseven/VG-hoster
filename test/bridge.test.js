@@ -55,7 +55,7 @@ before(async () => {
   // A pretend GitHub: a bare repo as "origin", and a clone that plays the bridge's own folder.
   const sh = (cmd, cwd = tmp) => execSync(cmd, { cwd, stdio: "pipe" });
   sh("git init -q --bare -b main origin.git");
-  sh(`git clone -q origin.git live && cd live && git config user.email t@t && git config user.name t && echo hi > README.md && git add . && git commit -qm init && git push -q origin main`);
+  sh(`git clone -q origin.git live && cd live && git config user.email t@t && git config user.name t && echo hi > README.md && printf 'require("http").createServer((q, r) => r.end("ok")).listen(process.env.PORT);\n' > server.js && git add . && git commit -qm init && git push -q origin main`);
   // Fake Codex for building: writes a file in the folder it's given and leaves a summary.
   const fake = path.join(tmp, "codex");
   fs.writeFileSync(fake, `#!/usr/bin/env node
@@ -70,7 +70,7 @@ process.stdin.on("data", (d) => (input += d)).on("end", () => {
   base = `http://127.0.0.1:${port}`;
   bridge = spawn(process.execPath, ["--no-warnings", "server.js"], {
     cwd: path.join(import.meta.dirname, ".."),
-    env: { PATH: process.env.PATH, AI_ENGINE: "api", BRIDGE_DIR: path.join(tmp, "live"), WORK_DIR: path.join(tmp, "work"), CODEX_BIN: path.join(tmp, "codex"),
+    env: { PATH: process.env.PATH, AI_ENGINE: "api", CLAUDE_CHAT_MODE: "quick", BRIDGE_DIR: path.join(tmp, "live"), WORK_DIR: path.join(tmp, "work"), CODEX_BIN: path.join(tmp, "codex"),
       SELF_UPDATE_NO_RESTART: "1", HOME: tmp, ANTHROPIC_API_KEY: "x", ANTHROPIC_BASE_URL: `${mockUrl}/anth`, N8N_API_URL: `${mockUrl}/n8napi`, N8N_API_KEY: "k", PORT: String(port), BRIDGE_TOKEN: TOKEN, DB_FILE: path.join(tmp, "b.db"), TRUST_PROXY: "0",
       GITHUB_TOKEN: "gh", GITHUB_REPO: "o/r", GITHUB_API_URL: `${mockUrl}/gh`, GITHUB_WEBHOOK_SECRET: HOOK_SECRET,
       TELEGRAM_BOT_TOKEN: "T", TELEGRAM_CHAT_ID: CHAT, TELEGRAM_API_URL: `${mockUrl}/tg`,
@@ -351,4 +351,14 @@ test("hub APIs isolate chat and versioned files by project", async () => {
   assert.equal((await api('files?project=hub-a')).body[0].version,2);
   assert.equal((await api('file?project=hub-a&path=notes.html')).body.content,'Updated text');
   assert.equal((await api('file?project=hub-b&path=notes.html')).status,400);
+});
+
+test("self_update rolls back when the new version can't start", async () => {
+  execSync(`cd other && git pull -q && printf 'throw new Error("broken build")\\n' > server.js && git add . && git commit -qm broken && git push -q origin main`, { cwd: tmp, stdio: "pipe", shell: "/bin/bash" });
+  const before = execSync("git rev-parse --short HEAD", { cwd: path.join(tmp, "live") }).toString().trim();
+  const r = (await mcp("claude", "self_update")).json;
+  assert.equal(r.updated, false);
+  assert.equal(r.rolled_back, true);
+  assert.match(r.error, /didn't start/);
+  assert.equal(execSync("git rev-parse --short HEAD", { cwd: path.join(tmp, "live") }).toString().trim(), before, "still on the old version");
 });
