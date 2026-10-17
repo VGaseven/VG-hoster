@@ -1,5 +1,6 @@
 // All bridge operations. Used by both the MCP tools and the dashboard API.
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 import { all, get, run, db } from "./db.js";
 import { ask, embed, spend, webSearch } from "./llm.js";
 import { runCodexCloud, buildWithFallback } from "./cli.js";
@@ -518,14 +519,14 @@ Do the work: read the relevant files (including any docs the task names), make t
 Don't push and don't switch branches; the bridge pushes your branch for Shahed to review. Shahed isn't a developer.
 Finish with a short plain summary: what you changed, how to see it, and anything left to do.`;
   try {
-    const r = await buildWithFallback(agent === "claude" ? "claude" : "codex", { prompt, cwd: ws.dir });
+    // The copy's git data lives in the main repo's .git folder, so the agent may write there too (to commit).
+    const r = await buildWithFallback(agent === "claude" ? "claude" : "codex", { prompt, cwd: ws.dir, gitDir: path.join(ws.src, ".git") });
     const pub = await publishWorkspace({ ...ws, title: t.title });
     const name = r.engine === "claude" ? "Claude" : "Codex";
     const msg = pub.changed
       ? `✅ ${name} finished "${t.title}" (${pub.commits} commit${pub.commits > 1 ? "s" : ""}).\nReview and create the pull request: ${pub.url}\n\n${clip(r.text, 1500)}`
       : `✅ ${name} finished "${t.title}" with no file changes.\n\n${clip(r.text, 1500)}`;
-    updateTask({ id: t.id, status: "done", note: msg }, agent === "claude" ? "claude" : "codex");
-    postMessage({ text: msg, project: t.project }, name.toLowerCase());
+    updateTask({ id: t.id, status: "done", note: msg }, agent === "claude" ? "claude" : "codex"); // this also posts it to the chat
     notify(msg.split("\n").slice(0, 2).join("\n"));
     return getTask(t.id);
   } catch (e) {

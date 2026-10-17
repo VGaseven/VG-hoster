@@ -103,11 +103,11 @@ export async function runCodex({ system, prompt, history = [], model, timeoutMs 
 
 // ---- building: Codex or Claude Code with permission to change files, inside a private copy of a repo ----
 const BUILD_TIMEOUT_MS = Number(process.env.BUILD_TIMEOUT_MIN || 45) * 60_000;
-export async function buildIn({ engine, prompt, cwd }) {
+export async function buildIn({ engine, prompt, cwd, gitDir }) {
   if (engine === "codex") {
     const outFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "codex-")), "last.txt");
     const args = ["exec", "--ephemeral", "--ignore-user-config", "--sandbox", "workspace-write", "-c", "sandbox_workspace_write.network_access=true",
-      "--cd", cwd, "--color", "never", "-o", outFile, "-"];
+      "--cd", cwd, ...(gitDir ? ["--add-dir", gitDir] : []), "--color", "never", "-o", outFile, "-"];
     try {
       const r = await slot(() => exec(CODEX_BIN, args, prompt, BUILD_TIMEOUT_MS, cwd));
       const text = fs.existsSync(outFile) ? fs.readFileSync(outFile, "utf8").trim() : "";
@@ -116,7 +116,7 @@ export async function buildIn({ engine, prompt, cwd }) {
     } finally { fs.rmSync(path.dirname(outFile), { recursive: true, force: true }); }
   }
   const args = ["-p", "--output-format", "json", "--no-session-persistence", "--strict-mcp-config", "--permission-mode", "acceptEdits",
-    "--allowedTools", "Bash,Edit,Write,Read,Glob,Grep,WebFetch,WebSearch"];
+    "--allowedTools", "Bash,Edit,Write,Read,Glob,Grep,WebFetch,WebSearch", ...(gitDir ? ["--add-dir", gitDir] : [])];
   const r = await slot(() => exec(CLAUDE_BIN, args, prompt, BUILD_TIMEOUT_MS, cwd));
   let j = null;
   try { j = JSON.parse(r.out); } catch { /* not JSON */ }

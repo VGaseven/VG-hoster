@@ -37,11 +37,19 @@ export async function prepareWorkspace({ id, repo }) {
   const dir = path.join(WORK_DIR, id), branch = `team/${id}`;
   if (fs.existsSync(dir)) return { dir, branch, base, src, repo: repo || bridgeRepo };
   await git(["worktree", "add", "-B", branch, dir, `origin/${base}`], src);
+  // Share the installed packages so tests can run in the copy (never committed: it's a link, and it's ignored below).
+  const mods = path.join(src, "node_modules");
+  if (fs.existsSync(mods) && !fs.existsSync(path.join(dir, "node_modules"))) {
+    try { fs.symlinkSync(mods, path.join(dir, "node_modules"), "junction"); } catch { /* tests just won't find packages */ }
+  }
+  const exclude = path.join(src, ".git", "info", "exclude");
+  try { if (!fs.readFileSync(exclude, "utf8").includes("\nnode_modules\n")) fs.appendFileSync(exclude, "\nnode_modules\n"); } catch { /* no exclude file */ }
   return { dir, branch, base, src, repo: repo || bridgeRepo };
 }
 
 // Commit anything left uncommitted, push the branch, and return a link to open the pull request.
 export async function publishWorkspace({ dir, branch, base, repo, title }) {
+  // Note: "git add -A" respects .git/info/exclude, so the shared node_modules link is never committed.
   await git(["add", "-A"], dir);
   const dirty = await git(["status", "--porcelain"], dir);
   if (dirty) await git(["-c", "user.name=Team Bridge", "-c", "user.email=team-bridge@users.noreply.github.com", "commit", "-m", title], dir);
