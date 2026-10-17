@@ -59,7 +59,8 @@ export async function selfUpdate({ restart = process.env.SELF_UPDATE_NO_RESTART 
   if (before === after) return { updated: false, version: after, note: "Already up to date." };
   const changed = await git(["diff", "--name-only", before, after], BRIDGE_DIR);
   try {
-    if (/package(-lock)?\.json/.test(changed)) {
+    // Reinstall packages when they changed, or when they've gone missing (e.g. something cleaned the folder).
+    if (/package(-lock)?\.json/.test(changed) || !fs.existsSync(path.join(BRIDGE_DIR, "node_modules", "express"))) {
       const npm = path.join(path.dirname(process.execPath), process.platform === "win32" ? "npm.cmd" : "npm");
       execFileSync(fs.existsSync(npm) ? npm : "npm", ["install", "--omit=dev"], { cwd: BRIDGE_DIR, stdio: "ignore", shell: process.platform === "win32" });
     }
