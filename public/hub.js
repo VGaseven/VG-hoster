@@ -143,6 +143,7 @@ let token = "",
   poll = null,
   epoch = 0,
   waiting = [];
+let conversation = "group", firstChatRender = true, sessionRows = [], resultRows = [], decisionRows = {approvals:[],tasks:[]};
 let tasks = [], connection = "syncing", taskUnavailable = false;
 const colors = [
   "#ddd2fb",
@@ -162,6 +163,7 @@ const text = (tag, value, className) => {
 };
 function notice(key) {
   $("notice").textContent = key ? t(key) : "";
+  requestAnimationFrame(sizeChat);
 }
 function stopPoll() {
   clearTimeout(poll);
@@ -177,6 +179,9 @@ function hidePrivate() {
   files = [];
   selectedFile = null;
   waiting = [];
+  $("generalChat").hidden = true;
+  if($("generalDialog").open) $("generalDialog").close();
+  $("searchResults").replaceChildren(); $("sessionList").replaceChildren(); $("decisionList").replaceChildren();
   $("home").hidden = true;
   $("project").hidden = true;
   $("login").hidden = false;
@@ -238,7 +243,7 @@ function translate() {
     renderFiles();
     renderWaiting();
     renderWork();
-    renderConnection();
+    renderConnection();renderExtras();requestAnimationFrame(sizeChat);
   }
 }
 function renderCards() {
@@ -274,6 +279,7 @@ function renderCards() {
 async function loadHome() {
   projects = await api("projects");
   authenticated = true;
+  $("generalChat").hidden = false;
   $("login").hidden = true;
   $("lock").hidden = false;
   notice("");
@@ -290,9 +296,9 @@ async function route() {
   $("message").value = "";
   let name;
   try {
-    name = location.hash.startsWith("#project=")
-      ? decodeURIComponent(location.hash.slice(9))
-      : null;
+    const params = new URLSearchParams(location.hash.slice(1));
+    name = params.get("project");
+    conversation = ["claude","codex","chatgpt","claude-code","local","bridge"].includes(params.get("conversation")) ? params.get("conversation") : "group";
   } catch {
     name = null;
   }
@@ -309,6 +315,10 @@ async function route() {
   $("projectIcon").style.background =
     colors[projects.indexOf(current) % colors.length];
   messages = [];
+  firstChatRender = true;
+  sessionRows=[];resultRows=[];decisionRows={approvals:[],tasks:[]};
+  $("searchResults").replaceChildren();$("unifiedSearch").value="";renderExtras();
+  $("newMessages").hidden = true;
   tasks = [];
   taskUnavailable = false;
   connection = "syncing";
@@ -319,15 +329,22 @@ async function route() {
   renderFiles();
   renderWaiting();
   switchTab("chat");
+  $("myProjects").hidden = !["work","uni"].includes(current.name);
+  $("childProjects").hidden = true;
+  if(matchMedia("(max-width:600px)").matches && !$("workBody").hidden) $("toggleWork").click();
+  loadExtras(version);
   try {
     const project = current.name;
     const [m, f, work] = await Promise.all([
-      api("chat?" + new URLSearchParams({ project, limit: "100" })),
+      api(chatPath(project)),
       api("files?" + new URLSearchParams({ project })),
       api("tasks?" + new URLSearchParams({ project })).catch(() => null),
     ]);
     if (version !== epoch) return;
     messages = uniqueMessages(m);
+    const target=new URLSearchParams(location.hash.slice(1)).get('message');
+    if(target){const found=await api('chat-message?'+new URLSearchParams({project,agent:conversation,id:target}));if(version!==epoch)return;messages=uniqueMessages([...messages,found]).sort((a,b)=>a.id-b.id);}
+
     tasks = (work || []).filter(t => t.project === project);
     taskUnavailable = work === null;
     connection = "connected";
@@ -336,6 +353,7 @@ async function route() {
     files = f;
     renderMessages();
     renderFiles();
+    if(target)requestAnimationFrame(()=>{const row=$('message-'+target);row?.scrollIntoView({block:'nearest'});row?.setAttribute('tabindex','-1');row?.focus({preventScroll:true});});
     schedulePoll(version);
   } catch (e) {
     if (version === epoch) { notice(e.message); connection = "reconnecting"; renderConnection(); schedulePoll(version); }
@@ -363,6 +381,7 @@ function uniqueMessages(rows) {
   const seen = new Set();
   return rows.filter(m => {
     if (current && m.project && m.project !== current.name) return false;
+    if (conversation !== "group" && m.agent !== conversation) return false;
     if (m.id == null) return true;
     if (seen.has(String(m.id))) return false;
     seen.add(String(m.id)); return true;
@@ -370,14 +389,22 @@ function uniqueMessages(rows) {
 }
 function renderConnection() { $("connection").textContent = t(connection); }
 function renderWork() {
+  const opened=new Set([...document.querySelectorAll("#workStatus details[open]")].map(e=>e.closest("article").id+":"+e.querySelector("summary").textContent));
   const box = $("workStatus"); box.replaceChildren();
   if (taskUnavailable || !tasks.length) box.append(text("p", t(taskUnavailable ? "workUnavailable" : "noWork"), "work-hint"));
-  for (const task of tasks) {
+  for (const task of tasks.filter(task => $("workFilter").value === "all" || task.status === $("workFilter").value)) {
     const item = text("article", "", "work-item");
     item.append(text("span", task.id, "work-id"), text("p", task.title));
     const status = text("span", ["open", "in_progress", "done", "blocked"].includes(task.status) ? t(task.status === "open" ? "statusOpen" : task.status) : task.status, "work-badge");
     status.dataset.state = ["open", "in_progress", "done", "blocked"].includes(task.status) ? task.status : "unknown";
-    item.append(status, text("small", task.claimed_by || task.assignee || "")); box.append(item);
+    item.id = 'task-' + task.id;
+    item.append(status, text("small", task.claimed_by || task.assignee || ""),text('small',date(task.updated)));
+    if(task.details) item.append(text('p',task.details));
+    if(task.notes?.length) { const details=document.createElement('details'); details.append(text('summary',t('activity'))); for(const n of task.notes) details.append(text('p',n.author+': '+n.note)); item.append(details); }
+    const result=document.createElement('details'); result.append(text('summary',t('result')));
+    result.append(text('p',task.status==='done' ? (task.notes?.at(-1)?.note || t('noResult')) : t('notFinished')));
+    const saved=resultRows.find(r=>r.task_id===task.id);
+    if(saved){result.replaceChildren(text('summary',t('result')),text('p',saved.summary));for(const path of saved.files){const b=text('button',path);b.onclick=()=>{switchTab('files');openFile(path);};result.append(b);}if(saved.session?.source_url){const a=text('a',t('originalSession'));a.href=saved.session.source_url;a.rel='noreferrer';result.append(a);}else result.append(text('small',t('noSessionLink')));}else result.append(text('small',t('noSessionLink'))); item.append(result); box.append(item);for(const d of item.querySelectorAll("details"))d.open=opened.has(item.id+":"+d.querySelector("summary").textContent);
   }
 }
 function renderMessages() {
@@ -385,23 +412,32 @@ function renderMessages() {
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
   const oldScroll = box.scrollTop;
   box.replaceChildren();
-  if (!messages.length) box.append(text("p", t("noMessages"), "empty"));
-  const authors = [...new Set(messages.map(m => m.author))];
+  if (!messages.length) box.append(text("p", t(conversation==='group'?'noMessages':'noDirect'), "empty"));
+  document.querySelector('[data-i18n=together]').textContent=conversation==='group'?t('together'):conversation+' · '+t('privateConversation');
+  document.querySelector('#chatForm label').textContent=conversation==='group'?t('message'):t('privateConversation');
+  document.querySelector('#chatForm [data-i18n=mention]').textContent=conversation==='group'?t('mention'):t('directHelp');
+  const authors = ["group","claude","codex","chatgpt","claude-code","local","bridge"];
   $("participants").replaceChildren();
   $("participants").setAttribute("aria-label", t("participants"));
   for (const author of authors) {
-    const chip = text("span", "", "participant"); chip.append(avatar(author), text("bdi", author)); $("participants").append(chip);
+    const chip = text("button", "", "participant"); chip.type='button'; chip.setAttribute('aria-pressed',String(author===conversation)); chip.append(avatar(author), text("bdi", author==='group'?t('group'):author)); chip.onclick=()=>{location.hash=new URLSearchParams({project:current.name,conversation:author}).toString();}; $("participants").append(chip);
   }
+  $("scopeNote").textContent = conversation === "group" ? t("groupNote") : t("privateNote");
   for (const m of messages) {
     const row = text("article", "", "message");
+    row.id = "message-"+m.id;
     row.dataset.author = identity(m.author).key;
     const content = text("div", "", "message-content");
     const header = document.createElement("header");
     header.append(text("bdi", m.author), text("time", date(m.at)));
     const bubble = text("p", m.text, "bubble"); bubble.dir = "auto";
-    content.append(header, bubble); row.append(avatar(m.author), content); box.append(row);
+    content.append(header);
+    if(m.author==='bridge'||/^(📋|📝|🛠️|☁️)/u.test(m.text)) { const detail=document.createElement('details');detail.append(text('summary',t('activity')),bubble);content.append(detail); } else content.append(bubble);
+    row.append(avatar(m.author), content); box.append(row);
   }
-  box.scrollTop = atBottom ? box.scrollHeight : oldScroll;
+  box.scrollTop = firstChatRender || atBottom ? box.scrollHeight : oldScroll;
+  $("newMessages").hidden = firstChatRender || atBottom;
+  firstChatRender = false;
 }
 function renderWaiting() {
   $("answering").textContent = waiting.length
@@ -414,7 +450,7 @@ function schedulePoll(version) {
     const project = current.name;
     try {
       const [rows, work] = await Promise.all([
-        api("chat?" + new URLSearchParams({ project, limit: "100" })),
+        api(chatPath(project)),
         api("tasks?" + new URLSearchParams({ project })).catch(() => null),
       ]);
       if (version !== epoch) return;
@@ -422,6 +458,7 @@ function schedulePoll(version) {
       if (JSON.stringify(next) !== JSON.stringify(messages)) { messages = next; renderMessages(); }
       tasks = (work || []).filter(t => t.project === project);
       taskUnavailable = work === null; renderWork();
+      loadExtras(version);
       connection = "connected"; renderConnection();
       schedulePoll(version);
     } catch (e) {
@@ -463,31 +500,19 @@ async function openFile(path) {
 }
 function switchTab(name) {
   tab = name;
-  for (const item of ["chat", "files"]) {
+  requestAnimationFrame(sizeChat);
+  for (const item of ["chat", "files", "sessions", "decisions", "search"]) {
     const active = item === name;
     $(item + "Panel").hidden = !active;
     $(item + "Tab").setAttribute("aria-selected", String(active));
     $(item + "Tab").tabIndex = active ? 0 : -1;
   }
 }
-for (const name of ["chat", "files"]) {
-  $(name + "Tab").onclick = () => switchTab(name);
-  $(name + "Tab").onkeydown = (e) => {
-    if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
-      e.preventDefault();
-      switchTab(
-        e.key === "Home"
-          ? "chat"
-          : e.key === "End"
-            ? "files"
-            : tab === "chat"
-              ? "files"
-              : "chat",
-      );
-      $(tab + "Tab").focus();
-    }
-  };
+for (const name of ['sessions','decisions','search']) {
+ const button=text('button',t(name));button.id=name+'Tab';button.dataset.i18n=name;button.setAttribute('role','tab');button.setAttribute('aria-controls',name+'Panel');button.setAttribute('aria-selected','false');button.tabIndex=-1;document.querySelector('.tabs').append(button);
 }
+const tabNames=['chat','files','sessions','decisions','search'];
+for(const name of tabNames) { $(name+'Tab').onclick=()=>switchTab(name); $(name+'Tab').onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();let i=tabNames.indexOf(tab);i=e.key==='Home'?0:e.key==='End'?4:(i+(e.key==='ArrowRight'?1:4))%5;switchTab(tabNames[i]);$(tab+'Tab').focus();}}; }
 $("language").onclick = () => {
   lang = lang === "en" ? "ar" : "en";
   try {
@@ -525,6 +550,7 @@ $("loginForm").onsubmit = async (e) => {
 };
 $("newProject").onclick = () => {
   $("projectForm").reset();
+  for(const o of $("newParent").options)o.disabled=!!o.value&&!projects.some(p=>p.name===o.value);
   $("projectError").textContent = "";
   $("projectDialog").showModal();
 };
@@ -546,6 +572,7 @@ $("projectForm").onsubmit = async (e) => {
         description: $("newDescription").value.trim(),
       }),
     });
+    if($("newParent").value) await api("project-parent",{method:"POST",body:JSON.stringify({project:name,parent:$("newParent").value})});
     projects = await api("projects");
     $("projectDialog").close();
     renderCards();
@@ -564,16 +591,16 @@ $("chatForm").onsubmit = async (e) => {
     project = current.name;
   $("send").disabled = true;
   try {
-    const result = await api("chat", {
+    const result = await api(conversation === "group" ? "chat" : "direct", {
       method: "POST",
-      body: JSON.stringify({ project, text: value, to: "none" }),
+      body: JSON.stringify({ project, text: value, to: "none", agent: conversation }),
     });
     if (version !== epoch) return;
     $("message").value = "";
     waiting = result.answering || [];
     renderWaiting();
     const next = await api(
-      "chat?" + new URLSearchParams({ project, limit: "100" }),
+      chatPath(project),
     );
     if (version !== epoch) return;
     messages = uniqueMessages(next);
@@ -617,6 +644,7 @@ window.addEventListener("pagehide", () => {
   token = "";
   hidePrivate();
 });
+setupOverhaul();
 translate();
 notice("loading");
 loadHome().catch((e) => {
@@ -625,3 +653,46 @@ loadHome().catch((e) => {
   }
   notice(e.message === "invalid" ? "" : e.message);
 });
+function chatPath(project) {return (conversation==='group'?'chat':'direct')+'?'+new URLSearchParams({project,agent:conversation,limit:'200'});}
+async function loadExtras(version) {
+ const project=current?.name;if(!project)return;
+ const results=await Promise.allSettled(['sessions','decisions','results'].map(p=>api(p+'?'+new URLSearchParams({project}))));
+ if(version!==epoch)return;
+ sessionRows=results[0].status==='fulfilled'?results[0].value:null;
+ decisionRows=results[1].status==='fulfilled'?results[1].value:null;
+ resultRows=results[2].status==='fulfilled'?results[2].value:[];
+ renderExtras();renderWork();
+}
+function renderExtras() {
+ const sessions=$('sessionList');sessions.replaceChildren();
+ if(!sessionRows?.length)sessions.append(text('p',t(sessionRows?'noSessions':'error')));
+ for(const s of sessionRows||[]) {const item=text('article','','work-item');item.id='session-'+s.id;item.append(text('h3',s.title),text('p',s.summary),text('p',s.status),text('small',date(s.updated)));if(s.source_url){const link=text('a',t('originalSession'));link.href=s.source_url;link.rel='noreferrer';item.append(link);}else item.append(text('p',t('noSessionLink')));sessions.append(item);}
+ const decisions=$('decisionList');decisions.replaceChildren();
+ if(!decisionRows){decisions.append(text('p',t('error')));return;}
+ if(!decisionRows.approvals.length&&!decisionRows.tasks.length)decisions.append(text('p',t('noDecisions')));
+ for(const a of decisionRows.approvals){const item=text('article','','decision');item.append(text('h3',a.action),text('p',a.actor),text('pre',a.args));for(const approve of [true,false]){const b=text('button',t(approve?'approve':'reject'));b.onclick=async()=>{b.disabled=true;try{await api('approvals/'+encodeURIComponent(a.id),{method:'POST',body:JSON.stringify({approve})});await loadExtras(epoch);}catch{notice('error');b.disabled=false;}};item.append(b);}decisions.append(item);}
+ for(const task of decisionRows.tasks){const b=text('button',task.title+' · '+t(task.status==='blocked'?'blocked':'waitingUser'),'file-row');b.onclick=()=>{switchTab('chat');$('workFilter').value='all';renderWork();$('task-'+task.id)?.scrollIntoView({block:'nearest'});};decisions.append(b);}
+}
+function setupOverhaul(){
+ Object.assign(copy.en,{workspace:'Workspace',topLevel:'Top level',privateConversation:'Private conversation',directHelp:'Stored privately. Automatic agent replies are not connected.',noDirect:'No messages in this private conversation yet.',originalSession:'Original session',group:'Group',groupNote:'Shared with this project’s team.',privateNote:'Private record · agent replies are not connected yet. Messages stay out of the group and external notifications.',tasks:'Tasks',filter:'Filter',all:'All',compact:'Compact messages',newMessages:'New messages ↓',sessions:'Sessions',decisions:'Needs your decision',search:'Search',sessionNote:'Only registered sessions appear here. Native app chats are not imported automatically.',noSessions:'No linked sessions are registered for this project.',noSessionLink:'Original session link unavailable',noDecisions:'Nothing needs your decision here.',activity:'Technical activity · expand',result:'Result',noResult:'Marked complete; no result summary was attached.',notFinished:'No completed result yet.',generalChat:'✦ General chat',destination:'Destination project',routeNote:'Check the destination before sending. Private conversations currently store messages without waking an agent.',myProjects:'My projects',unifiedSearch:'Search this project and selected conversation',searchNote:'Tasks, files, registered sessions and messages in this conversation. Up to 100 matching items.',approve:'Approve operation',reject:'Reject',waitingUser:'Waiting for you',choose:'Choose a destination',uncertain:'Please choose the workspace and project. Nothing has been sent.',suggested:'Suggested destination — you can change it:',groupConfirm:'This message will be shared with the selected project’s team.',privateConfirm:'This message will be stored in the selected private conversation.'});
+ Object.assign(copy.ar,{workspace:'المساحة',topLevel:'المستوى الرئيسي',privateConversation:'محادثة خاصة',directHelp:'تُحفظ بشكل خاص. الردود الآلية غير متصلة.',noDirect:'لا توجد رسائل في هذه المحادثة الخاصة بعد.',originalSession:'الجلسة الأصلية',group:'المجموعة',groupNote:'مشتركة مع فريق هذا المشروع.',privateNote:'سجل خاص · الردود الآلية غير متصلة بعد. تبقى الرسائل خارج المجموعة والإشعارات الخارجية.',tasks:'المهام',filter:'تصفية',all:'الكل',compact:'رسائل مختصرة',newMessages:'رسائل جديدة ↓',sessions:'الجلسات',decisions:'يحتاج قرارك',search:'بحث',sessionNote:'تظهر الجلسات المسجّلة فقط. لا تُستورد محادثات التطبيقات تلقائيًا.',noSessions:'لا توجد جلسات مرتبطة مسجّلة لهذا المشروع.',noSessionLink:'رابط الجلسة الأصلية غير متاح',noDecisions:'لا يوجد قرار مطلوب هنا.',activity:'نشاط تقني · عرض التفاصيل',result:'النتيجة',noResult:'مكتملة في السجل؛ لم يُرفق ملخص للنتيجة.',notFinished:'لا توجد نتيجة مكتملة بعد.',generalChat:'✦ محادثة عامة',destination:'المشروع المستقبِل',routeNote:'راجعي الوجهة قبل الإرسال. المحادثة الخاصة تحفظ الرسائل حاليًا دون تشغيل الوكيل.',myProjects:'مشاريعي',unifiedSearch:'ابحثي في المشروع والمحادثة المحددة',searchNote:'المهام والملفات والجلسات المسجّلة ورسائل المحادثة. حتى ١٠٠ نتيجة مطابقة.',approve:'الموافقة على العملية',reject:'رفض',waitingUser:'بانتظارك',choose:'اختاري الوجهة',uncertain:'اختاري المساحة والمشروع. لم تُرسل أي رسالة.',suggested:'وجهة مقترحة — يمكنك تغييرها:',groupConfirm:'ستُشارك الرسالة مع فريق المشروع المحدد.',privateConfirm:'ستُحفظ الرسالة في المحادثة الخاصة المحددة.'});
+ $('toggleWork').onclick=()=>{const hidden=!$('workBody').hidden;$('workBody').hidden=hidden;$('toggleWork').setAttribute('aria-expanded',String(!hidden));document.querySelector('.chat-layout').classList.toggle('collapsed',hidden);};
+ $('workFilter').onchange=renderWork;
+ $('compact').onchange=()=>document.querySelector('#chatPanel').classList.toggle('compact',$('compact').checked);
+ $('newMessages').onclick=()=>{$('messages').scrollTop=$('messages').scrollHeight;$('newMessages').hidden=true;};
+ $('messages').onscroll=()=>{if($('messages').scrollHeight-$('messages').scrollTop-$('messages').clientHeight<40)$('newMessages').hidden=true;};
+ $('myProjects').onclick=async()=>{const version=epoch;try{const rows=await api('children?'+new URLSearchParams({project:current.name}));if(version!==epoch)return;const list=$('childProjects');list.replaceChildren();list.hidden=false;if(!rows.length)list.append(text('p',t('noProjects')));for(const p of rows){const b=text('button',p.name);b.onclick=()=>location.hash='project='+encodeURIComponent(p.name);list.append(b);}}catch{notice('error');}};
+ let searchVersion=0;
+ $('unifiedSearch').oninput=async()=>{const v=++searchVersion,version=epoch,q=$('unifiedSearch').value;const box=$('searchResults');box.replaceChildren();if(q.trim().length<2)return;try{const results=await api('search?'+new URLSearchParams({project:current.name,agent:conversation,q}));if(v!==searchVersion||version!==epoch)return;if(!results.length)box.append(text('p',t('noMatches')));for(const r of results){const b=text('button',r.kind+' · '+r.title,'file-row');b.onclick=()=>{if(r.kind==='file'){switchTab('files');openFile(r.id);}else if(r.kind==='message'){location.hash=new URLSearchParams({project:current.name,conversation,message:r.id}).toString();}else{switchTab(r.kind==='session'?'sessions':'chat');if(r.kind==='task'){$('workFilter').value='all';renderWork();}$(r.kind+'-'+r.id)?.scrollIntoView({block:'nearest'});}};box.append(b);}}catch{if(v===searchVersion)box.append(text('p',t('error')));}};
+ $('generalChat').onclick=()=>{$('generalForm').reset();$('generalError').textContent='';$('classification').textContent=t('uncertain');$('destination').replaceChildren();const empty=text('option',t('choose'));empty.value='';$('destination').append(empty);for(const p of projects){const o=text('option',p.name);o.value=p.name;$('destination').append(o);}$('generalDialog').showModal();};
+ $('closeGeneral').onclick=()=>$('generalDialog').close();
+ let manuallyChosen=false;
+ $('destination').onchange=()=>{manuallyChosen=true;};
+ $('generalText').oninput=()=>{if(manuallyChosen)return;const value=$('generalText').value.toLowerCase();const named=projects.filter(p=>!['uni','work','personal','default'].includes(p.name)&&value.includes(p.name.toLowerCase()));if(named.length===1){$('destination').value=named[0].name;$('classification').textContent=t('suggested')+' '+named[0].name;return;}const scopes=[['uni',/\b(university|course|exam|assignment)\b|جامعة|اختبار|واجب/],['work',/\b(work|client|meeting)\b|عمل|عميل|اجتماع/],['personal',/\b(family|health|personal)\b|عائلة|صحة|شخصي/],['default',/\b(hub|bridge)\b/]].filter(([p,re])=>re.test(value)&&projects.some(x=>x.name===p));$('destination').value=scopes.length===1?scopes[0][0]:'';$('classification').textContent=scopes.length===1?t('suggested')+' '+scopes[0][0]:t('uncertain');};
+ $('generalAgent').onchange=()=>{$('classification').textContent=t($('generalAgent').value==='group'?'groupConfirm':'privateConfirm');};
+ $('generalDialog').addEventListener('close',()=>{manuallyChosen=false;});
+ $('generalForm').onsubmit=async e=>{e.preventDefault();const project=$('destination').value,agent=$('generalAgent').value,value=$('generalText').value.trim();if(!project||!value)return;e.submitter.disabled=true;try{await api(agent==='group'?'chat':'direct',{method:'POST',body:JSON.stringify({project,agent,text:value,to:'none'})});$('generalDialog').close();location.hash=new URLSearchParams({project,conversation:agent}).toString();notice('sent');}catch{$('generalError').textContent=t('sendFailed');}finally{e.submitter.disabled=false;}};
+}
+
+function sizeChat(){if(!current||tab!=='chat')return;const panel=$('chatPanel');panel.style.height=Math.max(260,Math.min(640,window.innerHeight-panel.getBoundingClientRect().top-(innerWidth<761?72:22)))+'px';}
+window.addEventListener('resize',sizeChat);

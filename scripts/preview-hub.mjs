@@ -1,0 +1,22 @@
+// Local-only fixture preview. Never loads .env or copies the production database.
+import fs from 'node:fs';
+import path from 'node:path';
+import {spawn} from 'node:child_process';
+const root=path.resolve(import.meta.dirname,'..');
+const dir=path.join(root,'.preview');fs.mkdirSync(dir,{recursive:true});
+process.env.DB_FILE=path.join(dir,'review.db');
+process.env.TELEGRAM_MIRROR='0';process.env.AI_ENGINE='api';
+const {run}=await import('../src/db.js');
+for(const p of ['work','uni','personal','Econometrics'])run('INSERT OR IGNORE INTO projects(name,description) VALUES(?,?)',p,'Review fixture — not live data');
+run("UPDATE projects SET description='Review fixture — no live data or external actions' WHERE name='default'");
+await import('../src/hub.js');
+run("INSERT OR IGNORE INTO project_parents VALUES('Econometrics','uni')");
+for(let i=1;i<=24;i++)run('INSERT OR IGNORE INTO messages(id,project,author,text) VALUES(?,?,?,?)',i,'default',i%2?'human':'claude',i===24?'This preview keeps the composer visible and task activity close by. All content here is demonstration data.':`Review example ${i}: a short message showing the bounded conversation.`);
+run("INSERT OR IGNORE INTO tasks(id,project,title,assignee,status,details) VALUES('review-task','default','Review the Hub overhaul','human','open','Check the compact chat, agent navigation and project views.')");
+run("INSERT OR IGNORE INTO tasks(id,project,title,assignee,status,details) VALUES('blocked-demo','default','Connect private agent replies','codex','blocked','Private records are isolated; native app replies are not connected yet.')");
+run("INSERT OR IGNORE INTO tasks(id,project,title,assignee,status,details) VALUES('result-demo','default','Example deliverable','codex','done','Demonstration only')");
+run("INSERT OR IGNORE INTO files(path,project,version,content,author) VALUES('review-notes.txt','default',1,'Preview fixture: the final implementation is pending review.','human')");
+run("INSERT OR IGNORE INTO task_results(task_id,summary,files) VALUES('result-demo','Example of a result with a real stored preview file.','[\"review-notes.txt\"]')");
+run("INSERT OR IGNORE INTO hub_sessions(id,project,source,title,status,summary,source_url) VALUES('current-review','default','codex','Upgrade Hub workspace experience','working','This actual Codex task; not automatically synchronized.','codex://threads/01a149af-d095-7648-a9f5-4c2817a78021')");
+const child=spawn(process.execPath,['--no-warnings','server.js'],{cwd:root,stdio:'inherit',env:{PATH:process.env.PATH,DB_FILE:process.env.DB_FILE,HOST:'127.0.0.1',PORT:'4317',AI_ENGINE:'api',TELEGRAM_MIRROR:'0',TRIAL_START:'1',HUB_PREVIEW:'1',RATE_LIMIT_PER_MIN:'10000',TRUST_PROXY:'0'}});
+process.on('SIGTERM',()=>child.kill());process.on('SIGINT',()=>child.kill());

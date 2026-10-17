@@ -590,3 +590,54 @@ dialog textarea {
   margin: 0;
   accent-color: #7b5cd6;
 }
+/* Bounded workspace: the stream and task rail scroll independently. */
+main:has(#project:not([hidden])) {max-width:1120px;padding-top:12px;padding-bottom:20px;}
+#project .back {margin:0 0 8px;padding:5px 12px;}
+#project .project-heading {margin-bottom:12px;gap:12px;}
+#project .project-heading h1 {font-size:25px;margin:2px 0;}
+#project .project-heading .eyebrow {display:none;}
+#project .project-icon {width:40px;height:40px;font-size:22px;}
+#projectDescription {font-size:12px;max-height:30px;overflow:auto;}
+#project .tabs {margin-bottom:10px;overflow-x:auto;}
+#project .tabs button {min-width:auto;padding:7px 12px;white-space:nowrap;}
+#chatPanel {height:calc(100dvh - 250px);min-height:360px;max-height:760px;display:flex;flex-direction:column;border-radius:18px;}
+.conversation-heading {padding:12px 18px 6px;}
+.conversation-heading h2 {font-size:16px;margin:0;}
+.participants {padding:0 18px 8px;flex-wrap:nowrap;overflow-x:auto;flex-shrink:0;}
+.participant {color:#eee;border-color:#444;font-weight:500;white-space:nowrap;}
+.participant[aria-pressed=true] {background:#d9c8f3;color:#2a203a;border-color:#d9c8f3;}
+#scopeNote {margin:0;padding:6px 18px;line-height:1.4;}
+.chat-layout {flex:1;min-height:0;grid-template-columns:minmax(0,1fr) 210px;overflow:hidden;}
+.chat-layout.collapsed {grid-template-columns:minmax(0,1fr) 70px;}
+.chat-stream {position:relative;min-height:0;display:flex;}
+#chatPanel .messages {height:auto;max-height:none;flex:1;padding:16px 20px;overscroll-behavior:contain;}
+#chatPanel .message {margin-bottom:16px;}
+#chatPanel.compact .message {margin-bottom:8px;}
+#chatPanel.compact .bubble {padding:7px 11px;}
+.work-panel {padding:10px;overflow:auto;min-height:0;background:#171717;}
+.work-panel button,.work-panel select {width:100%;padding:6px;background:#292929;color:#eee;border:1px solid #555;border-radius:8px;font-size:12px;}
+.work-panel label {font-size:11px;margin-top:10px;}
+.work-panel input[type=checkbox] {width:auto;}
+#workStatus {display:block;}
+#chatPanel #chatForm {padding:8px 18px 12px;flex-shrink:0;}
+#chatPanel #chatForm label {margin:0 0 4px;}
+#chatPanel textarea {height:55px;max-height:100px;min-height:40px;resize:none;padding:8px 12px;}
+#chatPanel .compose-footer {margin-top:6px;flex-direction:row;align-items:center;}
+#chatPanel .compose-footer button {padding:7px 12px;}
+#newMessages {position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:12px;background:#d9c8f3;color:#302342;padding:5px 12px;}
+#generalChat {position:fixed;bottom:16px;left:16px;z-index:4;border-radius:30px;box-shadow:0 5px 22px #34224a33;}
+select {font:inherit;max-width:100%;padding:10px;border-radius:10px;}
+#generalDialog select {width:100%;margin-bottom:12px;}
+#generalDialog p {font-size:13px;}
+#myProjects {margin-bottom:10px;}
+#childProjects {display:flex;gap:8px;margin-bottom:12px;}
+#sessionsPanel .work-item,#decisionsPanel .decision {border-top:1px solid var(--line);padding:16px 0;}
+#sessionsPanel .work-item p {font-size:14px;}
+#sessionsPanel,#decisionsPanel,#searchPanel {max-height:65dvh;overflow:auto;}
+#chatPanel details {font-size:12px;}
+#chatPanel summary {cursor:pointer;color:#d9c8f3;}
+#chatPanel .message details .bubble {margin-top:8px;}
+@media(max-width:760px){.chat-layout{grid-template-columns:minmax(0,1fr) 165px}.work-panel{border-top:0;border-inline-start:1px solid #333;padding:8px}.topbar{padding:10px 16px}main:has(#project:not([hidden])){padding:10px 12px 70px}.topbar nav a{display:none}.topbar nav{width:auto}.topbar{flex-wrap:nowrap}.brand{font-size:16px}.brand-icon{width:30px;height:30px}#chatPanel{height:calc(100dvh - 240px);min-height:360px}.conversation-heading{flex-wrap:nowrap}.conversation-heading h2{font-size:14px}.participants{padding-inline:12px}.participant bdi{font-size:10px}.participant{padding:4px 7px}#chatPanel .messages{padding:12px}.message-content{width:calc(100% - 36px)}.avatar{width:26px;height:26px}#chatPanel .message{gap:8px}#chatPanel .message .bubble{font-size:12px;padding:9px}#chatPanel .compose-footer p{max-width:60%;font-size:10px}#generalChat{font-size:12px;padding:8px 12px}}
+@media(max-width:480px){.chat-layout{grid-template-columns:minmax(0,1fr) 128px}.chat-layout.collapsed{grid-template-columns:minmax(0,1fr) 58px}#chatPanel .message{display:block}#chatPanel .message>.avatar{display:none}.message-content{width:100%}.conversation-heading .eyebrow{display:none}.work-item p{font-size:11px}.work-panel{padding:6px}.topbar nav{gap:4px}.topbar nav button{font-size:11px;padding:7px}#scopeNote{font-size:10px;padding:5px 12px}}
+#chatPanel {min-height:0;}
+@media(min-width:761px){body:has(#project:not([hidden])) .topbar{padding-block:12px;}}
