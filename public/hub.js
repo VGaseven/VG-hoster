@@ -18,7 +18,8 @@ const copy = {
     loginIntro:
       "Your projects, conversations and files, together in one calm place.",
     token: "Bridge access token",
-    loginNote: "Used only for this open page. It is never saved by the hub.",
+    loginNote: "Paste it once. The token itself is never saved in this browser.",
+    rememberDevice: "Remember this device for a year",
     unlock: "Open my hub",
     eyebrow: "A LITTLE SPACE FOR BIG IDEAS",
     headline: "Everything you’re making.",
@@ -80,7 +81,8 @@ const copy = {
     welcome: "أهلًا شهد، هذا مكانك.",
     loginIntro: "مشاريعك ومحادثاتك وملفاتك، معًا في مكان هادئ.",
     token: "رمز الدخول إلى Bridge",
-    loginNote: "يُستخدم في هذه الصفحة المفتوحة فقط، ولا تحفظه المساحة.",
+    loginNote: "الصقيه مرة واحدة. الرمز نفسه لا يُحفظ في هذا المتصفح.",
+    rememberDevice: "تذكّري هذا الجهاز لمدة سنة",
     unlock: "افتح مساحتي",
     eyebrow: "مساحة صغيرة لأفكار كبيرة",
     headline: "كل الأشياء التي تصنعينها.",
@@ -195,7 +197,7 @@ async function api(path, options = {}) {
   const response = await fetch("/api/" + path, {
     ...options,
     headers,
-    credentials: "omit",
+    credentials: "same-origin",
     cache: "no-store",
   });
   if (response.status === 401) {
@@ -500,6 +502,7 @@ $("back").onclick = () => {
 window.addEventListener("hashchange", route);
 $("lock").onclick = () => {
   token = "";
+  fetch("/api/logout", { method: "POST", credentials: "same-origin" }).catch(() => {});
   hidePrivate();
   notice("locked");
   $("token").focus();
@@ -512,6 +515,7 @@ $("loginForm").onsubmit = async (e) => {
   button.disabled = true;
   try {
     await loadHome();
+    if ($("remember").checked) await api("login", { method: "POST", body: JSON.stringify({ remember: true }) }).catch(() => {});
   } catch (err) {
     token = "";
     notice(err.message);

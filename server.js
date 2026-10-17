@@ -52,6 +52,20 @@ const digest = (s) => crypto.createHash("sha256").update(String(s)).digest();
 const tokenOk = (given) => crypto.timingSafeEqual(digest(given), digest(TOKEN)); // constant-time compare
 const auth = (req, res, next) => (!TOKEN || tokenOk(decode(tokenOf(req) || "")) ? next() : res.status(401).json({ error: "unauthorized" }));
 
+// "Remember this device": a signed, httpOnly cookie for the hub, so the token itself is never stored in the browser.
+// It only opens /api (not /mcp). Changing BRIDGE_TOKEN signs out every device.
+const DEVICE_DAYS = Number(process.env.DEVICE_LOGIN_DAYS || 365);
+const sign = (v) => crypto.createHmac("sha256", String(TOKEN)).update("hub-device:" + v).digest("base64url");
+const deviceOk = (req) => {
+  const [exp, mac] = ((req.headers.cookie || "").match(/(?:^|;\s*)hub_device=([^;]+)/)?.[1] || "").split(".");
+  if (!exp || !mac || Number(exp) < Date.now()) return false;
+  const a = Buffer.from(mac), b = Buffer.from(sign(exp));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+};
+const deviceCookie = (req, value, maxAge) => `hub_device=${value}; Path=/api; HttpOnly; SameSite=Strict; Max-Age=${maxAge}` +
+  (req.secure || req.get("x-forwarded-proto") === "https" ? "; Secure" : "");
+const apiAuth = (req, res, next) => (TOKEN && deviceOk(req) ? next() : auth(req, res, next));
+
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 // ---- MCP endpoint (stateless). Use ?agent=chatgpt, ?agent=claude or ?agent=claude-code on each connector URL. ----
@@ -67,7 +81,13 @@ app.get("/mcp", (_req, res) => res.status(405).set("Allow", "POST").end());
 
 // ---- Dashboard API (you are "human") ----
 const api = express.Router();
-api.use(auth);
+api.post("/logout", (req, res) => res.set("Set-Cookie", deviceCookie(req, "", 0)).json({ ok: true }));
+api.use(apiAuth);
+api.post("/login", (req, res) => {
+  if (!TOKEN || req.body?.remember === false) return res.json({ ok: true, remembered: false });
+  const exp = String(Date.now() + DEVICE_DAYS * 86_400_000);
+  res.set("Set-Cookie", deviceCookie(req, `${exp}.${sign(exp)}`, DEVICE_DAYS * 86_400)).json({ ok: true, remembered: true, days: DEVICE_DAYS });
+});
 const h = (fn) => async (req, res) => { try { res.json(await fn({ ...req.query, ...req.body, ...req.params })); } catch (e) { res.status(400).json({ error: e.message }); } };
 const H = "human";
 const sub = ENGINE === "subscription";

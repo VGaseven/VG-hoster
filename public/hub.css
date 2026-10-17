@@ -576,3 +576,17 @@ dialog textarea {
 #chatPanel .empty { border-color:#444; color:#bbb; font-size:13px; }
 #messages:focus-visible { outline:2px solid #d9c8f3; outline-offset:-3px; }
 @media(max-width:760px) { .chat-layout { grid-template-columns:1fr; } .work-panel { border-inline-start:0; border-top:1px solid #303030; padding:16px 20px; } #workStatus { display:flex; gap:16px; flex-wrap:wrap; } .work-item { flex:1 1 130px; } .work-hint { margin-bottom:8px; } #chatPanel .messages { padding:18px 14px; } .conversation-heading { flex-wrap:wrap; padding:20px 18px 12px; } .participants { padding:0 18px 16px; } #chatPanel #chatForm { padding:16px; } .conversation-heading h2 { font-size:19px; } }
+.login .remember {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.login .remember input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: #7b5cd6;
+}

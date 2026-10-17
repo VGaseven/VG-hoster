@@ -362,3 +362,22 @@ test("self_update rolls back when the new version can't start", async () => {
   assert.match(r.error, /didn't start/);
   assert.equal(execSync("git rev-parse --short HEAD", { cwd: path.join(tmp, "live") }).toString().trim(), before, "still on the old version");
 });
+
+test("hub remembers a device with a signed cookie, never the token itself", async () => {
+  const get = async (url, opts) => { // the shared per-IP rate limit may still be full from earlier tests
+    for (let i = 0; ; i++) { const r = await fetch(url, opts); if (r.status !== 429 || i > 30) return r; await new Promise((ok) => setTimeout(ok, 2000)); }
+  };
+  assert.equal((await get(`${base}/api/login`, { method: "POST" })).status, 401);
+  const r = await get(`${base}/api/login`, { method: "POST", headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json" }, body: "{}" });
+  assert.equal((await r.json()).remembered, true);
+  const set = r.headers.get("set-cookie");
+  assert.match(set, /^hub_device=\d+\.[\w-]+; Path=\/api; HttpOnly; SameSite=Strict; Max-Age=\d+/);
+  assert.ok(!set.includes(TOKEN));
+  const cookie = set.split(";")[0];
+  assert.equal((await get(`${base}/api/projects`, { headers: { Cookie: cookie } })).status, 200);
+  const [exp, mac] = cookie.slice("hub_device=".length).split(".");
+  assert.equal((await get(`${base}/api/projects`, { headers: { Cookie: `hub_device=${Number(exp) + 1}.${mac}` } })).status, 401, "tampered cookie");
+  assert.equal((await get(`${base}/mcp?agent=claude`, { method: "POST", headers: { Cookie: cookie } })).status, 401, "device cookie doesn't open MCP");
+  const out = await get(`${base}/api/logout`, { method: "POST" });
+  assert.match(out.headers.get("set-cookie"), /hub_device=; .*Max-Age=0/);
+});
