@@ -61,7 +61,7 @@ const server = http.createServer((req, res) => {
         }
         return send(200, projects);
       }
-      if(u.pathname==='/api/direct-status')return send(200,{capability:{available:false,reason:'provider_unavailable'},request:null});
+      if(u.pathname==='/api/direct-status')return send(200,{capability:{available:false,reason:'provider_unavailable'},request:{state:'failed',error_category:'auth_required',error_stage:'invoke',updated:'2026-10-17 10:00:00'}});
       if(u.pathname==='/api/sessions'||u.pathname==='/api/results'||u.pathname==='/api/children')return send(200,[]);
       if(u.pathname==='/api/decisions')return send(200,{approvals:[],tasks:[]});
       if(u.pathname==='/api/search')return send(200,[{kind:'file',id:'notes.html',title:'notes.html'}]);
@@ -341,6 +341,8 @@ try {
   await evaluate('document.querySelectorAll("#participants button")[1].click()');
   await wait('location.hash.includes("conversation=claude") && document.querySelectorAll(".message").length===0');
   await check('!document.querySelector("#messages").textContent.includes("sentinel")', 'private agents have distinct histories');
+  await wait('document.querySelector("#privateReplyControls").textContent.includes("تسجيل الدخول")');
+  await check('document.querySelector("#requestPrivateReply").disabled && !document.querySelector("#privateReplyControls").textContent.includes("auth_required")', 'private failure shows translated safe guidance with replies disabled');
   await evaluate('document.querySelectorAll("#participants button")[0].click()');
   await wait('location.hash.includes("conversation=group") && document.querySelectorAll(".message").length===3');
   await check('!document.querySelector("#messages").textContent.includes("sentinel")', 'private history never appears in group');

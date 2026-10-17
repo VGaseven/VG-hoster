@@ -1,6 +1,7 @@
 // Human Hub read models. Private messages never enter the legacy group/event tables.
 import { all, get, run, db } from './db.js';
 import * as core from './core.js';
+import {privateFailure} from './private-errors.js';
 import { askPrivate, privateReplyCapability } from './llm.js';
 const agents = new Set(['claude','codex','chatgpt','claude-code','local','bridge']);
 db.exec(`CREATE TABLE IF NOT EXISTS direct_messages (
@@ -22,12 +23,13 @@ export function directMessages(a) {
  return all('SELECT * FROM direct_messages WHERE project=? AND agent=? ORDER BY id DESC LIMIT ?',project(a.project),agent(a.agent),limitOf(a.limit)).reverse();
 }
 db.exec(`CREATE TABLE IF NOT EXISTS direct_requests (message_id INTEGER PRIMARY KEY, project TEXT NOT NULL, agent TEXT NOT NULL, state TEXT NOT NULL, updated TEXT DEFAULT CURRENT_TIMESTAMP);`);
+for(const column of ['error_category','error_stage'])if(!all('PRAGMA table_info(direct_requests)').some(c=>c.name===column))db.exec(`ALTER TABLE direct_requests ADD COLUMN ${column} TEXT`);
 // A restart cannot resume an in-flight external request safely. Do not auto-retry.
 run("UPDATE direct_requests SET state='interrupted',updated=CURRENT_TIMESTAMP WHERE state='working'");
 const privateJobs = new Map();
 export function directStatus(a) {
  const p=project(a.project), who=agent(a.agent);
- return { capability: privateReplyCapability(who), request:get('SELECT message_id,state,updated FROM direct_requests WHERE project=? AND agent=? ORDER BY message_id DESC LIMIT 1',p,who)||null };
+ return { capability: privateReplyCapability(who), request:get('SELECT message_id,state,updated,error_category,error_stage FROM direct_requests WHERE project=? AND agent=? ORDER BY message_id DESC LIMIT 1',p,who)||null };
 }
 export function sendDirect(a) {
  const p=project(a.project), who=agent(a.agent);
@@ -44,9 +46,10 @@ export function sendDirect(a) {
    const reply=await askPrivate(who,history,p);
    run('INSERT INTO direct_messages(project,agent,author,text) VALUES(?,?,?,?)',p,who,who,reply);
    run("UPDATE direct_requests SET state='completed',updated=CURRENT_TIMESTAMP WHERE message_id=?",posted.id);
-  }catch{
+  }catch(error){
    // Provider errors may echo private prompts; neither store nor log the raw error.
-   run("UPDATE direct_requests SET state='failed',updated=CURRENT_TIMESTAMP WHERE message_id=?",posted.id);
+   const safe=privateFailure(error);
+   run("UPDATE direct_requests SET state='failed',error_category=?,error_stage=?,updated=CURRENT_TIMESTAMP WHERE message_id=?",safe.category,safe.stage,posted.id);
   }finally{privateJobs.delete(scope);}})();privateJobs.set(scope,job);
  }
  return {posted,answering:a.reply?[who]:[],delivery:a.reply?'reply_requested':'stored'};

@@ -21,3 +21,5 @@ Approved file: https://www.figma.com/design/GUyxttaB4nhl8BElW81fl2 . Downloaded 
 Node 1:6's high-fidelity design context was translated into scoped native CSS tokens: surface, composer, input, task rail, human/agent bubble colors, accent colors and 14px bubble radius. Interactive DOM controls remain interactive. The exported PNGs are review references, never raster replacements for UI. Existing agent avatars are retained. No temporary download URL is embedded in runtime code; the original study file was not edited.
 
 Final version-matched Codex proxy result: **blocked — initialization timed out after 10 seconds with zero response bytes**. No scoped list could be sent and no names/IDs were retrieved. This is a transport-handshake blocker, not proof of missing sessions or an authentication failure. Further work needs protocol/daemon diagnostics; no daemon restart or access change was attempted.
+
+Follow-up diagnosis: the probe sent newline JSON into a WebSocket byte tunnel. This client framing error explains the timeout; it is not evidence of daemon/auth failure. No corrected live probe or second Claude call was made. See docs/HUB_DIAGNOSTICS.md.

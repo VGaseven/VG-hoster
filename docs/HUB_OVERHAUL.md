@@ -27,8 +27,8 @@ General classification is a conservative local heuristic, not an AI classifier. 
 
 `node scripts/preview-hub.mjs` starts http://127.0.0.1:4317/#project=default using `.preview/review.db`. It binds loopback, starts no scheduler/Telegram, inherits no application credentials, and blocks external-action mutations. Group messages in preview are stored without dispatch. The seed is clearly labelled demonstration data. Do not use this mode for production.
 
-- `npm test`: 33 passed, including cookie authentication, regression coverage, private isolation, no mirror/dispatch, invalid scopes, session URL validation, same-project results and parent cycles.
-- `node test/hub-ui.mjs`: 38 browser checks passed, including warm-cache recovery, RTL/mobile geometry, composer bounds after notices, escaping, dedup/reconnect, private navigation, new-message scroll preservation, task filters and search.
+- `npm test`: 34 passed, including cookie authentication, regression coverage, private isolation, no mirror/dispatch, invalid scopes, session URL validation, same-project results and parent cycles.
+- `node test/hub-ui.mjs`: 39 browser checks passed, including warm-cache recovery, RTL/mobile geometry, composer bounds after notices, escaping, dedup/reconnect, private navigation, new-message scroll preservation, task filters and search.
 - Native Chrome inspection on the Mac performed against the loopback preview. Test screenshots contain fixtures only.
 - Content hashes updated; no dependencies or framework migration.
 
@@ -58,3 +58,5 @@ Do not merge or deploy this draft before Shahed reviews scope and the integratio
 - [ ] Merge/deploy: awaiting scope review; draft remains unmerged.
 
 Detailed bounded assessment, supported interfaces, minimal next decisions and Kitchen reuse audit: [HUB_NATIVE_INTEGRATION_ASSESSMENT.md](HUB_NATIVE_INTEGRATION_ASSESSMENT.md).
+
+Safe failure categories, corrected native transport diagnosis and staged-release recommendation: [HUB_DIAGNOSTICS.md](HUB_DIAGNOSTICS.md).

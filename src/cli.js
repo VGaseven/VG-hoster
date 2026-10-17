@@ -1,6 +1,7 @@
 // Runs Claude Code and Codex on this computer, signed in with your Claude and ChatGPT subscriptions.
 // No API keys: they are removed from the child's environment so the CLIs can't bill the API by accident.
 import { spawn } from "node:child_process";
+import {PrivateReplyError,privateFailure} from "./private-errors.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -57,10 +58,10 @@ function exec({ cmd, pre }, args, input, timeoutMs = TIMEOUT_MS, cwd = os.tmpdir
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, [...pre, ...args], { env, cwd, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
     let out = "", err = "";
-    const timer = setTimeout(() => { child.kill("SIGTERM"); reject(new Error(`${bin} took longer than ${Math.round(timeoutMs / 1000)}s (is it signed in?)`)); }, timeoutMs);
+    const timer = setTimeout(() => { child.kill("SIGTERM"); reject(Object.assign(new Error(`${bin} took longer than ${Math.round(timeoutMs / 1000)}s (is it signed in?)`),{code:"ETIMEDOUT"})); }, timeoutMs);
     child.stdout.on("data", (d) => (out += d));
     child.stderr.on("data", (d) => (err += d));
-    child.on("error", (e) => { clearTimeout(timer); reject(e.code === "ENOENT" ? new Error(`${bin} is not installed on this computer`) : e); });
+    child.on("error", (e) => { clearTimeout(timer); reject(e.code === "ENOENT" ? Object.assign(new Error(`${bin} is not installed on this computer`),{code:"ENOENT"}) : e); });
     child.on("close", (code) => { clearTimeout(timer); resolve({ code, out, err }); });
     child.stdin.end(input);
   });
@@ -218,15 +219,19 @@ export async function runPrivateClaude({system,prompt,history=[]}) {
   const cwd=fs.mkdtempSync(path.join(os.tmpdir(),'hub-private-'));
   const env=Object.fromEntries(['HOME','USER','LOGNAME','PATH','TMPDIR','SystemRoot','LANG'].filter(k=>process.env[k]).map(k=>[k,process.env[k]]));
   env.PATH=[env.PATH,...EXTRA_DIRS].filter(Boolean).join(path.delimiter);
+  let stage='preflight';
   try {
     // Fail closed on older installations; help runs no agent job.
     const help=await exec(CLAUDE_BIN,['--help'],'',10000,cwd,env);
     const required=['--safe-mode','--restricted','--no-session-persistence','--strict-mcp-config','--disable-slash-commands','--no-chrome','--tools'];
-    if(help.code!==0||required.some(flag=>!help.out.includes(flag)))throw new Error('Private Claude CLI flags unavailable');
+    if(help.code!==0)throw privateFailure({message:help.err},'preflight');
+    if(required.some(flag=>!help.out.includes(flag)))throw new PrivateReplyError('unsupported_cli','preflight');
     const args=['-p','--output-format','json',...required,'','--system-prompt',system];
+    stage='invoke';
     const r=await slot(()=>exec(CLAUDE_BIN,args,flatten(history,prompt),TIMEOUT_MS,cwd,env));
-    let result;try{result=JSON.parse(r.out);}catch{throw new Error('Private Claude CLI failed');}
-    if(r.code!==0||result.is_error||typeof result.result!=='string')throw new Error('Private Claude CLI failed');
+    let result;try{result=JSON.parse(r.out);}catch{if(r.code!==0)throw privateFailure({message:r.err},stage);throw new PrivateReplyError('invalid_response',stage);}
+    if(r.code!==0||result.is_error)throw privateFailure({message:String(result.result||r.err)},stage);
+    if(typeof result.result!=='string')throw new PrivateReplyError('invalid_response',stage);
     return result.result;
-  } finally {fs.rmSync(cwd,{recursive:true,force:true});}
+  } catch(error){throw privateFailure(error,stage);} finally {fs.rmSync(cwd,{recursive:true,force:true});}
 }

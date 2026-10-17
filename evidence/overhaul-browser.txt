@@ -22,6 +22,7 @@ PASS requested responder displayed
 PASS composer stays within viewport
 PASS private send is persisted and escaped
 PASS private agents have distinct histories
+PASS private failure shows translated safe guidance with replies disabled
 PASS private history never appears in group
 PASS new replies preserve reading position and show indicator
 PASS new message indicator returns to latest
@@ -36,4 +37,4 @@ PASS project creation
 PASS locking clears private content
 PASS reload requires login again
 PASS auth never sent in cookies or URLs
-38 UI checks passed
+39 UI checks passed
