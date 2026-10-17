@@ -13,6 +13,7 @@ const chromeBin =
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 let chrome, ws;
 let calls = 0;
+let failChat = false;
 const pending = new Map();
 const requests = [];
 let projects = [
@@ -58,7 +59,12 @@ const server = http.createServer((req, res) => {
         }
         return send(200, projects);
       }
+      if (u.pathname === "/api/tasks") return send(200, [
+        { id:"T-1", project:"Economics notes", title:"Review the outline", assignee:"codex", status:"in_progress" },
+        { id:"T-other", project:"Creative <studio>", title:"Private other project", status:"done" }
+      ]);
       if (u.pathname === "/api/chat") {
+        if (failChat) return send(503, {});
         if (req.method === "POST") {
           const p = JSON.parse(body);
           chats[p.project].push({
@@ -253,6 +259,32 @@ try {
     'document.querySelector("#projectName").textContent==="Economics notes"',
     "project navigation",
   );
+  await check('document.querySelectorAll(".work-item").length===1 && !document.querySelector("#workStatus").textContent.includes("Private other project")', "task isolation and actual recorded state");
+  await check('document.querySelector(".avatar").complete && document.querySelector(".avatar").naturalWidth>0', "Figma avatar loads locally");
+  await check('document.querySelector(".message .avatar").getBoundingClientRect().width===32 && document.querySelector(".message .avatar").getBoundingClientRect().height===32', "Figma avatar geometry is 32 by 32");
+  await check('document.documentElement.scrollWidth<=320', "mobile RTL conversation fits");
+  chats["Economics notes"].push(chats["Economics notes"][0], {id:3, author:"chatgpt", text:'<img src=x onerror="window.injected=true"> مرحبًا English', at:"2026-10-17 08:10:00"});
+  await sleep(5300);
+  await check('document.querySelectorAll(".message").length===2 && !document.querySelector(".bubble img") && !window.injected', "polling deduplicates IDs and escapes message HTML");
+  failChat = true;
+  await sleep(5300);
+  await check('document.querySelector("#connection").textContent.includes("الاتصال")', "failed polling reports reconnecting");
+  failChat = false;
+  await sleep(5300);
+  await check('document.querySelector("#connection").textContent==="محدّثة"', "polling recovers automatically");
+  await evaluate('document.querySelector("#chatTab").dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowRight",bubbles:true}))');
+  await check('document.querySelector("#filesTab").getAttribute("aria-selected")==="true" && document.activeElement.id==="filesTab"', "keyboard tab navigation");
+  if (process.env.CHAT_SCREENSHOT_DIR) {
+    await evaluate('document.querySelector("#chatTab").click()');
+    const mobileShot = await send("Page.captureScreenshot", { format:"png", captureBeyondViewport:true });
+    fs.writeFileSync(path.join(process.env.CHAT_SCREENSHOT_DIR,"chat-mobile-rtl.png"),Buffer.from(mobileShot.data,"base64"));
+    await evaluate('document.querySelector("#language").click()');
+    await send("Emulation.setDeviceMetricsOverride", {width:1280,height:1100,deviceScaleFactor:1,mobile:false});
+    const desktopShot = await send("Page.captureScreenshot",{format:"png"});
+    fs.writeFileSync(path.join(process.env.CHAT_SCREENSHOT_DIR,"chat-desktop.png"),Buffer.from(desktopShot.data,"base64"));
+    await evaluate('document.querySelector("#language").click()');
+    await send("Emulation.setDeviceMetricsOverride", {width:320,height:740,deviceScaleFactor:1,mobile:true});
+  }
   await evaluate(
     'document.querySelector("#filesTab").click();document.querySelector(".file-row").click()',
   );
@@ -268,7 +300,7 @@ try {
   await evaluate(
     'document.querySelector("#chatTab").click();document.querySelector("#message").value="@claude Hello";document.querySelector("#chatForm").requestSubmit(document.querySelector("#send"))',
   );
-  await wait('document.querySelectorAll(".message").length===2');
+  await wait('document.querySelectorAll(".message").length===3');
   await check(
     'document.querySelector("#answering").textContent.includes("claude")',
     "requested responder displayed",

@@ -113,13 +113,16 @@
           aria-labelledby="chatTab"
           class="panel"
         >
-          <div id="messages" class="messages" aria-live="polite"></div>
+          <div class="conversation-heading"><div><span class="eyebrow" data-i18n="conversation">TEAM CONVERSATION</span><h2 data-i18n="together">A place to work together.</h2></div><span id="connection" role="status"></span></div>
+          <div id="participants" class="participants"></div>
+          <div class="chat-layout"><div class="chat-stream"><div id="messages" class="messages" tabindex="0" aria-live="polite"></div></div><aside class="work-panel"><h3 data-i18n="recordedWork">Recorded work</h3><p class="work-hint" data-i18n="workHint">Task records, not live presence.</p><div id="workStatus"></div></aside></div>
           <p id="answering" role="status" class="muted"></p>
           <form id="chatForm">
             <label for="message" data-i18n="message">Message your team</label
             ><textarea
               id="message"
-              rows="3"
+              rows="2"
+              dir="auto"
               maxlength="20000"
               required
             ></textarea>

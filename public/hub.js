@@ -2,6 +2,13 @@
 const $ = (id) => document.getElementById(id);
 const copy = {
   en: {
+    conversation: "TEAM CONVERSATION", together: "A place to work together.",
+    recordedWork: "Recorded work", workHint: "Task records, not live presence.",
+    noWork: "No task records in this project.", workUnavailable: "Task records unavailable.",
+    syncing: "Refreshing…", connected: "Up to date", reconnecting: "Reconnecting…",
+    statusOpen: "Open", in_progress: "In progress", done: "Done", blocked: "Blocked",
+    participants: "Authors in this conversation", requestRecorded: "Reply request recorded",
+
     skip: "Skip to content",
     brand: "Shahed’s Hub",
     classic: "Classic dashboard",
@@ -58,6 +65,13 @@ const copy = {
     pollFailed: "Couldn’t refresh replies. Reopen this project to try again.",
   },
   ar: {
+    conversation: "محادثة الفريق", together: "مكان للعمل معًا.",
+    recordedWork: "العمل المسجّل", workHint: "سجلات المهام، وليست حالة اتصال مباشرة.",
+    noWork: "لا توجد مهام مسجّلة في هذا المشروع.", workUnavailable: "تعذّر تحميل سجلات المهام.",
+    syncing: "جارٍ التحديث…", connected: "محدّثة", reconnecting: "جارٍ إعادة الاتصال…",
+    statusOpen: "مفتوحة", in_progress: "قيد التنفيذ", done: "مكتملة", blocked: "متوقفة",
+    participants: "المشاركون في هذه المحادثة", requestRecorded: "سُجّل طلب الرد",
+
     skip: "انتقل إلى المحتوى",
     brand: "مساحة شهد",
     classic: "لوحة التحكم القديمة",
@@ -127,6 +141,7 @@ let token = "",
   poll = null,
   epoch = 0,
   waiting = [];
+let tasks = [], connection = "syncing", taskUnavailable = false;
 const colors = [
   "#ddd2fb",
   "#c4eedb",
@@ -165,6 +180,9 @@ function hidePrivate() {
   $("login").hidden = false;
   $("lock").hidden = true;
   $("messages").replaceChildren();
+  $("participants").replaceChildren();
+  $("workStatus").replaceChildren();
+  tasks = [];
   $("projectCards").replaceChildren();
   $("fileList").replaceChildren();
   $("fileContent").textContent = "";
@@ -217,6 +235,8 @@ function translate() {
     renderMessages();
     renderFiles();
     renderWaiting();
+    renderWork();
+    renderConnection();
   }
 }
 function renderCards() {
@@ -287,6 +307,11 @@ async function route() {
   $("projectIcon").style.background =
     colors[projects.indexOf(current) % colors.length];
   messages = [];
+  tasks = [];
+  taskUnavailable = false;
+  connection = "syncing";
+  renderConnection();
+  renderWork();
   files = [];
   renderMessages();
   renderFiles();
@@ -294,56 +319,113 @@ async function route() {
   switchTab("chat");
   try {
     const project = current.name;
-    const [m, f] = await Promise.all([
+    const [m, f, work] = await Promise.all([
       api("chat?" + new URLSearchParams({ project, limit: "100" })),
       api("files?" + new URLSearchParams({ project })),
+      api("tasks?" + new URLSearchParams({ project })).catch(() => null),
     ]);
     if (version !== epoch) return;
-    messages = m;
+    messages = uniqueMessages(m);
+    tasks = (work || []).filter(t => t.project === project);
+    taskUnavailable = work === null;
+    connection = "connected";
+    renderConnection();
+    renderWork();
     files = f;
     renderMessages();
     renderFiles();
     schedulePoll(version);
   } catch (e) {
-    if (version === epoch) notice(e.message);
+    if (version === epoch) { notice(e.message); connection = "reconnecting"; renderConnection(); schedulePoll(version); }
+  }
+}
+const identity = (author) => {
+  const key = String(author || "unknown").toLowerCase();
+  if (key === "claude" || key === "claude-code") return { key: "claude", asset: "claude", name: author };
+  if (key === "chatgpt" || key === "dot") return { key: "chatgpt", asset: "chatgpt", name: author };
+  return { key: key === "human" ? "human" : "other", name: author || "unknown" };
+};
+function avatar(author) {
+  const who = identity(author);
+  if (who.asset) {
+    const img = document.createElement("img");
+    img.src = `/assets/${who.asset}.png`;
+    img.width = 32; img.height = 32; img.alt = ""; img.className = "avatar";
+    return img;
+  }
+  const el = text("span", String(who.name).slice(0, 2).toUpperCase(), "avatar avatar-initial");
+  el.setAttribute("aria-hidden", "true");
+  return el;
+}
+function uniqueMessages(rows) {
+  const seen = new Set();
+  return rows.filter(m => {
+    if (current && m.project && m.project !== current.name) return false;
+    if (m.id == null) return true;
+    if (seen.has(String(m.id))) return false;
+    seen.add(String(m.id)); return true;
+  });
+}
+function renderConnection() { $("connection").textContent = t(connection); }
+function renderWork() {
+  const box = $("workStatus"); box.replaceChildren();
+  if (taskUnavailable || !tasks.length) box.append(text("p", t(taskUnavailable ? "workUnavailable" : "noWork"), "work-hint"));
+  for (const task of tasks) {
+    const item = text("article", "", "work-item");
+    item.append(text("span", task.id, "work-id"), text("p", task.title));
+    const status = text("span", ["open", "in_progress", "done", "blocked"].includes(task.status) ? t(task.status === "open" ? "statusOpen" : task.status) : task.status, "work-badge");
+    status.dataset.state = ["open", "in_progress", "done", "blocked"].includes(task.status) ? task.status : "unknown";
+    item.append(status, text("small", task.claimed_by || task.assignee || "")); box.append(item);
   }
 }
 function renderMessages() {
   const box = $("messages");
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  const oldScroll = box.scrollTop;
   box.replaceChildren();
   if (!messages.length) box.append(text("p", t("noMessages"), "empty"));
+  const authors = [...new Set(messages.map(m => m.author))];
+  $("participants").replaceChildren();
+  $("participants").setAttribute("aria-label", t("participants"));
+  for (const author of authors) {
+    const chip = text("span", "", "participant"); chip.append(avatar(author), text("bdi", author)); $("participants").append(chip);
+  }
   for (const m of messages) {
     const row = text("article", "", "message");
+    row.dataset.author = identity(m.author).key;
+    const content = text("div", "", "message-content");
     const header = document.createElement("header");
-    header.append(text("strong", m.author), text("time", date(m.at)));
-    row.append(header, text("p", m.text));
-    box.append(row);
+    header.append(text("bdi", m.author), text("time", date(m.at)));
+    const bubble = text("p", m.text, "bubble"); bubble.dir = "auto";
+    content.append(header, bubble); row.append(avatar(m.author), content); box.append(row);
   }
-  if (atBottom) box.scrollTop = box.scrollHeight;
+  box.scrollTop = atBottom ? box.scrollHeight : oldScroll;
 }
 function renderWaiting() {
   $("answering").textContent = waiting.length
-    ? `${t("waiting")}: ${waiting.join(", ")}`
-    : "";
+    ? `${t("requestRecorded")}: ${waiting.join(", ")}` : "";
 }
 function schedulePoll(version) {
   stopPoll();
   poll = setTimeout(async () => {
-    if (version !== epoch || !current) return;
+    if (version !== epoch || !current || !authenticated) return;
+    const project = current.name;
     try {
-      const next = await api(
-        "chat?" + new URLSearchParams({ project: current.name, limit: "100" }),
-      );
+      const [rows, work] = await Promise.all([
+        api("chat?" + new URLSearchParams({ project, limit: "100" })),
+        api("tasks?" + new URLSearchParams({ project })).catch(() => null),
+      ]);
       if (version !== epoch) return;
-      if (JSON.stringify(next) !== JSON.stringify(messages)) {
-        messages = next;
-        renderMessages();
-      }
+      const next = uniqueMessages(rows);
+      if (JSON.stringify(next) !== JSON.stringify(messages)) { messages = next; renderMessages(); }
+      tasks = (work || []).filter(t => t.project === project);
+      taskUnavailable = work === null; renderWork();
+      connection = "connected"; renderConnection();
       schedulePoll(version);
     } catch (e) {
-      if (version === epoch)
-        notice(e.message === "invalid" ? "invalid" : "pollFailed");
+      if (version === epoch && authenticated) {
+        connection = "reconnecting"; renderConnection(); schedulePoll(version);
+      }
     }
   }, 5000);
 }
@@ -486,10 +568,11 @@ $("chatForm").onsubmit = async (e) => {
     $("message").value = "";
     waiting = result.answering || [];
     renderWaiting();
-    messages = await api(
+    const next = await api(
       "chat?" + new URLSearchParams({ project, limit: "100" }),
     );
     if (version !== epoch) return;
+    messages = uniqueMessages(next);
     renderMessages();
     notice("sent");
     schedulePoll(version);
