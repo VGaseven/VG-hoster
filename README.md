@@ -34,6 +34,7 @@ By default (`AI_ENGINE=subscription`) every "ask Claude", "ask ChatGPT", debate,
 
 ## Group chat: everyone sees everything
 One chat for you, Bob (ChatGPT Dots), the Claude app, Claude Code, Codex and the Local AI.
+- **One @ each:** `@claude` decides by itself: a quick answer, a GitHub build (pull request) or a new session in your Claude app. `@codex` answers, or for real work opens a task in your **Codex app** (needs `CODEX_CLOUD_ENV`; without it Codex does the task on this computer). `@claude-code` and `@cloud` still force a path.
 - **Wake someone:** write `@codex`, `@claude`, `@local` or `@all` in a message (dashboard, Bob, Claude app, anywhere). They answer in the chat a minute later, on your subscriptions. In the dashboard, a message with no @mention goes to Codex.
 - **Real code work:** write `@claude-code …` (add `repo:owner/name` to pick a repository). It becomes a GitHub issue; Claude Code builds it on a branch and the pull request link comes back to the chat, so you can watch the work on GitHub.
 - **Give work:** a task assigned to `codex`, `claude` or `local` starts right away on the PC; "✅ … finished" appears in the chat. Code changes still go to `claude-code` on GitHub. (`AUTO_WORK=0` turns the auto-start off.)

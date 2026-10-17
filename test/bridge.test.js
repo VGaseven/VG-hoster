@@ -13,9 +13,9 @@ const tgQueue = [], tgSent = [], ghIssues = [], n8nCalls = [], n8nStore = [];
 let mock, bridge, base, mockUrl, tmp, updateId = 1;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-async function waitFor(fn, ms = 5000) {
+async function waitFor(fn, ms = 5000, every = 50) {
   const end = Date.now() + ms;
-  for (;;) { const v = await fn(); if (v) return v; if (Date.now() > end) throw new Error("timed out"); await sleep(50); }
+  for (;;) { const v = await fn(); if (v) return v; if (Date.now() > end) throw new Error("timed out"); await sleep(every); }
 }
 
 before(async () => {
@@ -26,8 +26,12 @@ before(async () => {
       const json = (code, v) => { res.writeHead(code, { "Content-Type": "application/json" }); res.end(JSON.stringify(v)); };
       const b = body ? JSON.parse(body) : {};
       if (req.url === "/gh/repos/o/r/issues") { ghIssues.push(b); return json(201, { number: 7, html_url: "https://github.com/o/r/issues/7" }); }
-      if (req.url === "/anth/v1/messages") return json(200, { id: "m1", type: "message", role: "assistant", model: b.model, stop_reason: "end_turn",
-        content: [{ type: "text", text: "Of course! Happy to help the team." }], usage: { input_tokens: 10, output_tokens: 5 } });
+      if (req.url === "/anth/v1/messages") {
+        const last = JSON.stringify(b.messages.at(-1).content);
+        const text = /please research markets/.test(last) ? "ROUTE: SESSION Market research" : /please build the faq/.test(last) ? "ROUTE: BUILD Add a FAQ page" : "Of course! Happy to help the team.";
+        return json(200, { id: "m1", type: "message", role: "assistant", model: b.model, stop_reason: "end_turn",
+          content: [{ type: "text", text }], usage: { input_tokens: 10, output_tokens: 5 } });
+      }
       if (req.url === "/n8napi/webhook/hello") return json(200, { ok: true, got: b.payload });
       if (req.url.startsWith("/n8napi/")) {
         if (req.headers["x-n8n-api-key"] !== "k") return json(401, { message: "unauthorized" });
@@ -258,4 +262,18 @@ test("a Claude app session (actor claude) can claim an @cloud task", async () =>
   const c = await mcp("claude", "claim_task", { id: t.id });
   assert.ok(!c.error, c.text);
   assert.ok((await mcp("chatgpt", "claim_task", { id: t.id })).error, "others still can't take it");
+});
+
+test("one @claude: Claude decides between answering, building on GitHub and a cloud session", async () => {
+  const before = ghIssues.length;
+  await api("chat", "POST", { text: "@claude please build the faq page on my site", project: "route" });
+  await waitFor(() => ghIssues.length > before);
+  assert.equal(ghIssues.at(-1).title, "Add a FAQ page");
+  await api("chat", "POST", { text: "@claude please research markets for my portfolio", project: "route" });
+  const chat = async () => { const r = await api("chat?project=route"); if (!Array.isArray(r.body)) throw new Error(`chat: ${r.status} ${JSON.stringify(r.body)}`); return r.body; };
+  const queued = await waitFor(async () => (await chat()).find((m) => /Queued for Claude in your Claude app/.test(m.text)), 8000, 500);
+  assert.ok(queued);
+  const list = (await mcp("claude", "list_tasks", { project: "route" })).json;
+  assert.ok((Array.isArray(list) ? list : list.tasks).some((t) => t.assignee === "cloud" && t.title === "Market research"));
+  assert.ok(!(await chat()).some((m) => /^ROUTE:/.test(m.text)), "routing lines never show in the chat");
 });

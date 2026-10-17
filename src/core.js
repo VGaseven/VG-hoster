@@ -2,6 +2,7 @@
 import { randomUUID } from "node:crypto";
 import { all, get, run, db } from "./db.js";
 import { ask, embed, spend, webSearch } from "./llm.js";
+import { runCodexCloud } from "./cli.js";
 import { notify } from "./notify.js";
 import { safeFetchText } from "./safefetch.js";
 import { createIssue, githubReady, REPO_RE } from "./github.js";
@@ -450,8 +451,8 @@ export function mentionsIn(text) {
 // @cloud queues the message for a Claude Code session in Shahed's Claude app. A scheduled check (about hourly) opens one session
 // per queued task; the session works on GitHub and reports back here.
 export const wantsCloud = (text) => mentionWords(text).some((w) => CLOUD.has(w));
-function queueForCloud({ text, project, actor }) {
-  const title = clip(String(text).replace(/@[a-z][a-z-]*[a-z]/gi, "").replace(/\s+/g, " ").trim(), 90) || "Request from the team chat";
+function queueForCloud({ text, project, actor, title: given }) {
+  const title = given || clip(String(text).replace(/@[a-z][a-z-]*[a-z]/gi, "").replace(/\s+/g, " ").trim(), 90) || "Request from the team chat";
   const t = createTask({ title, details: `From the team chat (${actor}):\n\n${text}`, assignee: "cloud", project }, actor);
   postMessage({ text: `☁️ Queued for Claude in your Claude app (task ${t.id}). A session opens there within about an hour.`, project }, "bridge");
   return t;
@@ -459,9 +460,9 @@ function queueForCloud({ text, project, actor }) {
 // @claude-code (or @code) turns the message into real work on GitHub: Claude Code builds it on a branch and opens a pull request
 // you can open on github.com or the GitHub app. "repo:owner/name" in the message picks the repository.
 export const wantsBuilder = (text) => mentionWords(text).some((w) => BUILDER.has(w));
-function sendToBuilder({ text, project, actor }) {
+function sendToBuilder({ text, project, actor, title: given }) {
   const repo = String(text).match(/\brepo:\s*([\w.-]+\/[\w.-]+)/i)?.[1];
-  const title = clip(String(text).replace(/@[a-z][a-z-]*[a-z]/gi, "").replace(/\brepo:\s*\S+/i, "").replace(/\s+/g, " ").trim(), 90) || "Request from the team chat";
+  const title = given || clip(String(text).replace(/@[a-z][a-z-]*[a-z]/gi, "").replace(/\brepo:\s*\S+/i, "").replace(/\s+/g, " ").trim(), 90) || "Request from the team chat";
   const t = createTask({ title, details: `From the team chat (${actor}):\n\n${text}`, assignee: "claude-code", project }, actor);
   const job = dispatchTask({ id: t.id, repo }, actor)
     .then((d) => postMessage({ text: `🛠️ Claude Code is on it: ${d.github_url}\nYou'll see a pull request there to check when it's done.`, project }, "claude-code"))
@@ -470,15 +471,47 @@ function sendToBuilder({ text, project, actor }) {
 }
 const pendingReplies = new Set();
 // Wake the given agents to reply in the background, so the person or app posting never waits minutes for an answer.
+// One @claude does it all, and @codex too: the agent first decides what kind of request this is.
+const ROUTING = {
+  claude: `First decide what this needs:
+- Changes to code, a website or files in a GitHub repo → reply with ONLY one line: ROUTE: BUILD <short title> (add repo:owner/name if they named a repo)
+- A bigger job that needs a long working session (research, a report, a plan with many parts) → reply with ONLY: ROUTE: SESSION <short title>
+- Anything else (a question, a quick answer, a short piece of writing) → just answer.`,
+  codex: `First decide what this needs:
+- A real task that changes code or files, or needs a long working session → reply with ONLY one line: ROUTE: TASK <short title>
+- Anything else → just answer.`,
+};
+export function parseRoute(reply) {
+  const m = String(reply).trim().match(/^ROUTE:\s*(BUILD|SESSION|TASK)\b\s*(.*)$/im);
+  if (!m) return null;
+  const repo = m[2].match(/\brepo:\s*([\w.-]+\/[\w.-]+)/i)?.[1];
+  return { kind: m[1].toUpperCase(), title: m[2].replace(/\brepo:\s*\S+/i, "").trim(), repo };
+}
+async function startCodexTask({ text, title, project, actor }) {
+  const t = createTask({ title: title || clip(cleanText(text), 90), details: `From the team chat (${actor}):\n\n${text}`, assignee: "codex", project }, actor);
+  if (!process.env.CODEX_CLOUD_ENV) {
+    // No Codex Cloud environment yet: Codex does it on the PC/Mac and writes the result on the task.
+    return route({ ...t, status: "open" }, actor);
+  }
+  const r = await runCodexCloud({ prompt: `${cleanText(text)}\n\n(Task from Shahed's team chat, project "${project}". Shahed isn't a developer: keep explanations short and plain. Open a pull request for any code change; never merge.)` });
+  updateTask({ id: t.id, note: `Opened in the Codex app: ${r.url || r.text}`, status: "in_progress" }, "codex");
+  postMessage({ text: `🔵 Codex opened a task in your Codex app: ${r.url || r.text}`, project }, "codex");
+}
+const cleanText = (text) => String(text).replace(/@[a-z][a-z-]*[a-z]/gi, "").replace(/\s+/g, " ").trim();
 function wake(agents, { text, project, actor }) {
   for (const a of agents) {
     const job = (async () => {
       const thread = listMessages({ project, limit: 30 }).map((m) => `${m.author}: ${m.text}`).join("\n\n");
-      const prompt = `Team chat so far:\n${thread || "(start)"}\n\nYou were mentioned by ${actor}. Write your reply to the team chat. ` +
-        `If they asked for work, do it and give the result. Keep it short. Your reply is posted to the chat for you, so just write the message itself; ` +
-        `don't mention tools or posting.`;
-      try { postMessage({ text: await askAgent({ agent: a, prompt, project, feed: false }, actor), project }, CHAT_AUTHOR[a]); }
-      catch (e) { postMessage({ text: `(${CHAT_AUTHOR[a]} couldn't answer: ${e.message})`, project }, "bridge"); }
+      const prompt = `Team chat so far:\n${thread || "(start)"}\n\nYou were mentioned by ${actor}. ${ROUTING[a] ? ROUTING[a] + "\n" : ""}Write your reply to the team chat. ` +
+        `Keep it short. Your reply is posted to the chat for you, so just write the message itself; don't mention tools or posting.`;
+      try {
+        const reply = await askAgent({ agent: a, prompt, project, feed: false }, actor);
+        const r = ROUTING[a] && parseRoute(reply);
+        if (!r) return postMessage({ text: reply, project }, CHAT_AUTHOR[a]);
+        if (r.kind === "BUILD") return sendToBuilder({ text: `${text}${r.repo ? ` repo:${r.repo}` : ""}`, project, actor, title: r.title });
+        if (r.kind === "SESSION") return queueForCloud({ text, project, actor, title: r.title });
+        return await startCodexTask({ text, title: r.title, project, actor });
+      } catch (e) { postMessage({ text: `(${CHAT_AUTHOR[a]} couldn't answer: ${e.message})`, project }, "bridge"); }
     })();
     pendingReplies.add(job);
     job.finally(() => pendingReplies.delete(job));

@@ -159,7 +159,7 @@ for (const t of TOOLS) core.registerAction(t.name, t.fn);
 export const TOOL_NAMES = TOOLS.map((t) => t.name);
 
 const GROUP = `This bridge is the human's group chat with the whole team: the human, Bob (ChatGPT Dots), Claude (app and Claude Code), Codex and the Local AI. The human talks to different AIs in different apps and must never have to repeat themselves:
-- Wake a teammate by writing @codex, @claude, @local or @all in team_chat. Write @claude-code for real code/website work: it becomes a GitHub pull request the human can see. Their answer appears in the chat a little later; check with read_team_chat or get_updates.
+- Wake a teammate by writing @codex, @claude, @local or @all in team_chat. @claude decides by itself whether to answer, build on GitHub (pull request) or open a Claude app session; @codex answers or opens a task in the Codex app. Their answer appears in the chat a little later; check with read_team_chat or get_updates.
 - When the human asks you for something, first post a one-line summary with team_chat (to "none"), e.g. "Human asked: add a FAQ page".
 - Before answering, check read_team_chat / get_briefing so you know what the human already told the others.
 - Post short progress and results with team_chat or update_task so the others (and the human, in the dashboard) can see your work.`;

@@ -101,6 +101,16 @@ export async function runCodex({ system, prompt, history = [], model, timeoutMs 
   } finally { fs.rmSync(path.dirname(outFile), { recursive: true, force: true }); }
 }
 
+// ---- Codex Cloud: a task that shows up in Shahed's Codex app (chatgpt.com/codex) ----
+// Needs CODEX_CLOUD_ENV: the Codex Cloud environment id for the repo (Codex app → Settings → Environments).
+export async function runCodexCloud({ prompt, branch = process.env.CODEX_CLOUD_BRANCH }) {
+  const args = ["cloud", "exec", "--env", process.env.CODEX_CLOUD_ENV, ...(branch ? ["--branch", branch] : []), prompt];
+  const r = await slot(() => exec(CODEX_BIN, args, "", 120_000));
+  const out = `${r.out}\n${r.err}`.trim();
+  if (r.code !== 0) throw fail("Codex Cloud", out);
+  return { url: out.match(/https?:\/\/\S+/)?.[0] || null, text: out.split("\n").filter(Boolean).at(-1) || "started" };
+}
+
 // ---- a free AI on this computer's own GPU (Ollama) ----
 // Set LOCAL_MODEL (e.g. one you pulled with `ollama pull`) to turn it on. No plan limits; nothing leaves the computer.
 const OLLAMA_URL = (process.env.OLLAMA_URL || "http://127.0.0.1:11434").replace(/\/$/, "");
