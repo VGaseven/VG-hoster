@@ -145,6 +145,7 @@ let token = "",
   waiting = [];
 let conversation = "group", firstChatRender = true, sessionRows = [], resultRows = [], decisionRows = {approvals:[],tasks:[]};
 let tasks = [], connection = "syncing", taskUnavailable = false;
+let chatRows = [], homeView = "chats", cameFrom = "";
 const colors = [
   "#ddd2fb",
   "#c4eedb",
@@ -191,6 +192,8 @@ function hidePrivate() {
   $("workStatus").replaceChildren();
   tasks = [];
   $("projectCards").replaceChildren();
+  $("chatList").replaceChildren(); chatRows = [];
+  if ($("newChatDialog").open) $("newChatDialog").close();
   $("fileList").replaceChildren();
   $("fileContent").textContent = "";
   $("filePreview").hidden = true;
@@ -238,7 +241,9 @@ function translate() {
     .querySelector("[role=tablist]")
     .setAttribute("aria-label", t("projectSpace"));
   renderCards();
+  renderChatList();
   if (current) {
+    $("back").textContent = t(cameFrom === "chats" ? "backChats" : "back");
     renderMessages();
     renderFiles();
     renderWaiting();
@@ -298,6 +303,8 @@ async function route() {
   try {
     const params = new URLSearchParams(location.hash.slice(1));
     name = params.get("project");
+    homeView = params.get("view") === "projects" ? "projects" : "chats";
+    cameFrom = params.get("from") === "chats" ? "chats" : "";
     conversation = ["claude","codex","chatgpt","claude-code","local","bridge"].includes(params.get("conversation")) ? params.get("conversation") : "group";
   } catch {
     name = null;
@@ -306,9 +313,14 @@ async function route() {
   $("home").hidden = !!current;
   $("project").hidden = !current;
   if (!current) {
+    showHome(version);
     if (name) notice("projectMissing");
     return;
   }
+  $("back").textContent = t(cameFrom === "chats" ? "backChats" : "back");
+  // Opened from the chat list: show only the chat, like a messaging app.
+  document.body.classList.toggle("chat-focus", cameFrom === "chats");
+  $("generalChat").hidden = cameFrom === "chats";
   notice("");
   $("projectName").textContent = current.name;
   $("projectDescription").textContent = current.description || "";
@@ -420,7 +432,7 @@ function renderMessages() {
   $("participants").replaceChildren();
   $("participants").setAttribute("aria-label", t("participants"));
   for (const author of authors) {
-    const chip = text("button", "", "participant"); chip.type='button'; chip.setAttribute('aria-pressed',String(author===conversation)); chip.append(avatar(author), text("bdi", author==='group'?t('group'):author)); chip.onclick=()=>{location.hash=new URLSearchParams({project:current.name,conversation:author}).toString();}; $("participants").append(chip);
+    const chip = text("button", "", "participant"); chip.type='button'; chip.setAttribute('aria-pressed',String(author===conversation)); chip.append(avatar(author), text("bdi", author==='group'?t('group'):author)); chip.onclick=()=>{location.hash=new URLSearchParams({project:current.name,conversation:author,...(cameFrom?{from:cameFrom}:{})}).toString();}; $("participants").append(chip);
   }
   $("scopeNote").textContent = conversation === "group" ? t("groupNote") : t("privateNote");
   for (const m of messages) {
@@ -438,6 +450,7 @@ function renderMessages() {
   box.scrollTop = firstChatRender || atBottom ? box.scrollHeight : oldScroll;
   $("newMessages").hidden = firstChatRender || atBottom;
   firstChatRender = false;
+  markSeen(current?.name, conversation, messages);
 }
 function renderWaiting() {
   $("answering").textContent = waiting.length
@@ -522,7 +535,7 @@ $("language").onclick = () => {
 };
 $("search").oninput = renderCards;
 $("back").onclick = () => {
-  location.hash = "";
+  location.hash = cameFrom === "chats" ? "" : "view=projects";
 };
 window.addEventListener("hashchange", route);
 $("lock").onclick = () => {
@@ -645,6 +658,7 @@ window.addEventListener("pagehide", () => {
   hidePrivate();
 });
 setupOverhaul();
+setupChats();
 translate();
 notice("loading");
 loadHome().catch((e) => {
@@ -740,4 +754,97 @@ async function refreshPrivateStatus(version){
  if(state.request)controls.append(text('small',t('replyState')+': '+state.request.state+' · '+date(state.request.updated)));
  if(state.request?.state==='failed'){const key='private_'+state.request.error_category;controls.append(text('small',t(Object.hasOwn(copy.en,key)?key:'private_provider_error')));}
  }catch{if(version===epoch){controls.replaceChildren(text('small',t('replyUnavailable')));}}
+}
+
+// WhatsApp-style chat list: one place for every group and private chat, newest first.
+// Only the last-seen message id per chat is kept in this browser, to show unread badges.
+const chatKey = (project, agent) => JSON.stringify([project, agent]);
+function readSeen() { try { const v = JSON.parse(localStorage.getItem("hub-seen") || "{}"); return v && typeof v === "object" ? v : {}; } catch { return {}; } }
+function markSeen(project, agent, rows) {
+  if (!project || !rows.length) return;
+  const top = Math.max(...rows.map(m => Number(m.id) || 0));
+  const seen = readSeen(), key = chatKey(project, agent);
+  if ((seen[key] || 0) >= top) return;
+  seen[key] = top;
+  try { localStorage.setItem("hub-seen", JSON.stringify(seen)); } catch {}
+}
+const agentName = (agent) => ({ group: t("group"), claude: "Claude", codex: "Codex", chatgpt: "ChatGPT", "claude-code": "Claude Code", local: "Local AI", bridge: "Bridge" })[agent] || agent;
+function shortTime(value) {
+  if (!value) return "";
+  const d = new Date(value.includes("T") ? value : value.replace(" ", "T") + "Z");
+  if (Number.isNaN(d.valueOf())) return "";
+  const locale = lang === "ar" ? "ar-SA" : "en-GB", now = new Date();
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return t("yesterday");
+  return d.toLocaleDateString(locale, { day: "numeric", month: "short" });
+}
+function showHome(version) {
+  document.body.classList.remove("chat-focus");
+  const chats = homeView === "chats";
+  $("chatsHome").hidden = !chats;
+  $("projectsHome").hidden = chats;
+  $("chatsView").setAttribute("aria-pressed", String(chats));
+  $("projectsView").setAttribute("aria-pressed", String(!chats));
+  $("generalChat").hidden = chats;
+  if (chats) loadChatList(version);
+}
+async function loadChatList(version) {
+  stopPoll();
+  try {
+    const seen = readSeen();
+    const pairs = Object.entries(seen).map(([k, id]) => { try { return [...JSON.parse(k), id]; } catch { return null; } }).filter(Boolean);
+    const rows = await api("chats?" + new URLSearchParams({ seen: JSON.stringify(pairs) }));
+    if (version !== epoch) return;
+    chatRows = rows; renderChatList();
+  } catch (e) { if (version === epoch) notice(e.message); }
+  if (version === epoch && authenticated && !current) poll = setTimeout(() => loadChatList(version), 5000);
+}
+function renderChatList() {
+  const list = $("chatList");
+  if (!list) return;
+  list.replaceChildren();
+  if (!chatRows.length) { list.append(text("li", t("noChats"), "empty")); return; }
+  for (const c of chatRows) {
+    const li = document.createElement("li");
+    const b = text("button", "", "chat-row"); b.type = "button";
+    if (c.unread) b.classList.add("unread");
+    const pic = c.agent === "group" ? text("span", "👥", "avatar avatar-initial group-avatar") : avatar(c.agent);
+    pic.setAttribute("aria-hidden", "true");
+    const body = text("span", "", "chat-row-body");
+    const top = text("span", "", "chat-row-top");
+    const title = text("bdi", c.agent === "group" ? c.project : agentName(c.agent), "chat-row-title");
+    top.append(title, text("time", shortTime(c.at)));
+    const sub = text("span", "", "chat-row-sub");
+    const kind = text("span", c.agent === "group" ? t("groupChat") : `${t("privateWith")} · ${c.project}`, "chat-row-kind");
+    const preview = text("bdi", c.id == null ? t("noMessagesYet") : (c.author === "human" ? t("you") + ": " : c.agent === "group" ? agentName(c.author) + ": " : "") + c.text.replace(/\s+/g, " "), "chat-row-preview");
+    preview.dir = "auto";
+    sub.append(preview);
+    if (c.unread) { const badge = text("span", c.unread > 99 ? "99+" : String(c.unread), "unread-badge"); badge.setAttribute("aria-label", `${c.unread} ${t("unreadLabel")}`); sub.append(badge); }
+    body.append(top, kind, sub);
+    b.append(pic, body);
+    b.onclick = () => { location.hash = new URLSearchParams({ project: c.project, conversation: c.agent, from: "chats" }).toString(); };
+    li.append(b); list.append(li);
+  }
+}
+function setupChats() {
+  Object.assign(copy.en, { chats: "Chats", newChat: "+ New chat", newChatTitle: "Start a new chat", chatKind: "Who do you want to talk to?", kindPrivate: "One assistant (private)", kindGroup: "The whole team (group)", assistant: "Assistant", inProject: "In project", openChat: "Open chat", backChats: "← Chats", groupChat: "Group chat", privateWith: "Private", you: "You", noMessagesYet: "No messages yet", noChats: "No chats yet. Tap “+ New chat” to start one.", yesterday: "Yesterday", unreadLabel: "unread messages" });
+  Object.assign(copy.ar, { chats: "المحادثات", newChat: "+ محادثة جديدة", newChatTitle: "ابدئي محادثة جديدة", chatKind: "مع من تريدين التحدث؟", kindPrivate: "مساعد واحد (خاصة)", kindGroup: "الفريق كله (مجموعة)", assistant: "المساعد", inProject: "في مشروع", openChat: "افتحي المحادثة", backChats: "→ المحادثات", groupChat: "محادثة جماعية", privateWith: "خاصة", you: "أنتِ", noMessagesYet: "لا توجد رسائل بعد", noChats: "لا توجد محادثات بعد. اضغطي «+ محادثة جديدة» للبدء.", yesterday: "أمس", unreadLabel: "رسائل غير مقروءة" });
+  $("chatsView").onclick = () => { location.hash = ""; };
+  $("projectsView").onclick = () => { location.hash = "view=projects"; };
+  const syncKind = () => { const group = $("newChatForm").elements.chatKind.value === "group"; $("newChatAgent").disabled = group; $("newChatAgent").previousElementSibling.hidden = group; $("newChatAgent").hidden = group; };
+  for (const r of $("newChatForm").elements.chatKind) r.onchange = syncKind;
+  $("newChat").onclick = () => {
+    $("newChatForm").reset();
+    $("newChatProject").replaceChildren(...projects.map(p => { const o = text("option", p.name); o.value = p.name; return o; }));
+    syncKind(); $("newChatDialog").showModal();
+  };
+  $("cancelNewChat").onclick = () => $("newChatDialog").close();
+  $("newChatForm").onsubmit = (e) => {
+    e.preventDefault();
+    const project = $("newChatProject").value; if (!project) return;
+    const agent = $("newChatForm").elements.chatKind.value === "group" ? "group" : $("newChatAgent").value;
+    $("newChatDialog").close();
+    location.hash = new URLSearchParams({ project, conversation: agent, from: "chats" }).toString();
+  };
 }

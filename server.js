@@ -109,6 +109,7 @@ api.post("/update", h((a) => core.updateBridge(a, H)));
 api.post("/tasks/:id/build", h((a) => core.buildTaskById(a, H)));
 api.post("/pause", h((a) => core.pauseAll(a, H)));
 api.post("/resume", h((a) => core.resumeAll(a, H)));
+api.get('/chats', h(hub.chatList));
 api.get('/direct', h(hub.directMessages));
 api.get('/direct-status', h(hub.directStatus));
 api.post('/direct', h(hub.sendDirect));
