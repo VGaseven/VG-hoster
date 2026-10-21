@@ -129,3 +129,31 @@ export function chatList(a) {
   return {...c,unread};
  }).sort((x,y)=>(y.at||'').localeCompare(x.at||'')||(y.id||0)-(x.id||0));
 }
+// Project sections and details for the Home map. Status is recorded by people or agents, never computed;
+// there is deliberately no progress percentage.
+export const SECTIONS = ['work','uni','personal','gaming','skills'];
+const STATUSES = ['active','paused','done','unknown'];
+db.exec(`CREATE TABLE IF NOT EXISTS project_meta(project TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'unknown',
+ last_step TEXT NOT NULL DEFAULT '', remaining TEXT NOT NULL DEFAULT '', links TEXT NOT NULL DEFAULT '[]', updated TEXT DEFAULT CURRENT_TIMESTAMP)`);
+export function projectMeta() {
+ return all(`SELECT p.name AS project, COALESCE(m.status,'unknown') AS status, COALESCE(m.last_step,'') AS last_step, COALESCE(m.remaining,'') AS remaining,
+  COALESCE(m.links,'[]') AS links, m.updated, r.parent FROM projects p LEFT JOIN project_meta m ON m.project=p.name LEFT JOIN project_parents r ON r.project=p.name`)
+  .map(x=>({...x,links:JSON.parse(x.links)}));
+}
+export function setProjectMeta(a) {
+ const p=project(a.project);
+ const status=a.status===undefined?'unknown':a.status;
+ if(!STATUSES.includes(status))throw new Error('Unknown status');
+ const textOf=(v,n)=>{if(v!==undefined&&typeof v!=='string')throw new Error('Text expected');return String(v||'').slice(0,n);};
+ const links=a.links===undefined?[]:a.links;
+ if(!Array.isArray(links)||links.length>20)throw new Error('Links must be a list of up to 20');
+ const clean=links.map(l=>{
+  if(typeof l?.label!=='string'||!l.label.trim()||typeof l?.url!=='string')throw new Error('Each link needs a label and url');
+  const u=new URL(l.url);if(u.protocol!=='https:'||u.username||u.password)throw new Error('Links must be https without credentials');
+  return {label:l.label.trim().slice(0,80),url:u.href};
+ });
+ run(`INSERT INTO project_meta(project,status,last_step,remaining,links) VALUES(?,?,?,?,?) ON CONFLICT(project) DO UPDATE SET
+  status=excluded.status,last_step=excluded.last_step,remaining=excluded.remaining,links=excluded.links,updated=CURRENT_TIMESTAMP`,
+  p,status,textOf(a.last_step,500),textOf(a.remaining,1000),JSON.stringify(clean));
+ return projectMeta().find(x=>x.project===p);
+}
