@@ -107,3 +107,6 @@ data/
 .preview/
 
 node_modules
+
+# Keep the BizData/WhatIf tool modules (the Python "lib/" rule above would hide them)
+!public/tools/bizdata/lib/

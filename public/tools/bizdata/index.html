@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <meta name="referrer" content="no-referrer" />
+    <title>BizData Stack Sandbox · Shahed’s Hub</title>
+    <link rel="stylesheet" href="app.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <a class="skip" href="#stage">Skip to the mission</a>
+    <header class="bar">
+      <div class="bar-title">
+        <p class="eyebrow">BizData Stack Sandbox · Mission 1</p>
+        <h1>Rotterdam Port Bottleneck</h1>
+        <p class="promise">Learn to make and defend business decisions with data.</p>
+      </div>
+      <fieldset class="mode" id="mode">
+        <legend>Learning mode</legend>
+        <label><input type="radio" name="mode" value="guided" checked /> Guided</label>
+        <label><input type="radio" name="mode" value="assisted" /> Assisted</label>
+        <label><input type="radio" name="mode" value="independent" /> Independent</label>
+      </fieldset>
+    </header>
+    <p class="sim-note" id="simNote" role="note"></p>
+
+    <section class="status" aria-labelledby="statusTitle">
+      <h2 id="statusTitle" class="visually-hidden">Company status (simulated)</h2>
+      <div class="kpis" id="kpis"></div>
+    </section>
+
+    <nav class="steps" aria-label="Mission steps"><ol id="steps"></ol></nav>
+
+    <main id="stage" tabindex="-1">
+      <section id="step-briefing" class="step" aria-labelledby="h-briefing"></section>
+      <section id="step-evidence" class="step" aria-labelledby="h-evidence" hidden></section>
+      <section id="step-strategy" class="step" aria-labelledby="h-strategy" hidden></section>
+      <section id="step-defend" class="step" aria-labelledby="h-defend" hidden></section>
+      <section id="step-review" class="step" aria-labelledby="h-review" hidden></section>
+      <section id="step-portfolio" class="step" aria-labelledby="h-portfolio" hidden></section>
+    </main>
+
+    <dialog id="lineage" aria-labelledby="lineageTitle">
+      <div class="dialog-head"><h2 id="lineageTitle"></h2><button type="button" id="closeLineage" class="ghost">Close</button></div>
+      <div id="lineageBody"></div>
+    </dialog>
+    <div id="live" class="visually-hidden" aria-live="polite"></div>
+  </body>
+</html>
