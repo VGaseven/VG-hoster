@@ -1,0 +1,68 @@
+{
+  "name": "biz-data-sandbox",
+  "displayName": "BizData Sandbox",
+  "description": "An interactive learning sandbox that teaches business majors real-world SQL, R and EViews data workflows with live what-if simulators.",
+  "version": "0.1.0",
+  "publisher": "vgaseven",
+  "author": {
+    "name": "vgaseven"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vgaseven/vg-hoster.git",
+    "directory": "biz-data-sandbox"
+  },
+  "bugs": {
+    "url": "https://github.com/vgaseven/vg-hoster/issues"
+  },
+  "homepage": "https://github.com/vgaseven/vg-hoster/tree/master/biz-data-sandbox#readme",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Education",
+    "Data Science"
+  ],
+  "keywords": [
+    "business analytics",
+    "sql",
+    "r",
+    "eviews",
+    "econometrics",
+    "customer lifetime value",
+    "arima",
+    "finance",
+    "education"
+  ],
+  "galleryBanner": {
+    "color": "#1e3a5f",
+    "theme": "dark"
+  },
+  "activationEvents": [
+    "onCommand:bizDataSandbox.start"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "bizDataSandbox.start",
+        "title": "Open BizData Sandbox",
+        "category": "BizData"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "check:webview": "node --check media/main.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/vscode": "~1.85.0",
+    "@vscode/vsce": "^4.0.0",
+    "typescript": "^5.9.3"
+  }
+}
