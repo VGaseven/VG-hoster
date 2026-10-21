@@ -342,6 +342,19 @@ test("hub shell and classic dashboard coexist without exposing project data", as
   assert.equal((await fetch(`${base}/mcp`)).status, 405);
 });
 
+test("Work tool: BizData Sandbox is served from the shared extension files and needs no Hub data", async () => {
+  const page = await fetch(`${base}/tools/bizdata/`);
+  assert.equal(page.status, 200);
+  assert.match(await page.text(), /src="host\.js"/);
+  for (const file of ["body.html", "main.js", "main.css", "scenarios.js"]) {
+    const r = await fetch(`${base}/tools/bizdata/media/${file}`);
+    assert.equal(r.status, 200, file);
+    assert.equal(await r.text(), fs.readFileSync(path.join(import.meta.dirname, "../biz-data-sandbox/media", file), "utf8"));
+  }
+  assert.doesNotMatch(fs.readFileSync(path.join(import.meta.dirname, "../public/tools/bizdata/host.js"), "utf8"), /\/api\//);
+  assert.equal((await fetch(`${base}/tools/bizdata/media/../../../server.js`)).status, 404);
+});
+
 test("hub APIs isolate chat and versioned files by project", async () => {
   await api('projects', 'POST', {name:'hub-a',description:'First project'});
   await api('projects', 'POST', {name:'hub-b',description:'Second project'});

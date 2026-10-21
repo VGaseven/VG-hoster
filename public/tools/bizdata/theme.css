@@ -1,0 +1,63 @@
+@import url("https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap");
+
+/* Maps the VS Code theme variables the sandbox uses onto the Hub's calm, light pastel look (docs/HUB_SPEC.md §5). */
+:root {
+  --vscode-font-family: Nunito, "Baloo Bhaijaan 2", system-ui, sans-serif;
+  --vscode-font-size: 15px;
+  --vscode-editor-font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --vscode-editor-font-size: 13px;
+  --vscode-foreground: #3b3355;
+  --vscode-descriptionForeground: #706681;
+  --vscode-editor-background: #f6f2ff;
+  --vscode-editor-foreground: #3b3355;
+  --vscode-sideBar-background: #ffffff;
+  --vscode-panel-border: #e8e0f3;
+  --vscode-input-border: #ddd2fb;
+  --vscode-focusBorder: #7b5cd6;
+  --vscode-button-background: #7b5cd6;
+  --vscode-button-foreground: #ffffff;
+  --vscode-button-hoverBackground: #6a4cc4;
+  --vscode-button-secondaryBackground: #ede7fb;
+  --vscode-button-secondaryForeground: #3b3355;
+  --vscode-button-secondaryHoverBackground: #ddd2fb;
+  --vscode-list-hoverBackground: #f5f0ff;
+  --vscode-list-activeSelectionBackground: #ddd2fb;
+  --vscode-list-activeSelectionForeground: #3b3355;
+  --vscode-charts-blue: #7b5cd6;
+  --vscode-charts-orange: #f08a5d;
+  --vscode-charts-green: #2f9e6e;
+  --vscode-charts-purple: #a052c9;
+  --vscode-editorWarning-foreground: #c2410c;
+  --radius: 20px;
+}
+
+body {
+  background: #f6f2ff;
+}
+
+h1,
+h2,
+.chart-title {
+  font-family: "Baloo 2", "Baloo Bhaijaan 2", sans-serif;
+}
+
+.card {
+  box-shadow: 0 6px 24px rgba(59, 51, 85, 0.06);
+}
+
+button {
+  border-radius: 12px;
+}
+
+#codeEditor {
+  background: #fbf9ff;
+}
+
+/* The Hub page above the frame already shows the title and description. */
+.app-header > div:first-child {
+  display: none;
+}
+
+.app-header {
+  justify-content: flex-start;
+}

@@ -177,6 +177,8 @@ api.post("/backup", h(() => backup()));
 app.use("/api", api);
 
 app.get("/classic", (_req, res) => res.sendFile(path.join(import.meta.dirname, "public/classic.html")));
+// Hub tools: BizData Sandbox (Work) shares its sandbox files with the VS Code extension in biz-data-sandbox/.
+app.use("/tools/bizdata/media", express.static(path.join(import.meta.dirname, "biz-data-sandbox/media")));
 app.use(express.static(path.join(import.meta.dirname, "public")));
 
 // ---- Backups: daily snapshot, keep the last 7 ----

@@ -147,6 +147,13 @@ let conversation = "group", firstChatRender = true, sessionRows = [], resultRows
 let chatRows = [], homeView = "chats", cameFrom = "";
 let tasks = [], connection = "syncing", taskUnavailable = false, meta = [];
 const SECTIONS = ["work","uni","personal","gaming","skills"];
+// Built-in Hub tools. They are pages in public/tools/<id>/, listed under a section, and read no Hub data.
+const TOOLS = [
+  { id: "bizdata", section: "work", emoji: "🧮", src: "/tools/bizdata/",
+    name: { en: "BizData Sandbox", ar: "مختبر بيانات الأعمال" },
+    description: { en: "Practise real SQL, R and EViews workflows: customer value, cash-flow forecasts and inflation models, with live what-if sliders.",
+      ar: "تدرّبي على خطوات عمل حقيقية بلغات SQL وR وEViews: قيمة العميل، توقّع التدفق النقدي ونماذج التضخم، مع أشرطة تفاعلية." } },
+];
 const colors = [
   "#ddd2fb",
   "#c4eedb",
@@ -266,6 +273,9 @@ function renderCards() {
   const sectioned = meta.some((m) => SECTIONS.includes(m.parent)) && !q;
   $("projectCards").classList.toggle("sectioned", sectioned);
   if (sectioned) return renderSections();
+  const tools = TOOLS.filter((x) => `${x.name.en} ${x.name.ar} ${x.description[lang]}`.toLocaleLowerCase().includes(q));
+  for (const x of tools) $("projectCards").append(toolCard(x));
+  if (!shown.length && tools.length) return;
   if (!shown.length) {
     $("projectCards").append(
       text("p", t(q ? "noMatches" : "noProjects"), "empty"),
@@ -308,15 +318,27 @@ async function route() {
   selectedFile = null;
   $("filePreview").hidden = true;
   $("message").value = "";
-  let name;
+  let name, toolId;
   try {
     const params = new URLSearchParams(location.hash.slice(1));
     name = params.get("project");
+    toolId = params.get("tool");
     homeView = params.get("view") === "projects" ? "projects" : "chats";
     cameFrom = params.get("from") === "chats" ? "chats" : "";
     conversation = ["claude","codex","chatgpt","claude-code","local","bridge"].includes(params.get("conversation")) ? params.get("conversation") : "group";
   } catch {
     name = null;
+  }
+  const tool = TOOLS.find((x) => x.id === toolId);
+  $("tool").hidden = !tool;
+  if (tool) {
+    current = null;
+    $("home").hidden = true;
+    $("project").hidden = true;
+    $("generalChat").hidden = true;
+    document.body.classList.remove("chat-focus");
+    notice("");
+    return showTool(tool);
   }
   current = projects.find((p) => p.name === name) || null;
   $("home").hidden = !!current;
@@ -542,7 +564,7 @@ $("language").onclick = () => {
     localStorage.setItem("hub-language", lang);
   } catch {}
   translate();
-  if (authenticated) { renderCards(); renderDetails(); }
+  if (authenticated) { renderCards(); renderDetails(); if (!$("tool").hidden) route(); }
 };
 $("search").oninput = renderCards;
 $("back").onclick = () => {
@@ -879,7 +901,9 @@ function renderSections() {
     const section = text("section", "", "hub-section");
     section.append(text("h3", t("section_" + g.key), "section-title"));
     const grid = text("div", "", "cards");
-    if (!g.items.length) grid.append(text("p", t("noProjects"), "empty"));
+    const tools = TOOLS.filter((x) => x.section === g.key);
+    for (const x of tools) grid.append(toolCard(x));
+    if (!g.items.length && !tools.length) grid.append(text("p", t("noProjects"), "empty"));
     for (const p of g.items) {
       const m = metaOf(p.name), index = projects.indexOf(p);
       const card = text("button", "", "card");
@@ -909,3 +933,33 @@ function renderDetails() {
     box.append(list);
   }
 }
+// ---- Hub tools (see TOOLS). The tool runs in its own frame so its styles and scripts stay apart from the chat. ----
+Object.assign(copy.en, { toolBadge: "Tool", toolChat: "💬 Chat with the team about it", openTool: "Open tool →" });
+Object.assign(copy.ar, { toolBadge: "أداة", toolChat: "💬 تحدّثي مع الفريق عنها", openTool: "افتحي الأداة ←" });
+// translate() ran before these strings existed; fill the tool view once now (showTool keeps it current).
+$("toolChat").textContent = t("toolChat");
+function toolCard(x) {
+  const card = text("button", "", "card tool-card");
+  card.type = "button";
+  card.style.setProperty("--pastel", "#cfe5ff");
+  card.append(text("span", t("toolBadge"), "status-badge tool-badge"), text("span", x.emoji, "card-icon"),
+    text("h3", x.name[lang]), text("p", x.description[lang]), text("span", t("openTool"), "card-open"));
+  card.onclick = () => { location.hash = "tool=" + encodeURIComponent(x.id); };
+  return card;
+}
+function showTool(x) {
+  $("toolIcon").textContent = x.emoji;
+  $("toolIcon").style.background = "#cfe5ff";
+  $("toolSection").textContent = `${t("section_" + x.section)} · ${t("toolBadge")}`;
+  $("toolName").textContent = x.name[lang];
+  $("toolDescription").textContent = x.description[lang];
+  $("toolFrame").title = x.name[lang];
+  // Only (re)load when the tool changes, so switching language keeps the sandbox where it was.
+  if ($("toolFrame").getAttribute("src") !== x.src) $("toolFrame").setAttribute("src", x.src);
+  // The section's own group chat keeps every chat feature; the tool just links to it.
+  const chat = projects.find((p) => p.name === x.section);
+  $("toolChat").hidden = !chat;
+  $("toolChat").textContent = t("toolChat");
+  $("toolChat").onclick = () => { location.hash = new URLSearchParams({ project: x.section }).toString(); };
+}
+$("toolBack").onclick = () => { location.hash = "view=projects"; };

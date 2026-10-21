@@ -6,8 +6,8 @@
     <meta name="color-scheme" content="light" />
     <meta name="referrer" content="no-referrer" />
     <title>Shahed’s Hub</title>
-    <link rel="stylesheet" href="/hub.css?v=8bdc1bf40bce8ad7" />
-    <script src="/hub.js?v=d72d05bc1ce1e807" defer></script>
+    <link rel="stylesheet" href="/hub.css?v=6a5c0cfd4bb7130d" />
+    <script src="/hub.js?v=71b2aa41c2d6b32e" defer></script>
   </head>
   <body>
     <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
@@ -170,6 +170,19 @@
             <pre id="fileContent" tabindex="0"></pre>
           </article>
         </section>
+      </section>
+      <section id="tool" hidden aria-labelledby="toolName">
+        <button id="toolBack" class="back" type="button" data-i18n="back">← All projects</button>
+        <div class="project-heading tool-heading">
+          <span id="toolIcon" class="project-icon" aria-hidden="true"></span>
+          <div>
+            <span class="eyebrow" id="toolSection"></span>
+            <h1 id="toolName"></h1>
+            <p id="toolDescription"></p>
+          </div>
+          <button id="toolChat" type="button" hidden data-i18n="toolChat">💬 Chat with the team about it</button>
+        </div>
+        <iframe id="toolFrame" class="tool-frame" title="" allow="clipboard-write"></iframe>
       </section>
     </main>
     <button id="generalChat" class="primary" hidden data-i18n="generalChat">✦ General chat</button>

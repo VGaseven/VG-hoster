@@ -1,0 +1,45 @@
+<!-- Sandbox layout shared by the VS Code webview (src/extension.ts) and the Hub page (/tools/bizdata/). -->
+<header class="app-header">
+  <div>
+    <h1>BizData Sandbox</h1>
+    <p class="tagline">Learn real business data workflows in SQL, R and EViews &mdash; then see what the numbers do.</p>
+  </div>
+  <nav class="module-picker" id="modulePicker" aria-label="Business module"></nav>
+</header>
+
+<main class="layout">
+  <section class="card scenario" aria-labelledby="scenarioTitle">
+    <div class="eyebrow" id="scenarioModule"></div>
+    <h2 id="scenarioTitle"></h2>
+    <p id="scenarioProblem"></p>
+    <ol class="workflow" id="scenarioWorkflow"></ol>
+    <details class="concepts">
+      <summary>Key concepts</summary>
+      <dl id="scenarioConcepts"></dl>
+    </details>
+  </section>
+
+  <section class="card code" aria-label="Code">
+    <div class="tabs" role="tablist" id="langTabs"></div>
+    <div class="code-meta">
+      <span id="codeCaption"></span>
+      <span class="code-actions">
+        <button type="button" class="secondary" id="resetBtn" title="Restore the reference solution">Reset</button>
+        <button type="button" class="secondary" id="copyBtn">Copy</button>
+        <button type="button" id="openBtn" title="Open this snippet in a new editor tab">Open in editor</button>
+      </span>
+    </div>
+    <textarea id="codeEditor" spellcheck="false" aria-label="Code editor"></textarea>
+    <p class="hint" id="codeHint"></p>
+  </section>
+
+  <section class="card simulator" aria-labelledby="simTitle">
+    <h2 id="simTitle">Live simulator</h2>
+    <p class="hint">Move the sliders to see what running this workflow against a database would return. The code above updates with your parameters.</p>
+    <div class="controls" id="simControls"></div>
+    <div class="kpis" id="simKpis"></div>
+    <div class="chart" id="simChart" role="img"></div>
+    <div class="table-wrap"><table id="simTable"></table></div>
+  </section>
+</main>
+
