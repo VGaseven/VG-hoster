@@ -113,6 +113,28 @@ export function rentVsBuyRange(p, spread = { homeGrowthYear: 0.02, investReturnY
   return { cases: out, minDifference: diffs[0], maxDifference: diffs[diffs.length - 1] };
 }
 
+/**
+ * Car: loan vs paying cash, from EQUAL starting funds (>= the price) over holdMonths, equal monthly budgets.
+ * Cash buyer: pays the price and fees at month 0, invests the rest, and each month invests what the loan buyer
+ * repays. Loan buyer: pays the down payment and fees, invests the rest, repays monthly. Both run the car and sell it
+ * at the end; the loan buyer repays the remaining debt from the sale. Compares terminal wealth, so interest costs
+ * and the investment return on kept cash are both counted.
+ */
+export function carLoanVsCash(p) {
+  const { startingFunds, price, fees = 0, investReturnYear } = p;
+  if (startingFunds < price + fees) return { feasible: false, reason: `Paying cash needs ${Math.round(price + fees)}; starting funds are ${startingFunds}.` };
+  const loan = carOwnership(p), cash = carOwnership({ ...p, downPayment: price });
+  const ri = Math.pow(1 + investReturnYear, 1 / 12) - 1;
+  let loanInv = startingFunds - p.downPayment - fees, cashInv = startingFunds - price - fees;
+  for (let m = 1; m <= p.holdMonths; m++) {
+    const loanOut = -loan.flows[m].amount, cashOut = -cash.flows[m].amount, budget = Math.max(loanOut, cashOut);
+    loanInv = loanInv * (1 + ri) + (budget - loanOut);
+    cashInv = cashInv * (1 + ri) + (budget - cashOut);
+  }
+  const loanWealth = loanInv + loan.flows.at(-1).amount, cashWealth = cashInv + cash.flows.at(-1).amount;
+  return { feasible: true, loan, cash, loanWealth, cashWealth, difference: loanWealth - cashWealth };
+}
+
 /** Clearly fictional demo inputs. Labels travel with the data so no screen can show numbers without them. */
 export const DEMO = {
   label: "Synthetic demo data",
@@ -121,7 +143,7 @@ export const DEMO = {
   units: "Money in VAL; time in months; rates are annual, converted to monthly",
   period: "Illustrative 2026 values, not observed prices",
   source: "Invented for teaching. Not historical, not production data, not a sample of any real market.",
-  car: { price: 24000, downPayment: 4000, annualRate: 0.069, termMonths: 60, fees: 450, monthlyRunning: 310, holdMonths: 48, salePrice: 11500 },
+  car: { startingFunds: 30000, price: 24000, downPayment: 4000, annualRate: 0.069, termMonths: 60, fees: 450, monthlyRunning: 310, holdMonths: 48, salePrice: 11500, investReturnYear: 0.05 },
   housing: {
     startingFunds: 70000, homePrice: 300000, downPaymentPct: 0.2, purchaseCostsPct: 0.03, mortgageRate: 0.055, mortgageMonths: 360,
     monthlyRent: 1350, rentGrowthYear: 0.03, homeGrowthYear: 0.025, ownerCostsPctYear: 0.012, insuranceMonthly: 70, sellingCostsPct: 0.06,

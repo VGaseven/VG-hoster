@@ -1,7 +1,7 @@
 // Everyday Economics simulation core: the cash-flow rules Shahed set before any of it is used for teaching.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { monthlyPayment, loanSchedule, carOwnership, rentVsBuy, rentVsBuyRange, DEMO } from "../public/tools/everyday/lib/finance.js";
+import { monthlyPayment, loanSchedule, carOwnership, carLoanVsCash, rentVsBuy, rentVsBuyRange, DEMO } from "../public/tools/everyday/lib/finance.js";
 
 const close = (a, b, tol = 0.01) => assert.ok(Math.abs(a - b) <= tol, `${a} vs ${b}`);
 
@@ -78,4 +78,18 @@ test("demo data is labelled synthetic with currency, country, units, period and 
   assert.match(DEMO.source, /Not historical, not production data/);
   assert.doesNotMatch(`${DEMO.label} ${DEMO.period}`, /production|historical/i);
   assert.doesNotMatch(JSON.stringify(DEMO), /top \d+%|percentile|ranking/i);
+});
+
+test("car loan vs cash compares terminal wealth from equal funds, so interest and kept-cash returns both count", () => {
+  const c = carLoanVsCash(DEMO.car);
+  assert.equal(c.feasible, true);
+  // With no investment return and no interest, the two must end equal: financing alone creates no money.
+  const flat = carLoanVsCash({ ...DEMO.car, annualRate: 0, investReturnYear: 0 });
+  close(flat.difference, 0);
+  // Interest with no investment return: paying cash ends ahead by roughly the interest paid.
+  const noReturn = carLoanVsCash({ ...DEMO.car, investReturnYear: 0 });
+  close(-noReturn.difference, noReturn.loan.breakdown.interestPaid, 1);
+  // A high return on kept cash can favour the loan: no fixed answer.
+  assert.ok(carLoanVsCash({ ...DEMO.car, investReturnYear: 0.12 }).difference > 0);
+  assert.equal(carLoanVsCash({ ...DEMO.car, startingFunds: 10000 }).feasible, false);
 });

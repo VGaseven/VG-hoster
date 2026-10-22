@@ -177,17 +177,17 @@ api.post("/backup", h(() => backup()));
 app.use("/api", api);
 
 app.get("/classic", (_req, res) => res.sendFile(path.join(import.meta.dirname, "public/classic.html")));
-// WhatIf / BizData Stack Sandbox (Hub → Work). Its pages may load only their own files, the two SQLite files and
+// WhatIf tools (Hub → Work: /tools/bizdata, /tools/everyday). Pages may load only files under /tools/, the two SQLite files and
 // Google Fonts: no network access to /api or anywhere else. CORS (no credentials) lets the Hub's sandboxed,
 // opaque-origin iframe load these public static files; it carries no cookies and no Hub data.
-app.use("/tools/bizdata", (req, res, next) => {
-  const self = `${req.get("host")}/tools/bizdata/`;
+app.use("/tools", (req, res, next) => {
+  const self = `${req.get("host")}/tools/`;
   res.set({
     "Access-Control-Allow-Origin": "*",
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
     "Content-Security-Policy": [
-      "default-src 'none'", `script-src ${self} 'wasm-unsafe-eval'`, `worker-src blob: ${self}`, `connect-src ${self}vendor/`,
+      "default-src 'none'", `script-src ${self} 'wasm-unsafe-eval'`, `worker-src blob: ${self}`, `connect-src ${self}bizdata/vendor/`,
       `style-src ${self} https://fonts.googleapis.com`, "font-src https://fonts.gstatic.com", "img-src data:",
       "frame-ancestors 'self'", "base-uri 'none'", "form-action 'none'",
     ].join("; "),

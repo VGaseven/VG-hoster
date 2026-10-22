@@ -153,6 +153,10 @@ const TOOLS = [
     name: { en: "WhatIf: business decision lab", ar: "ماذا لو: مختبر قرارات الأعمال" },
     description: { en: "Make and defend a business decision with data. Mission 1: a port bottleneck at a fictional company, with real SQL in the browser and simulated outcomes.",
       ar: "اتخذي قرارًا تجاريًا ودافعي عنه بالبيانات. المهمة الأولى: اختناق في ميناء لشركة خيالية، مع SQL حقيقي في المتصفح ونتائج محاكاة." } },
+  { id: "everyday", section: "work", emoji: "🏠", src: "/tools/everyday/",
+    name: { en: "WhatIf: everyday money", ar: "ماذا لو: قرارات المال اليومية" },
+    description: { en: "Car loan or cash, rent or buy: full cash flows, editable assumptions and ranges, no right-or-wrong verdicts. Fictional demo numbers.",
+      ar: "قرض سيارة أم نقدًا، إيجار أم شراء: تدفقات نقدية كاملة وافتراضات قابلة للتعديل ونطاقات، بلا أحكام صح أو خطأ. أرقام تجريبية خيالية." } },
 ];
 const colors = [
   "#ddd2fb",
@@ -963,18 +967,19 @@ function showTool(x) {
   $("toolChat").onclick = () => { location.hash = new URLSearchParams({ project: x.section }).toString(); };
 }
 $("toolBack").onclick = () => { location.hash = "view=projects"; };
-// ---- WhatIf storage. The tool runs in a sandboxed iframe (opaque origin: no access to this page, its storage or
-// its cookies). It asks the Hub to keep its own "bizdata-*" keys, stored here under a separate "tool:" prefix.
-// Only messages from the tool's frame are answered; it can never read or write the Hub's own keys.
+// ---- WhatIf storage. Tools run in a sandboxed iframe (opaque origin: no access to this page, its storage or its
+// cookies). A tool asks the Hub to keep its own keys (the prefix of the tool open in the frame), stored here under a
+// separate "tool:" prefix. Only messages from the tool's frame are answered; it can never touch the Hub's own keys.
 window.addEventListener("message", (e) => {
   const frame = $("toolFrame"), d = e.data;
   if (!frame || e.source !== frame.contentWindow || !d || d.type !== "whatif-store") return;
-  const allowed = (k) => typeof k === "string" && /^bizdata-[a-z-]+$/.test(k);
+  const prefix = { bizdata: "bizdata-", everyday: "everyday-" }[TOOLS.find((x) => x.src === frame.getAttribute("src"))?.id];
+  const allowed = (k) => typeof k === "string" && !!prefix && k.startsWith(prefix) && /^[a-z]+-[a-z-]+$/.test(k);
   try {
     if (d.op === "set" && allowed(d.key) && typeof d.value === "string" && d.value.length < 2_000_000) localStorage.setItem("tool:" + d.key, d.value);
     if (d.op === "getAll") {
       const items = {};
-      for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith("tool:bizdata-")) items[k.slice(5)] = localStorage.getItem(k); }
+      for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith("tool:") && allowed(k.slice(5))) items[k.slice(5)] = localStorage.getItem(k); }
       e.source.postMessage({ type: "whatif-store-all", items }, "*"); // the opaque origin cannot be named; e.source is checked above
     }
   } catch {}

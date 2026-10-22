@@ -92,9 +92,9 @@ textarea { width: 100%; }
 
 .steps ol { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 0 0 14px; }
 .step-btn { display: inline-flex; gap: 8px; align-items: center; border-radius: 999px; }
-.step-btn[aria-current="step"], .step-btn[aria-current="step"]:hover:not(:disabled) { background: var(--accent); color: #fff; border-color: var(--accent); }
+.step-btn[aria-current], .step-btn[aria-current]:hover:not(:disabled) { background: var(--accent); color: #fff; border-color: var(--accent); }
 .step-no { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 12px; }
-.step-btn[aria-current="step"] .step-no { background: #fff; }
+.step-btn[aria-current] .step-no { background: #fff; }
 main:focus { outline: none; }
 .step > h2:focus, .step > h2:focus-visible { outline: none; box-shadow: none; } /* focus is moved here by script for screen readers */
 

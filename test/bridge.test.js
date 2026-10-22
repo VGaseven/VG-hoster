@@ -357,9 +357,9 @@ test("WhatIf (Work tool) public routes expose only the tool and two SQLite files
     assert.notEqual((await fetch(`${base}${p}`)).status, 200, p);
   }
   // The tool's own code never calls the Hub API, so it cannot read projects, chats or files.
-  const dir = path.join(import.meta.dirname, "../public/tools/bizdata");
+  const dir = path.join(import.meta.dirname, "../public/tools");
   const files = fs.readdirSync(dir, { recursive: true }).filter((f) => /\.(js|html)$/.test(f));
-  assert.ok(files.length >= 9);
+  assert.ok(files.length >= 13);
   for (const f of files) assert.doesNotMatch(fs.readFileSync(path.join(dir, f), "utf8"), /\/api\/|fetch\(|XMLHttpRequest|localStorage\.getItem\("hub-/, f);
   // Hub data stays behind the token.
   for (const p of ["/api/projects", "/api/chats", "/api/project-meta"]) assert.equal((await fetch(`${base}${p}`)).status, 401, p);

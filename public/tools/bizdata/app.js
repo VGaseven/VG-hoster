@@ -5,6 +5,7 @@ import { prepare, draws, evaluatePlan, planCash, violations, EMPTY_PLAN, DEFAULT
 import { evaluate, RUBRIC } from "./lib/rubric.js";
 import { buildRecord, cvBullets, demonstrated, toMarkdown } from "./lib/portfolio.js";
 import { BRIDGE, UNSUPPORTED_NOTE } from "./lib/bridge.js";
+import { createStore, download } from "../shared/store.js";
 
 // ---------- helpers ----------
 const $ = (id) => document.getElementById(id);
@@ -25,44 +26,7 @@ function h(tag, attrs, ...kids) {
 const eur = (v) => (v < 0 ? "−€" : "€") + Math.round(Math.abs(v)).toLocaleString("en-GB");
 const pct = (v, d = 1) => (v * 100).toFixed(d) + "%";
 const say = (text) => { $("live").textContent = ""; requestAnimationFrame(() => ($("live").textContent = text)); };
-// Storage. Opened directly, the tool uses this browser's localStorage. Embedded in the Hub, it runs in a sandboxed
-// iframe with an opaque origin and no storage of its own, so the Hub parent keeps its "bizdata-*" keys for it
-// (see hub.js "WhatIf storage"). Either way records stay in this browser and are never sent to a server.
-const framed = window.parent !== window;
-const localOk = (() => { try { localStorage.setItem("bizdata-probe", "1"); localStorage.removeItem("bizdata-probe"); return true; } catch { return false; } })();
-const memory = {};
-const store = {
-  get(key, fallback) {
-    try { const raw = localOk ? localStorage.getItem(key) : memory[key]; const v = raw == null ? null : JSON.parse(raw); return v ?? fallback; } catch { return fallback; }
-  },
-  set(key, value) {
-    const raw = JSON.stringify(value);
-    if (localOk) { try { localStorage.setItem(key, raw); return true; } catch { return false; } }
-    memory[key] = raw;
-    if (framed) window.parent.postMessage({ type: "whatif-store", op: "set", key, value: raw }, "*");
-    return framed;
-  },
-};
-/** In a sandboxed frame, fetch this tool's saved keys from the Hub once at start-up (gives up after 1.5 s). */
-function loadFromParent() {
-  if (localOk || !framed) return Promise.resolve();
-  return new Promise((resolve) => {
-    const done = (e) => {
-      if (e.source !== window.parent || e.data?.type !== "whatif-store-all") return;
-      for (const [k, v] of Object.entries(e.data.items || {})) if (/^bizdata-[a-z-]+$/.test(k) && typeof v === "string") memory[k] = v;
-      window.removeEventListener("message", done); resolve();
-    };
-    window.addEventListener("message", done);
-    window.parent.postMessage({ type: "whatif-store", op: "getAll" }, "*");
-    setTimeout(() => { window.removeEventListener("message", done); resolve(); }, 1500);
-  });
-}
-function download(name, content, type = "text/plain") {
-  const url = URL.createObjectURL(new Blob([content], { type: type + ";charset=utf-8" }));
-  const a = h("a", { href: url, download: name });
-  document.body.append(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
+const store = createStore("bizdata");
 
 // ---------- SQL sandbox (Web Worker running SQLite) ----------
 class Sandbox {
@@ -696,5 +660,5 @@ $("mode").addEventListener("change", (e) => {
 });
 $("closeLineage").onclick = () => $("lineage").close();
 $("lineage").addEventListener("close", () => { if (S.step === "defend") renderDefend(); });
-await loadFromParent();
+await store.load();
 restore();

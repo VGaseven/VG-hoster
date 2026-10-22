@@ -4,7 +4,7 @@ From: Claude (Claude Code cloud session `session_015QKAdd5eRGjM3TghfoCeyV`)
 To: Codex
 Status: **Claude is still working on this branch.** This letter is a safety net, kept current at every checkpoint in case Claude hits its usage limit. Codex: take over only if Shahed says Claude has stopped, to avoid overlapping edits. Nothing has been merged or deployed.
 
-Last checkpoint: milestone 5 (Everyday Economics simulation core + tests; no UI). See §5 and `docs/WHATIF.md`.
+Last checkpoint: milestone 6 (Everyday Economics screen in Hub → Work; shared storage module). Plan for the rest of this run: 7 accessibility (automated contrast), 8 Arabic in the tools, 9 Mission 2, 10 Python/R in the browser.
 
 ---
 
@@ -144,5 +144,5 @@ What the 14 tool tests prove: deterministic seeds; data traps present; dataset l
 6. *(done)* Hub → Work wiring with a sandboxed iframe (§3 isolation design).
 7. *(done)* `docs/WHATIF.md` and README section.
 8. Audit against the full BizData spec and report real vs simulated vs missing. *(Public-route and iframe isolation checks are done and tested.)*
-9. Everyday Economics: *(milestone 5 done)* simulation core `public/tools/everyday/lib/finance.js` + `test/everyday.test.js` (7 pass). Next: a code-optional screen (every assumption and cash flow visible), ranges, private share cards with amounts excluded by default. Not in the Hub yet. `.gitignore` has `!public/tools/everyday/lib/` for the same `lib/` reason.
+9. Everyday Economics: *(milestone 6: screen done at `/tools/everyday/`, Hub card under Work, `test/everyday-ui.mjs` passes; shared storage in `public/tools/shared/store.js`; Hub bridge allows the open tool's own prefix only; CSP now covers all of `/tools/`)*. *(milestone 5)* simulation core `public/tools/everyday/lib/finance.js` + `test/everyday.test.js` (7 pass). Next: a code-optional screen (every assumption and cash flow visible), ranges, private share cards with amounts excluded by default. Not in the Hub yet. `.gitignore` has `!public/tools/everyday/lib/` for the same `lib/` reason.
 10. Commit and push after each milestone and keep this file updated. Do not deploy without Shahed's separate approval.

@@ -128,7 +128,7 @@ The **realized outcome** (one seeded draw, the same for every plan) is shown aft
 5. Opt-in leaderboards that reward reasoning and correctness (never device speed); optional public portfolios and recruiter discovery only with explicit consent, preview, selective disclosure and unpublish.
 6. Commercial models (freemium, subscriptions, institutional licences) are unvalidated ideas. If tiers are added, enforce them on the server; a front-end tier flag is presentation only.
 
-### Later track: Everyday Economics (simulation core built and tested; no UI)
+### Everyday Economics (screen built, in Hub → Work; synthetic demo data)
 
 Personal-finance decisions (car, rent vs buy and similar) with these rules, from Shahed's corrections:
 
@@ -139,13 +139,14 @@ Personal-finance decisions (car, rent vs buy and similar) with these rules, from
 5. **Code is optional:** everyday users can inspect every assumption and calculation without SQL or Python, and are never blocked behind generated syntax.
 6. **Privacy:** financial inputs and portfolios stay private. Share cards need a preview and explicit export, with sensitive amounts excluded by default. No invented rankings ("top 5%") or market-research claims.
 
-**Status:** the simulation core exists in `public/tools/everyday/lib/finance.js` with 7 passing tests (`test/everyday.test.js`). It has no screen, is not in the Hub, and nothing is graded. It covers:
+**Status:** a code-optional screen at `/tools/everyday/` (Hub → Work card "WhatIf: everyday money", sandboxed like the business lab) over the tested core `public/tools/everyday/lib/finance.js` (8 tests in `test/everyday.test.js`; browser test `test/everyday-ui.mjs`). Two calculators: **Car: loan or cash** and **Home: rent or buy**. Every assumption is an editable field; results update immediately; "Show how it is calculated" lists the cash-flow rules and a month table; a range table replaces any verdict; an affordability check is shown as a constraint; a "What matters to you" checklist and private note are never scored; an optional share card is previewed, excludes money amounts unless the user ticks "Include money amounts", never includes the private note, and is only downloaded by the user. Inputs are stored only in this browser (via the Hub bridge when embedded, under the `everyday-` prefix; the business lab's keys are not visible to it). The core covers:
 
 - loan schedules (principal + interest; zero-rate loans);
+- car loan vs cash from equal savings and equal monthly budgets (`carLoanVsCash`): with zero interest and zero return both end equal; with interest and no return, cash ends ahead by the interest paid (tested);
 - car ownership: down payment and fees at month 0, repayments plus running costs monthly, sale price minus remaining debt at the end. A test proves the identity *net cost = price + fees + interest + running − sale*, and that the rejected "full price + all repayments" formula overstates cost by exactly the principal repaid;
 - rent vs buy: equal starting funds, monthly periods, equal monthly budgets with the difference invested, owner costs and insurance, and terminal home value after selling costs minus the remaining mortgage. Break-even is `null` when it does not happen within the horizon (tested);
 - a 3×3 range over home growth and investment return instead of a verdict, an affordability check (housing cost share of income) and an infeasibility message when the up-front cash is not there.
 
 Demo inputs are labelled *Synthetic demo data* for the fictional country Valoria, currency "VAL (fictional currency unit)", with units, period and source stated. Example result (10 years): buying ends 16,662 VAL ahead in the base case, with break-even in month 89, but −71,007 to +112,607 VAL across the range: the outcome depends on assumptions.
 
-Next for this track: a code-optional screen where every assumption and cash flow is visible and editable, ranges shown, and private share cards with amounts excluded by default. No marketing and no public deployment.
+Next for this track: Arabic, more decisions (e.g. phone plan vs buying outright, saving vs paying down debt), Saudi/Gulf-flavoured fictional demo sets. No marketing and no public deployment.
