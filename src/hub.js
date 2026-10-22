@@ -115,3 +115,17 @@ export function results(a) {
 }
 
 export function message(a){const p=project(a.project);if(!/^\d+$/.test(String(a.id)))throw new Error('Invalid message');const m=a.agent&&a.agent!=='group'?get('SELECT * FROM direct_messages WHERE id=? AND project=? AND agent=?',Number(a.id),p,agent(a.agent)):get('SELECT * FROM messages WHERE id=? AND project=?',Number(a.id),p);if(!m)throw new Error('Message unavailable');return m;}
+
+// One WhatsApp-style list: every project's group chat plus each private chat that has messages.
+// `seen` is the viewer's own [[project,agent,lastSeenId],...]; unread counts only other authors.
+export function chatList(a) {
+ let seen=[];try{seen=JSON.parse(a.seen||'[]');}catch{}
+ const last=new Map(Array.isArray(seen)?seen.filter(s=>Array.isArray(s)&&s.length===3).map(([p,w,id])=>[JSON.stringify([String(p),String(w)]),Number(id)||0]):[]);
+ const groups=all(`SELECT p.name AS project,'group' AS agent,m.id,m.author,substr(m.text,1,160) AS text,m.at FROM projects p LEFT JOIN messages m ON m.id=(SELECT MAX(id) FROM messages WHERE project=p.name)`);
+ const direct=all(`SELECT d.project,d.agent,d.id,d.author,substr(d.text,1,160) AS text,d.at FROM direct_messages d JOIN (SELECT MAX(id) AS id FROM direct_messages GROUP BY project,agent) x ON x.id=d.id JOIN projects p ON p.name=d.project`);
+ return [...groups,...direct].map(c=>{
+  const after=last.get(JSON.stringify([c.project,c.agent]))??0;
+  const unread=c.id==null?0:get(c.agent==='group'?"SELECT COUNT(*) AS n FROM (SELECT 1 FROM messages WHERE project=? AND id>? AND author!='human' LIMIT 100)":"SELECT COUNT(*) AS n FROM (SELECT 1 FROM direct_messages WHERE project=? AND agent=? AND id>? AND author!='human' LIMIT 100)",...(c.agent==='group'?[c.project,after]:[c.project,c.agent,after])).n;
+  return {...c,unread};
+ }).sort((x,y)=>(y.at||'').localeCompare(x.at||'')||(y.id||0)-(x.id||0));
+}

@@ -6,8 +6,8 @@
     <meta name="color-scheme" content="light" />
     <meta name="referrer" content="no-referrer" />
     <title>Shahed’s Hub</title>
-    <link rel="stylesheet" href="/hub.css?v=216c76c5de4f613b" />
-    <script src="/hub.js?v=cc51c96fcf10ed6a" defer></script>
+    <link rel="stylesheet" href="/hub.css?v=e6d7741aa65178df" />
+    <script src="/hub.js?v=fa86d85596d037de" defer></script>
   </head>
   <body>
     <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
@@ -50,6 +50,12 @@
       </section>
       <div id="notice" role="status" aria-live="polite"></div>
       <section id="home" hidden>
+        <div class="home-switch" role="group" aria-label="Hub"><button type="button" id="chatsView" aria-pressed="true" data-i18n="chats">Chats</button><button type="button" id="projectsView" aria-pressed="false" data-i18n="projects">Your projects</button></div>
+        <section id="chatsHome" class="chats-home" aria-labelledby="chatsTitle">
+          <div class="section-heading"><h1 id="chatsTitle" data-i18n="chats">Chats</h1><button id="newChat" class="primary" type="button" data-i18n="newChat">+ New chat</button></div>
+          <ul id="chatList" class="chat-list" aria-live="polite"></ul>
+        </section>
+        <div id="projectsHome" hidden>
         <div class="hero">
           <div>
             <span class="eyebrow" data-i18n="eyebrow"
@@ -78,6 +84,7 @@
           ><input id="search" type="search" autocomplete="off"
         /></label>
         <div id="projectCards" class="cards"></div>
+        </div>
       </section>
       <section id="project" hidden>
         <button id="back" class="back" data-i18n="back">← All projects</button>
@@ -167,6 +174,7 @@
     </main>
     <button id="generalChat" class="primary" hidden data-i18n="generalChat">✦ General chat</button>
     <dialog id="generalDialog"><form id="generalForm"><h2 data-i18n="generalChat">General chat</h2><label for="generalText" data-i18n="message">Message</label><textarea id="generalText" required maxlength="20000" dir="auto"></textarea><p id="classification" role="status"></p><label for="destination" data-i18n="destination">Destination project</label><select id="destination" required></select><label for="generalAgent" data-i18n="conversation">Conversation</label><select id="generalAgent"><option value="claude">Claude · private</option><option value="codex">Codex · private</option><option value="chatgpt">ChatGPT · private</option><option value="group">Group · shared with team</option></select><p data-i18n="routeNote">Check the destination before sending. Private conversations currently store messages without waking an agent.</p><div class="dialog-actions"><button type="button" id="closeGeneral" data-i18n="cancel">Cancel</button><button class="primary" data-i18n="send">Send message</button></div><p id="generalError" role="alert"></p></form></dialog>
+    <dialog id="newChatDialog"><form id="newChatForm"><h2 data-i18n="newChatTitle">Start a new chat</h2><fieldset class="chat-kind"><legend data-i18n="chatKind">Who do you want to talk to?</legend><label><input type="radio" name="chatKind" value="private" checked> <span data-i18n="kindPrivate">One assistant (private)</span></label><label><input type="radio" name="chatKind" value="group"> <span data-i18n="kindGroup">The whole team (group)</span></label></fieldset><label for="newChatAgent" data-i18n="assistant">Assistant</label><select id="newChatAgent"><option value="claude">Claude</option><option value="codex">Codex</option><option value="chatgpt">ChatGPT</option></select><label for="newChatProject" data-i18n="inProject">In project</label><select id="newChatProject" required></select><div class="dialog-actions"><button type="button" id="cancelNewChat" data-i18n="cancel">Cancel</button><button class="primary" data-i18n="openChat">Open chat</button></div></form></dialog>
     <dialog id="projectDialog">
       <form id="projectForm">
         <h2 data-i18n="newTitle">Make room for a new idea</h2>
