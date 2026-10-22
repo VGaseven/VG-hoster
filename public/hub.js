@@ -144,7 +144,8 @@ let token = "",
   epoch = 0,
   waiting = [];
 let conversation = "group", firstChatRender = true, sessionRows = [], resultRows = [], decisionRows = {approvals:[],tasks:[]};
-let tasks = [], connection = "syncing", taskUnavailable = false;
+let tasks = [], connection = "syncing", taskUnavailable = false, meta = [];
+const SECTIONS = ["work","uni","personal","gaming","skills"];
 let chatRows = [], homeView = "chats", cameFrom = "";
 const colors = [
   "#ddd2fb",
@@ -262,6 +263,9 @@ function renderCards() {
     `${p.name} ${projectLabel(p.name)} ${p.description}`.toLocaleLowerCase().includes(q),
   );
   $("projectCards").replaceChildren();
+  const sectioned = meta.some((m) => SECTIONS.includes(m.parent)) && !q;
+  $("projectCards").classList.toggle("sectioned", sectioned);
+  if (sectioned) return renderSections();
   if (!shown.length) {
     $("projectCards").append(
       text("p", t(q ? "noMatches" : "noProjects"), "empty"),
@@ -287,6 +291,7 @@ function renderCards() {
 }
 async function loadHome() {
   projects = await api("projects");
+  meta = await api("project-meta").catch((e) => { if (e.message === "invalid") throw e; return []; });
   authenticated = true;
   $("generalChat").hidden = false;
   $("login").hidden = true;
@@ -328,6 +333,7 @@ async function route() {
   notice("");
   $("projectName").textContent = projectLabel(current.name);
   $("projectDescription").textContent = current.description || "";
+  renderDetails();
   $("projectIcon").style.background =
     colors[projects.indexOf(current) % colors.length];
   messages = [];
@@ -345,7 +351,7 @@ async function route() {
   renderFiles();
   renderWaiting();
   switchTab("chat");
-  $("myProjects").hidden = !["work","uni"].includes(current.name);
+  $("myProjects").hidden = !SECTIONS.includes(current.name);
   $("childProjects").hidden = true;
   if(matchMedia("(max-width:600px)").matches && !$("workBody").hidden) $("toggleWork").click();
   loadExtras(version);
@@ -536,6 +542,7 @@ $("language").onclick = () => {
     localStorage.setItem("hub-language", lang);
   } catch {}
   translate();
+  if (authenticated) { renderCards(); renderDetails(); }
 };
 $("search").oninput = renderCards;
 $("back").onclick = () => {
@@ -851,4 +858,54 @@ function setupChats() {
     $("newChatDialog").close();
     location.hash = new URLSearchParams({ project, conversation: agent, from: "chats" }).toString();
   };
+}
+// ---- Sections (Work, Uni, Personal, Gaming, Skills) and recorded project details. No progress percentages. ----
+Object.assign(copy.en,{section_work:'Work',section_uni:'Uni',section_personal:'Personal',section_gaming:'Gaming',section_skills:'Skills',section_other:'Other',
+  st_active:'Active',st_paused:'Paused',st_done:'Done',st_unknown:'Status unknown',lastStep:'Last step',remaining:'Still to do',links:'Links',noLastStep:'No last step recorded.'});
+Object.assign(copy.ar,{section_work:'العمل',section_uni:'الجامعة',section_personal:'شخصي',section_gaming:'الألعاب',section_skills:'المهارات',section_other:'أخرى',
+  st_active:'نشط',st_paused:'متوقف',st_done:'مكتمل',st_unknown:'الحالة غير معروفة',lastStep:'آخر خطوة',remaining:'المتبقي',links:'روابط',noLastStep:'لم تُسجّل آخر خطوة.'});
+const metaOf = (name) => meta.find((m) => m.project === name) || { status: "unknown", last_step: "", remaining: "", links: [] };
+function statusBadge(status) {
+  const b = text("span", t("st_" + (["active","paused","done"].includes(status) ? status : "unknown")), "status-badge");
+  b.dataset.state = status;
+  return b;
+}
+function renderSections() {
+  const box = $("projectCards");
+  const groups = [...SECTIONS, "other"].map((key) => ({ key, items: projects.filter((p) =>
+    !SECTIONS.includes(p.name) && (key === "other" ? !SECTIONS.includes(metaOf(p.name).parent) : metaOf(p.name).parent === key)) }));
+  for (const g of groups) {
+    if (!g.items.length && g.key === "other") continue;
+    const section = text("section", "", "hub-section");
+    section.append(text("h3", t("section_" + g.key), "section-title"));
+    const grid = text("div", "", "cards");
+    if (!g.items.length) grid.append(text("p", t("noProjects"), "empty"));
+    for (const p of g.items) {
+      const m = metaOf(p.name), index = projects.indexOf(p);
+      const card = text("button", "", "card");
+      card.type = "button";
+      card.style.setProperty("--pastel", colors[index % colors.length]);
+      card.append(statusBadge(m.status), text("h3", p.name), text("p", p.description || t("noDescription")));
+      if (m.last_step) card.append(text("small", `${t("lastStep")}: ${m.last_step}`, "card-step"));
+      card.onclick = () => { location.hash = "project=" + encodeURIComponent(p.name); };
+      grid.append(card);
+    }
+    section.append(grid);
+    box.append(section);
+  }
+}
+function renderDetails() {
+  let box = $("projectDetails");
+  if (!box) { box = text("div", "", "project-details"); box.id = "projectDetails"; $("projectDescription").after(box); }
+  box.replaceChildren();
+  if (!current || SECTIONS.includes(current.name)) return;
+  const m = metaOf(current.name);
+  box.append(statusBadge(m.status));
+  box.append(text("p", m.last_step ? `${t("lastStep")}: ${m.last_step}` : t("noLastStep")));
+  if (m.remaining) box.append(text("p", `${t("remaining")}: ${m.remaining}`));
+  if (m.links.length) {
+    const list = text("p", `${t("links")}: `);
+    m.links.forEach((l, i) => { const a = text("a", l.label); a.href = l.url; a.rel = "noreferrer"; a.target = "_blank"; if (i) list.append(" · "); list.append(a); });
+    box.append(list);
+  }
 }
