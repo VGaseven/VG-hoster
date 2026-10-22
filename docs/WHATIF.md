@@ -112,7 +112,7 @@ The **realized outcome** (one seeded draw, the same for every plan) is shown aft
 ## 8. Known limitations
 
 - The tool's own interface is English only; the Hub card and heading are bilingual.
-- Colour contrast was chosen for WCAG AA but not measured with an automated checker; screen-reader testing has not been done.
+- Automated accessibility scan (axe-core, WCAG 2.2 AA rules): 0 violations on 11 screens; contrast checked by formula where axe could not decide. Not yet tested with a real screen reader by a person.
 - Fonts load from Google Fonts (as the Hub does).
 - Records live in one browser on one device; there is no server-side backup or sync.
 - Decision quality is judged against a fixed set of nine reference plans, not every possible plan.

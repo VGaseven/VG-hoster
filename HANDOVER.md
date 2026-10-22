@@ -4,7 +4,7 @@ From: Claude (Claude Code cloud session `session_015QKAdd5eRGjM3TghfoCeyV`)
 To: Codex
 Status: **Claude is still working on this branch.** This letter is a safety net, kept current at every checkpoint in case Claude hits its usage limit. Codex: take over only if Shahed says Claude has stopped, to avoid overlapping edits. Nothing has been merged or deployed.
 
-Last checkpoint: milestone 6 (Everyday Economics screen in Hub → Work; shared storage module). Plan for the rest of this run: 7 accessibility (automated contrast), 8 Arabic in the tools, 9 Mission 2, 10 Python/R in the browser.
+Last checkpoint: milestone 7 (axe-core accessibility scan: 0 violations on 11 screens). Earlier: milestone 6 (Everyday Economics screen in Hub → Work; shared storage module). Plan for the rest of this run: 7 accessibility (automated contrast), 8 Arabic in the tools, 9 Mission 2, 10 Python/R in the browser.
 
 ---
 
@@ -106,7 +106,8 @@ BRIDGE_TOKEN=<any local test value> DB_FILE=/tmp/hubtest/b.db HOME=/tmp/hubtest 
 | `test/whatif-journey.mjs` in Chromium (tool opened directly at `/tools/bizdata/`, local throwaway server) | **passes, no page or console errors.** Covered: guided SQL for all 3 tasks with checks passing; KPI trace dialog; `DELETE` refused as read-only; endless recursive query stopped after ~4.3 s, then reset and Ctrl+Enter run works; two plans saved and compared; submit gate blocks until complete; review 9/10 (one deliberate wrong weak-spot answer), decision "defensible", outcome shown separately; record saved; replay re-ran the saved SQL and reproduced score and outcome; Markdown export; state survives reload; independent fresh variant has blank editor, no hints, no spreadsheet helper; no horizontal scroll at 390 px on all six steps |
 | Keyboard (milestone 4, Chromium) | **pass**: first Tab reaches "Skip to the mission" (fixed: focus was moved to the heading on load); visible focus ring on every tabbed control; KPI trace opens with Enter, closes with Esc and focus returns to the KPI; steps by Enter; checkbox by Space, radio by arrow keys, slider by arrow keys; Ctrl+Enter runs SQL |
 | Reduced motion | **pass**: with `prefers-reduced-motion: reduce`, buttons report no transitions |
-| Screen reader, automated contrast checker | **not run** |
+| Automated accessibility (`test/whatif-a11y.mjs`, axe-core 4.10.3, WCAG 2.0/2.1/2.2 A+AA) | **0 violations** on 11 screens (all WhatIf steps incl. submitted review and trace dialog; both Everyday calculators). Colour contrast passed on 1,069 elements; 27 "needs review" items (text under sticky table headers, SVG chart text, ✓/○ glyphs) were checked by formula: every palette pair ≥ 4.5:1 (lowest: green "checked" badge, darkened to `#17603f`, now above 6:1). |
+| Screen reader (VoiceOver/NVDA) | **not run**: needs a human tester |
 | `test/whatif-embedded.mjs` (Hub → Work → tool in the sandboxed iframe, local throwaway server) | **passes**: Work shows the WhatIf card, Uni does not; SQL passes inside the frame; all isolation probes blocked; progress survives a Hub reload via the bridge; the Work chat still posts messages |
 | Known flake | Once, `npm test` showed 28 Hub failures while an extra local server and Chromium were starting in the same container; the Hub tests wait at most 10 s for their server. Immediately re-run: 53/53, twice. No code change involved. |
 
