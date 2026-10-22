@@ -1,0 +1,5 @@
+{
+  "note": "Use authenticated POST /api/sessions or /api/results to register real records. Do not import this template as real data. Source URLs must come from a verified application session, not a task identifier.",
+  "session_fields": ["id", "project", "task_id", "source", "source_url", "title", "status", "summary"],
+  "result_fields": ["project", "task_id", "summary", "files", "session_id"]
+}

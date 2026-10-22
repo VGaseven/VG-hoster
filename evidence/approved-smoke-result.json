@@ -1,0 +1,14 @@
+{
+  "prompt": "Reply with OK",
+  "attempts": 1,
+  "status": "failed",
+  "reply": null,
+  "dmMessages": 1,
+  "groupMessages": 0,
+  "groupSearchMatches": 0,
+  "activityDelta": 0,
+  "memoryDelta": 0,
+  "engine": "subscription",
+  "adapter": "Claude only; no API or other-provider fallback",
+  "nativeSessionCreated": false
+}

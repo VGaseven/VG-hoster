@@ -11,6 +11,7 @@ import path from "node:path";
 const TOKEN = "test-token", HOOK_SECRET = "hook-secret", CHAT = "42";
 const tgQueue = [], tgSent = [], ghIssues = [], n8nCalls = [], n8nStore = [];
 let mock, bridge, base, mockUrl, tmp, updateId = 1, lastSystem = "";
+const privatePrompts=[];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function waitFor(fn, ms = 5000, every = 50) {
@@ -29,6 +30,8 @@ before(async () => {
       if (req.url === "/anth/v1/messages") {
         const last = JSON.stringify(b.messages.at(-1).content);
         lastSystem = JSON.stringify(b.system);
+        if(last.includes("DM-ONLY-SENTINEL"))privatePrompts.push(b);
+        if(last.includes("DM-FAIL-SECRET"))return json(400,{type:"error",error:{type:"invalid_request_error",message:"DM-FAIL-SECRET"}});
         const text = /please research markets/.test(last) ? "ROUTE: SESSION Market research" : /please build the faq/.test(last) ? "ROUTE: BUILD Add a FAQ page" : "Of course! Happy to help the team.";
         return json(200, { id: "m1", type: "message", role: "assistant", model: b.model, stop_reason: "end_turn",
           content: [{ type: "text", text }], usage: { input_tokens: 10, output_tokens: 5 } });
@@ -71,7 +74,7 @@ process.stdin.on("data", (d) => (input += d)).on("end", () => {
   base = `http://127.0.0.1:${port}`;
   bridge = spawn(process.execPath, ["--no-warnings", "server.js"], {
     cwd: path.join(import.meta.dirname, ".."),
-    env: { PATH: process.env.PATH, AI_ENGINE: "api", CLAUDE_CHAT_MODE: "quick", BRIDGE_DIR: path.join(tmp, "live"), WORK_DIR: path.join(tmp, "work"), CODEX_BIN: path.join(tmp, "codex"),
+    env: { PATH: process.env.PATH, RATE_LIMIT_PER_MIN: "10000", AI_ENGINE: "api", CLAUDE_CHAT_MODE: "quick", BRIDGE_DIR: path.join(tmp, "live"), WORK_DIR: path.join(tmp, "work"), CODEX_BIN: path.join(tmp, "codex"),
       SELF_UPDATE_NO_RESTART: "1", HOME: tmp, ANTHROPIC_API_KEY: "x", ANTHROPIC_BASE_URL: `${mockUrl}/anth`, N8N_API_URL: `${mockUrl}/n8napi`, N8N_API_KEY: "k", PORT: String(port), BRIDGE_TOKEN: TOKEN, DB_FILE: path.join(tmp, "b.db"), TRUST_PROXY: "0",
       GITHUB_TOKEN: "gh", GITHUB_REPO: "o/r", GITHUB_API_URL: `${mockUrl}/gh`, GITHUB_WEBHOOK_SECRET: HOOK_SECRET,
       TELEGRAM_BOT_TOKEN: "T", TELEGRAM_CHAT_ID: CHAT, TELEGRAM_API_URL: `${mockUrl}/tg`,
@@ -354,6 +357,18 @@ test("hub APIs isolate chat and versioned files by project", async () => {
   assert.equal((await api('file?project=hub-b&path=notes.html')).status,400);
 });
 
+test("hub chat list shows group and private chats newest first with unread counts", async () => {
+  await api('projects', 'POST', {name:'list-a',description:'List A'});
+  await api('chat','POST',{project:'list-a',text:'Group hello',to:'none'});
+  await api('direct','POST',{project:'list-a',agent:'claude',text:'Private hello'});
+  const rows=(await api('chats')).body;
+  const group=rows.find(r=>r.project==='list-a'&&r.agent==='group'), priv=rows.find(r=>r.project==='list-a'&&r.agent==='claude');
+  assert.equal(group.text,'Group hello');assert.equal(priv.text,'Private hello');
+  assert.equal(priv.unread,0,'the human\'s own messages are never unread');
+  assert.ok(rows.some(r=>r.project==='hub-b'&&r.agent==='group'&&r.id==null),'empty group chats are still listed');
+  assert.equal((await api('chats?seen=not-json')).status,200);
+});
+
 test("self_update rolls back when the new version can't start", async () => {
   execSync(`cd other && git pull -q && printf 'throw new Error("broken build")\\n' > server.js && git add . && git commit -qm broken && git push -q origin main`, { cwd: tmp, stdio: "pipe", shell: "/bin/bash" });
   const before = execSync("git rev-parse --short HEAD", { cwd: path.join(tmp, "live") }).toString().trim();
@@ -391,4 +406,89 @@ test("shared skills reach the briefing and the agents' replies", async () => {
   assert.equal(r.error, false, r.text);
   assert.match(lastSystem, /Team playbooks/);
   assert.match(lastSystem, /connected-memory: never make the human repeat herself/);
+});
+
+test('Hub direct messages never leak into group, agent updates, search, other agents or projects', async () => {
+ await api('projects','POST',{name:'private-test'});
+ const before=tgSent.length;
+ const sent=await api('direct','POST',{project:'private-test',agent:'codex',text:'PRIVATE sentinel @all @cloud <img src=x onerror=alert(1)>'});
+ assert.equal(sent.status,200);assert.equal(sent.body.delivery,'stored');
+ assert.equal((await api('direct?project=private-test&agent=codex')).body.length,1);
+ assert.equal((await api('direct?project=private-test&agent=claude')).body.length,0);
+ assert.equal((await api('direct?project=default&agent=codex')).body.length,0);
+ assert.equal((await api('chat?project=private-test')).body.length,0);
+ assert.equal((await api('search?project=private-test&agent=group&q=sentinel')).body.length,0);
+ assert.equal((await api('search?project=private-test&agent=codex&q=sentinel')).body.length,1);
+ assert.ok(!(await mcp('claude','get_updates',{project:'private-test',peek:true,since:0})).text.includes('PRIVATE sentinel'));
+ assert.equal(tgSent.length,before);
+ assert.equal((await api('chat-message?project=private-test&agent=codex&id='+sent.body.posted.id)).status,200);
+ assert.equal((await api('chat-message?project=private-test&agent=claude&id='+sent.body.posted.id)).status,400);
+ assert.equal((await api('direct','POST',{project:'private-test',agent:'everyone',text:'no'})).status,400);
+ assert.equal((await api('direct','POST',{project:'unknown',agent:'codex',text:'no'})).status,400);
+ assert.equal((await api('direct','POST',{project:'private-test',agent:'codex',text:''})).status,400);
+ assert.equal((await fetch(base+'/api/direct?project=private-test&agent=codex')).status,401);
+});
+test('Hub session provenance, deliverables and nested project integrity',async()=>{
+ await api('projects','POST',{name:'hub-parent'});await api('projects','POST',{name:'hub-child'});
+ assert.equal((await api('project-parent','POST',{project:'hub-child',parent:'hub-parent'})).status,200);
+ assert.equal((await api('children?project=hub-parent')).body[0].name,'hub-child');
+ assert.equal((await api('project-parent','POST',{project:'hub-parent',parent:'hub-child'})).status,400);
+ const task=(await api('tasks','POST',{project:'hub-child',title:'Result fixture',assignee:'human'})).body;
+ const s={id:'fixture-session',project:'hub-child',source:'codex',title:'Verified fixture',task_id:task.id,source_url:'codex://threads/fixture-session',status:'completed',summary:'Fixture only'};
+ assert.equal((await api('sessions','POST',{...s,source_url:'javascript:alert(1)'})).status,400);
+ assert.equal((await api('sessions','POST',s)).status,200);
+ assert.equal((await api('sessions','POST',{...s,id:'claude-fixture',source:'claude',source_url:'https://claude.ai/code/session_fixture'})).status,200);
+ assert.equal((await api('sessions?project=hub-parent')).body.length,0);
+ assert.equal((await api('sessions','POST',{...s,project:'hub-parent'})).status,400);
+ await api('file','POST',{project:'hub-child',path:'result.txt',content:'Safe preview <script>bad()</script>'});
+ assert.equal((await api('results','POST',{project:'hub-child',task_id:task.id,summary:'Result ready',files:['result.txt'],session_id:s.id})).status,200);
+ assert.equal((await api('results','POST',{project:'hub-child',task_id:task.id,summary:'Wrong',files:['absent.txt']})).status,400);
+ assert.equal((await api('results?project=hub-child')).body[0].files[0],'result.txt');
+ assert.equal((await api('search?project=hub-child&q=Safe')).body[0].kind,'file');
+ assert.ok((await api('decisions?project=hub-child')).body.tasks.some(x=>x.id===task.id));
+});
+
+test('Private API replies remain scoped and omit shared context and external events',async()=>{
+ await api('projects','POST',{name:'dm-reply-test'});
+ await api('direct','POST',{project:'dm-reply-test',agent:'codex',text:'OTHER-DM-SECRET'});
+ const before=tgSent.length;
+ const response=await api('direct','POST',{project:'dm-reply-test',agent:'claude',text:'DM-ONLY-SENTINEL',reply:true});
+ assert.equal(response.status,200);assert.equal(response.body.delivery,'reply_requested');
+ for(let i=0;i<40;i++){if((await api('direct-status?project=dm-reply-test&agent=claude')).body.request?.state!=='working')break;await sleep(25);}
+ const state=(await api('direct-status?project=dm-reply-test&agent=claude')).body;
+ assert.equal(state.request.state,'completed');assert.equal(privatePrompts.length,1);
+ assert.equal(privatePrompts[0].messages.length,1);assert.ok(!JSON.stringify(privatePrompts[0]).includes('OTHER-DM-SECRET'));assert.ok(!privatePrompts[0].system.includes('Core memories:'));
+ const messages=(await api('direct?project=dm-reply-test&agent=claude')).body;assert.equal(messages.length,2);assert.equal(messages[1].author,'claude');
+ assert.equal((await api('chat?project=dm-reply-test')).body.length,0);
+ assert.equal((await api('search?project=dm-reply-test&agent=group&q=SENTINEL')).body.length,0);
+ assert.ok(!(await mcp('claude','get_updates',{project:'dm-reply-test',peek:true,since:0})).text.includes('DM-ONLY-SENTINEL'));assert.equal(tgSent.length,before);
+ assert.equal((await api('direct','POST',{project:'dm-reply-test',agent:'bridge',text:'no fallback',reply:true})).status,400);
+});
+
+test('Failed private replies expose only safe state and reject unavailable adapters before storing',async()=>{
+ const sent=await api('direct','POST',{project:'dm-reply-test',agent:'claude',text:'DM-FAIL-SECRET',reply:true});assert.equal(sent.status,200);
+ for(let i=0;i<40;i++){if((await api('direct-status?project=dm-reply-test&agent=claude')).body.request?.state!=='working')break;await sleep(25);}
+ const status=(await api('direct-status?project=dm-reply-test&agent=claude')).body;assert.equal(status.request.state,'failed');assert.ok(!JSON.stringify(status).includes('DM-FAIL-SECRET'));
+ assert.equal((await api('search?project=dm-reply-test&agent=group&q=DM-FAIL')).body.length,0);
+ const before=(await api('direct?project=dm-reply-test&agent=local')).body.length;
+ assert.equal((await api('direct','POST',{project:'dm-reply-test',agent:'local',text:'do not store unavailable reply',reply:true})).status,400);
+ assert.equal((await api('direct?project=dm-reply-test&agent=local')).body.length,before);
+});
+
+test("hub sections and project details: recorded status, last step and safe links only", async () => {
+  for (const name of ["work", "gaming", "vct-2027", "aim-chaos"]) await api("projects", "POST", { name, description: name });
+  await api("project-parent", "POST", { project: "vct-2027", parent: "work" });
+  await api("project-parent", "POST", { project: "aim-chaos", parent: "gaming" });
+  const saved = await api("project-meta", "POST", { project: "aim-chaos", status: "paused", last_step: "Server and touch UI merged", remaining: "Studio playtest",
+    links: [{ label: "Repo", url: "https://github.com/o/r" }] });
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.status, "paused");
+  assert.equal(saved.body.parent, "gaming");
+  const rows = (await api("project-meta")).body;
+  assert.equal(rows.find((r) => r.project === "vct-2027").status, "unknown", "no invented status");
+  assert.equal(rows.find((r) => r.project === "vct-2027").parent, "work");
+  assert.deepEqual(rows.find((r) => r.project === "aim-chaos").links, [{ label: "Repo", url: "https://github.com/o/r" }]);
+  assert.equal((await api("project-meta", "POST", { project: "aim-chaos", status: "50%" })).status, 400);
+  assert.equal((await api("project-meta", "POST", { project: "aim-chaos", links: [{ label: "x", url: "javascript:alert(1)" }] })).status, 400);
+  assert.equal((await api("project-meta", "POST", { project: "nope", status: "active" })).status, 400);
 });

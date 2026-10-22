@@ -6,8 +6,8 @@
     <meta name="color-scheme" content="light" />
     <meta name="referrer" content="no-referrer" />
     <title>Shahed’s Hub</title>
-    <link rel="stylesheet" href="/hub.css?v=138dfbc869b1069b" />
-    <script src="/hub.js?v=b09758ae154a3452" defer></script>
+    <link rel="stylesheet" href="/hub.css?v=8bdc1bf40bce8ad7" />
+    <script src="/hub.js?v=8be24ba086db309b" defer></script>
   </head>
   <body>
     <a class="skip" href="#main" data-i18n="skip">Skip to content</a>
@@ -50,6 +50,12 @@
       </section>
       <div id="notice" role="status" aria-live="polite"></div>
       <section id="home" hidden>
+        <div class="home-switch" role="group" aria-label="Hub"><button type="button" id="chatsView" aria-pressed="true" data-i18n="chats">Chats</button><button type="button" id="projectsView" aria-pressed="false" data-i18n="projects">Your projects</button></div>
+        <section id="chatsHome" class="chats-home" aria-labelledby="chatsTitle">
+          <div class="section-heading"><h1 id="chatsTitle" data-i18n="chats">Chats</h1><button id="newChat" class="primary" type="button" data-i18n="newChat">+ New chat</button></div>
+          <ul id="chatList" class="chat-list" aria-live="polite"></ul>
+        </section>
+        <div id="projectsHome" hidden>
         <div class="hero">
           <div>
             <span class="eyebrow" data-i18n="eyebrow"
@@ -78,6 +84,7 @@
           ><input id="search" type="search" autocomplete="off"
         /></label>
         <div id="projectCards" class="cards"></div>
+        </div>
       </section>
       <section id="project" hidden>
         <button id="back" class="back" data-i18n="back">← All projects</button>
@@ -91,7 +98,7 @@
             <p id="projectDescription"></p>
           </div>
         </div>
-        <div class="tabs" role="tablist" aria-label="Project">
+        <button id="myProjects" hidden data-i18n="myProjects">My projects</button><div id="childProjects" hidden></div><div class="tabs" role="tablist" aria-label="Project">
           <button
             id="chatTab"
             role="tab"
@@ -118,8 +125,8 @@
           class="panel"
         >
           <div class="conversation-heading"><div><span class="eyebrow" data-i18n="conversation">TEAM CONVERSATION</span><h2 data-i18n="together">A place to work together.</h2></div><span id="connection" role="status"></span></div>
-          <div id="participants" class="participants"></div>
-          <div class="chat-layout"><div class="chat-stream"><div id="messages" class="messages" tabindex="0" aria-live="polite"></div></div><aside class="work-panel"><h3 data-i18n="recordedWork">Recorded work</h3><p class="work-hint" data-i18n="workHint">Task records, not live presence.</p><div id="workStatus"></div></aside></div>
+          <div id="participants" class="participants"></div><p id="scopeNote" class="muted"></p>
+          <div class="chat-layout"><div class="chat-stream"><div id="messages" class="messages" tabindex="0" aria-live="polite"></div><button id="newMessages" hidden data-i18n="newMessages">New messages ↓</button></div><aside class="work-panel"><button id="toggleWork" aria-expanded="true" aria-controls="workBody" data-i18n="tasks">Tasks</button><div id="workBody"><label for="workFilter" data-i18n="filter">Filter</label><select id="workFilter"><option value="all" data-i18n="all">All</option><option value="open" data-i18n="statusOpen">Open</option><option value="in_progress" data-i18n="in_progress">In progress</option><option value="done" data-i18n="done">Done</option><option value="blocked" data-i18n="blocked">Blocked</option></select><label><input id="compact" type="checkbox"><span data-i18n="compact">Compact messages</span></label><div id="workStatus"></div></div></aside></div>
           <p id="answering" role="status" class="muted"></p>
           <form id="chatForm">
             <label for="message" data-i18n="message">Message your team</label
@@ -140,6 +147,9 @@
             </div>
           </form>
         </section>
+        <section id="sessionsPanel" class="panel" hidden role="tabpanel" aria-labelledby="sessionsTab"><h2 data-i18n="sessions">Sessions</h2><p data-i18n="sessionNote">Only sessions explicitly linked to this project appear here. Native app chats are not imported automatically.</p><div id="sessionList"></div></section>
+        <section id="decisionsPanel" class="panel" hidden role="tabpanel" aria-labelledby="decisionsTab"><h2 data-i18n="decisions">Needs your decision</h2><div id="decisionList"></div></section>
+        <section id="searchPanel" class="panel" hidden role="tabpanel" aria-labelledby="searchTab"><label for="unifiedSearch" data-i18n="unifiedSearch">Search this project and selected conversation</label><input id="unifiedSearch" type="search"><p data-i18n="searchNote">Tasks, files, registered sessions and the latest 200 messages in this conversation.</p><div id="searchResults" aria-live="polite"></div></section>
         <section
           id="filesPanel"
           role="tabpanel"
@@ -162,10 +172,13 @@
         </section>
       </section>
     </main>
+    <button id="generalChat" class="primary" hidden data-i18n="generalChat">✦ General chat</button>
+    <dialog id="generalDialog"><form id="generalForm"><h2 data-i18n="generalChat">General chat</h2><label for="generalText" data-i18n="message">Message</label><textarea id="generalText" required maxlength="20000" dir="auto"></textarea><p id="classification" role="status"></p><label for="destination" data-i18n="destination">Destination project</label><select id="destination" required></select><label for="generalAgent" data-i18n="conversation">Conversation</label><select id="generalAgent"><option value="claude">Claude · private</option><option value="codex">Codex · private</option><option value="chatgpt">ChatGPT · private</option><option value="group">Group · shared with team</option></select><p data-i18n="routeNote">Check the destination before sending. Private conversations currently store messages without waking an agent.</p><div class="dialog-actions"><button type="button" id="closeGeneral" data-i18n="cancel">Cancel</button><button class="primary" data-i18n="send">Send message</button></div><p id="generalError" role="alert"></p></form></dialog>
+    <dialog id="newChatDialog"><form id="newChatForm"><h2 data-i18n="newChatTitle">Start a new chat</h2><fieldset class="chat-kind"><legend data-i18n="chatKind">Who do you want to talk to?</legend><label><input type="radio" name="chatKind" value="private" checked> <span data-i18n="kindPrivate">One assistant (private)</span></label><label><input type="radio" name="chatKind" value="group"> <span data-i18n="kindGroup">The whole team (group)</span></label></fieldset><label for="newChatAgent" data-i18n="assistant">Assistant</label><select id="newChatAgent"><option value="claude">Claude</option><option value="codex">Codex</option><option value="chatgpt">ChatGPT</option></select><label for="newChatProject" data-i18n="inProject">In project</label><select id="newChatProject" required></select><div class="dialog-actions"><button type="button" id="cancelNewChat" data-i18n="cancel">Cancel</button><button class="primary" data-i18n="openChat">Open chat</button></div></form></dialog>
     <dialog id="projectDialog">
       <form id="projectForm">
         <h2 data-i18n="newTitle">Make room for a new idea</h2>
-        <label for="newName" data-i18n="name">Project name</label
+        <label for="newParent" data-i18n="workspace">Workspace</label><select id="newParent"><option value="" data-i18n="topLevel">Top level</option><option value="work">work</option><option value="uni">uni</option><option value="personal">personal</option></select><label for="newName" data-i18n="name">Project name</label
         ><input id="newName" maxlength="80" required /><label
           for="newDescription"
           data-i18n="description"
