@@ -4,7 +4,7 @@ From: Claude (Claude Code cloud session `session_015QKAdd5eRGjM3TghfoCeyV`)
 To: Codex
 Status: **Claude is still working on this branch.** This letter is a safety net, kept current at every checkpoint in case Claude hits its usage limit. Codex: take over only if Shahed says Claude has stopped, to avoid overlapping edits. Nothing has been merged or deployed.
 
-Last checkpoint: milestone 4 (keyboard pass, `docs/WHATIF.md`, README section, audit). See §5 and `docs/WHATIF.md`.
+Last checkpoint: milestone 5 (Everyday Economics simulation core + tests; no UI). See §5 and `docs/WHATIF.md`.
 
 ---
 
@@ -101,7 +101,7 @@ BRIDGE_TOKEN=<any local test value> DB_FILE=/tmp/hubtest/b.db HOME=/tmp/hubtest 
 | Suite | Result |
 |---|---|
 | `node --test test/bizdata.test.js` | **14 / 14 pass** |
-| `npm test` (39 Hub tests + 14 tool tests) | **53 / 53 pass** |
+| `npm test` (Hub + WhatIf + Everyday Economics) | **61 / 61 pass** at milestone 5 (earlier: 53 at milestone 1, 54 at milestone 3) |
 | `node --check` on `app.js`, `sql-worker.js`, all `lib/*.js` | pass (syntax only) |
 | `test/whatif-journey.mjs` in Chromium (tool opened directly at `/tools/bizdata/`, local throwaway server) | **passes, no page or console errors.** Covered: guided SQL for all 3 tasks with checks passing; KPI trace dialog; `DELETE` refused as read-only; endless recursive query stopped after ~4.3 s, then reset and Ctrl+Enter run works; two plans saved and compared; submit gate blocks until complete; review 9/10 (one deliberate wrong weak-spot answer), decision "defensible", outcome shown separately; record saved; replay re-ran the saved SQL and reproduced score and outcome; Markdown export; state survives reload; independent fresh variant has blank editor, no hints, no spreadsheet helper; no horizontal scroll at 390 px on all six steps |
 | Keyboard (milestone 4, Chromium) | **pass**: first Tab reaches "Skip to the mission" (fixed: focus was moved to the heading on load); visible focus ring on every tabbed control; KPI trace opens with Enter, closes with Esc and focus returns to the KPI; steps by Enter; checkbox by Space, radio by arrow keys, slider by arrow keys; Ctrl+Enter runs SQL |
@@ -144,5 +144,5 @@ What the 14 tool tests prove: deterministic seeds; data traps present; dataset l
 6. *(done)* Hub → Work wiring with a sandboxed iframe (§3 isolation design).
 7. *(done)* `docs/WHATIF.md` and README section.
 8. Audit against the full BizData spec and report real vs simulated vs missing. *(Public-route and iframe isolation checks are done and tested.)*
-9. Only then start the Everyday Economics track, following the corrections in section 1.
+9. Everyday Economics: *(milestone 5 done)* simulation core `public/tools/everyday/lib/finance.js` + `test/everyday.test.js` (7 pass). Next: a code-optional screen (every assumption and cash flow visible), ranges, private share cards with amounts excluded by default. Not in the Hub yet. `.gitignore` has `!public/tools/everyday/lib/` for the same `lib/` reason.
 10. Commit and push after each milestone and keep this file updated. Do not deploy without Shahed's separate approval.
