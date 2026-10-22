@@ -177,7 +177,24 @@ api.post("/backup", h(() => backup()));
 app.use("/api", api);
 
 app.get("/classic", (_req, res) => res.sendFile(path.join(import.meta.dirname, "public/classic.html")));
-// WhatIf / BizData Stack Sandbox (Hub → Work): only the two SQLite-in-the-browser files, never the rest of node_modules.
+// WhatIf / BizData Stack Sandbox (Hub → Work). Its pages may load only their own files, the two SQLite files and
+// Google Fonts: no network access to /api or anywhere else. CORS (no credentials) lets the Hub's sandboxed,
+// opaque-origin iframe load these public static files; it carries no cookies and no Hub data.
+app.use("/tools/bizdata", (req, res, next) => {
+  const self = `${req.get("host")}/tools/bizdata/`;
+  res.set({
+    "Access-Control-Allow-Origin": "*",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Content-Security-Policy": [
+      "default-src 'none'", `script-src ${self} 'wasm-unsafe-eval'`, `worker-src blob: ${self}`, `connect-src ${self}vendor/`,
+      `style-src ${self} https://fonts.googleapis.com`, "font-src https://fonts.gstatic.com", "img-src data:",
+      "frame-ancestors 'self'", "base-uri 'none'", "form-action 'none'",
+    ].join("; "),
+  });
+  next();
+});
+// Only the two SQLite-in-the-browser files, never the rest of node_modules.
 for (const file of ["sql-wasm-browser.js", "sql-wasm-browser.wasm"]) {
   app.get(`/tools/bizdata/vendor/${file}`, (_req, res) => res.sendFile(path.join(import.meta.dirname, "node_modules/sql.js/dist", file), { maxAge: "7d" }));
 }

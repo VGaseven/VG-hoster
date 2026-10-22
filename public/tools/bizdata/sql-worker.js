@@ -3,11 +3,13 @@
 // cookies or files. Every run uses a fresh in-memory copy in read-only mode, so nothing a student types can
 // change the data. The page terminates the worker after a time limit and starts a new one (cancel and reset).
 /* global initSqlJs */
-importScripts("vendor/sql-wasm-browser.js");
+// Started from a blob bootstrap (see app.js), so relative URLs cannot be used: WHATIF_BASE is the tool's folder.
+const BASE = self.WHATIF_BASE || "";
+importScripts(BASE + "vendor/sql-wasm-browser.js");
 
 const MAX_ROWS = 1000;
 let SQL = null, script = "";
-const ready = initSqlJs({ locateFile: (f) => "vendor/" + f.replace("sql-wasm.wasm", "sql-wasm-browser.wasm") }).then((s) => (SQL = s));
+const ready = initSqlJs({ locateFile: (f) => BASE + "vendor/" + f.replace("sql-wasm.wasm", "sql-wasm-browser.wasm") }).then((s) => (SQL = s));
 
 self.onmessage = async ({ data }) => {
   await ready;

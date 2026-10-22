@@ -698,3 +698,10 @@ body.chat-focus #project .back { position:sticky; top:8px; z-index:2; }
 .project-details { margin-top: 8px; display: grid; gap: 4px; justify-items: start; }
 .project-details p { margin: 0; }
 #projectCards.sectioned { display: block; }
+/* Hub tools (e.g. BizData Sandbox under Work): a card on Home and a full-width framed page. */
+.tool-card .tool-badge { background: #cfe5ff; }
+.tool-heading { flex-wrap: wrap; }
+.tool-heading #toolChat { margin-inline-start: auto; align-self: center; }
+.tool-frame { display: block; width: 100%; height: calc(100vh - 220px); min-height: 640px; border: 1px solid var(--line); border-radius: 24px; background: #f6f2ff; }
+@media (max-width: 600px) { .tool-frame { height: calc(100vh - 180px); min-height: 520px; border-radius: 18px; } }
+

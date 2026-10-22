@@ -342,6 +342,29 @@ test("hub shell and classic dashboard coexist without exposing project data", as
   assert.equal((await fetch(`${base}/mcp`)).status, 405);
 });
 
+test("WhatIf (Work tool) public routes expose only the tool and two SQLite files, never Hub data", async () => {
+  const page = await fetch(`${base}/tools/bizdata/`);
+  assert.equal(page.status, 200);
+  assert.match(await page.text(), /src="app\.js"/);
+  const js = await fetch(`${base}/tools/bizdata/vendor/sql-wasm-browser.js`);
+  assert.equal(js.status, 200);
+  assert.match(js.headers.get("content-type"), /javascript/);
+  const wasm = await fetch(`${base}/tools/bizdata/vendor/sql-wasm-browser.wasm`);
+  assert.equal(wasm.status, 200);
+  assert.match(wasm.headers.get("content-type"), /application\/wasm/);
+  // Nothing else from node_modules, and no path tricks.
+  for (const p of ["/tools/bizdata/vendor/sql-wasm.js", "/tools/bizdata/vendor/../../../package.json", "/node_modules/sql.js/package.json", "/tools/bizdata/vendor/%2e%2e%2f%2e%2e%2fserver.js"]) {
+    assert.notEqual((await fetch(`${base}${p}`)).status, 200, p);
+  }
+  // The tool's own code never calls the Hub API, so it cannot read projects, chats or files.
+  const dir = path.join(import.meta.dirname, "../public/tools/bizdata");
+  const files = fs.readdirSync(dir, { recursive: true }).filter((f) => /\.(js|html)$/.test(f));
+  assert.ok(files.length >= 9);
+  for (const f of files) assert.doesNotMatch(fs.readFileSync(path.join(dir, f), "utf8"), /\/api\/|fetch\(|XMLHttpRequest|localStorage\.getItem\("hub-/, f);
+  // Hub data stays behind the token.
+  for (const p of ["/api/projects", "/api/chats", "/api/project-meta"]) assert.equal((await fetch(`${base}${p}`)).status, 401, p);
+});
+
 test("hub APIs isolate chat and versioned files by project", async () => {
   await api('projects', 'POST', {name:'hub-a',description:'First project'});
   await api('projects', 'POST', {name:'hub-b',description:'Second project'});
