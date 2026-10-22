@@ -553,7 +553,7 @@ function submit() {
   const checks = Object.fromEntries(CHECKS.map((c) => [c.id, S.results[c.id]?.grade || { pass: false, messages: [] }]));
   const submission = { seed: S.seed, plan: structuredClone(S.plan), assumptions: { ...S.assumptions }, checks, evidence, defense: { ...S.defense } };
   S.evaluation = evaluate(S.scenario, submission);
-  const lastPassing = CHECKS.map((c) => S.results[c.id]).filter(Boolean).map((r, i) => ({ check: CHECKS[i].id, sql: r.sql, pass: !!r.grade?.pass }));
+  const lastPassing = CHECKS.filter((c) => S.results[c.id]?.sql).map((c) => ({ check: c.id, sql: S.results[c.id].sql, pass: !!S.results[c.id].grade?.pass }));
   S.record = buildRecord({ scenario: S.scenario, mode: S.mode, hints: S.hints, revealed: S.revealed, queries: lastPassing, checks, plan: submission.plan, assumptions: submission.assumptions, evidence, defense: submission.defense, evaluation: S.evaluation, startedAt: S.startedAt });
   S.record.explanations = { ...S.explanations }; S.record.predictions = { ...S.predictions };
   S.record.id = "rec-" + Date.now().toString(36);

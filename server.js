@@ -177,6 +177,10 @@ api.post("/backup", h(() => backup()));
 app.use("/api", api);
 
 app.get("/classic", (_req, res) => res.sendFile(path.join(import.meta.dirname, "public/classic.html")));
+// WhatIf / BizData Stack Sandbox (Hub → Work): only the two SQLite-in-the-browser files, never the rest of node_modules.
+for (const file of ["sql-wasm-browser.js", "sql-wasm-browser.wasm"]) {
+  app.get(`/tools/bizdata/vendor/${file}`, (_req, res) => res.sendFile(path.join(import.meta.dirname, "node_modules/sql.js/dist", file), { maxAge: "7d" }));
+}
 app.use(express.static(path.join(import.meta.dirname, "public")));
 
 // ---- Backups: daily snapshot, keep the last 7 ----
