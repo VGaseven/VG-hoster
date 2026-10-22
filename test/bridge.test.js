@@ -356,6 +356,18 @@ test("hub APIs isolate chat and versioned files by project", async () => {
   assert.equal((await api('file?project=hub-b&path=notes.html')).status,400);
 });
 
+test("hub chat list shows group and private chats newest first with unread counts", async () => {
+  await api('projects', 'POST', {name:'list-a',description:'List A'});
+  await api('chat','POST',{project:'list-a',text:'Group hello',to:'none'});
+  await api('direct','POST',{project:'list-a',agent:'claude',text:'Private hello'});
+  const rows=(await api('chats')).body;
+  const group=rows.find(r=>r.project==='list-a'&&r.agent==='group'), priv=rows.find(r=>r.project==='list-a'&&r.agent==='claude');
+  assert.equal(group.text,'Group hello');assert.equal(priv.text,'Private hello');
+  assert.equal(priv.unread,0,'the human\'s own messages are never unread');
+  assert.ok(rows.some(r=>r.project==='hub-b'&&r.agent==='group'&&r.id==null),'empty group chats are still listed');
+  assert.equal((await api('chats?seen=not-json')).status,200);
+});
+
 test("self_update rolls back when the new version can't start", async () => {
   execSync(`cd other && git pull -q && printf 'throw new Error("broken build")\\n' > server.js && git add . && git commit -qm broken && git push -q origin main`, { cwd: tmp, stdio: "pipe", shell: "/bin/bash" });
   const before = execSync("git rev-parse --short HEAD", { cwd: path.join(tmp, "live") }).toString().trim();

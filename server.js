@@ -20,6 +20,9 @@ const PORT = process.env.PORT || 3000;
 const TOKEN = process.env.BRIDGE_TOKEN;
 const RATE_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 120);
 if (!TOKEN) console.warn("WARNING: BRIDGE_TOKEN not set — anyone with the URL can use the bridge.");
+// Local staging copy (scripts/staging.sh): private Claude replies and stored messages only; everything else that acts is off.
+const STAGING = process.env.HUB_STAGING === "1";
+if (STAGING && !TOKEN) { console.error("HUB_STAGING needs BRIDGE_TOKEN."); process.exit(1); }
 
 const app = express();
 // Behind Render/Railway/Fly there is one proxy hop; this makes req.ip the real client. Set TRUST_PROXY=0 when exposed directly.
@@ -71,7 +74,7 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 
 // ---- MCP endpoint (stateless). Use ?agent=chatgpt, ?agent=claude or ?agent=claude-code on each connector URL. ----
 app.post("/mcp", auth, async (req, res) => {
-  if (process.env.HUB_PREVIEW === "1") return res.status(403).json({error:"MCP is disabled in the isolated review preview"});
+  if (process.env.HUB_PREVIEW === "1" || STAGING) return res.status(403).json({error:"MCP is disabled in the isolated review preview"});
   const actor = AGENTS.includes(req.query.agent) ? req.query.agent : "unknown-agent";
   const server = buildMcp(actor);
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
@@ -91,6 +94,12 @@ if (process.env.HUB_PREVIEW === '1') api.use((req,res,next)=>{
  if(req.path==='/chat')return res.json({posted:core.postMessage({text:String(req.body.text||''),project:req.body.project},'human'),answering:[]});
  return res.status(403).json({error:'Review preview: external actions disabled'});
 });
+if (STAGING) api.use((req,res,next)=>{
+ if(req.method==='GET'||req.path==='/login')return next();
+ if(req.method==='POST'&&req.path==='/direct'&&req.body?.agent==='claude')return next();
+ if(req.method==='POST'&&req.path==='/chat')return res.json({posted:core.postMessage({text:String(req.body.text||''),project:req.body.project},'human'),answering:[]});
+ return res.status(403).json({error:'Staging copy: external actions disabled'});
+});
 api.post("/login", (req, res) => {
   if (!TOKEN || req.body?.remember === false) return res.json({ ok: true, remembered: false });
   const exp = String(Date.now() + DEVICE_DAYS * 86_400_000);
@@ -109,6 +118,7 @@ api.post("/update", h((a) => core.updateBridge(a, H)));
 api.post("/tasks/:id/build", h((a) => core.buildTaskById(a, H)));
 api.post("/pause", h((a) => core.pauseAll(a, H)));
 api.post("/resume", h((a) => core.resumeAll(a, H)));
+api.get('/chats', h(hub.chatList));
 api.get('/direct', h(hub.directMessages));
 api.get('/direct-status', h(hub.directStatus));
 api.post('/direct', h(hub.sendDirect));
