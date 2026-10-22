@@ -11,5 +11,5 @@
 .figure .label { display: block; font-size: 13px; font-weight: 700; color: var(--muted); }
 .figure .value { display: block; font-family: "Baloo 2", Nunito, sans-serif; font-size: 21px; font-variant-numeric: tabular-nums; }
 .figure .note { display: block; font-size: 12.5px; color: var(--muted); }
-.share pre { white-space: pre-wrap; background: #fbf9ff; border: 1px dashed #cfc4e6; border-radius: 12px; padding: 12px; font-size: 14px; }
-.no-verdict { border-left: 5px solid #8fd6b3; }
+.share pre { font-family: inherit; white-space: pre-wrap; background: #fbf9ff; border: 1px dashed #cfc4e6; border-radius: 12px; padding: 12px; font-size: 14px; }
+.no-verdict { border-inline-start: 5px solid #8fd6b3; }

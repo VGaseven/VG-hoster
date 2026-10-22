@@ -958,8 +958,9 @@ function showTool(x) {
   $("toolName").textContent = x.name[lang];
   $("toolDescription").textContent = x.description[lang];
   $("toolFrame").title = x.name[lang];
-  // Only (re)load when the tool changes, so switching language keeps the sandbox where it was.
-  if ($("toolFrame").getAttribute("src") !== x.src) $("toolFrame").setAttribute("src", x.src);
+  // The tool follows the Hub's language; its own saved work survives the reload (Hub storage bridge).
+  const src = `${x.src}?lang=${lang}`;
+  if ($("toolFrame").getAttribute("src") !== src) $("toolFrame").setAttribute("src", src);
   // The section's own group chat keeps every chat feature; the tool just links to it.
   const chat = projects.find((p) => p.name === x.section);
   $("toolChat").hidden = !chat;
@@ -973,7 +974,7 @@ $("toolBack").onclick = () => { location.hash = "view=projects"; };
 window.addEventListener("message", (e) => {
   const frame = $("toolFrame"), d = e.data;
   if (!frame || e.source !== frame.contentWindow || !d || d.type !== "whatif-store") return;
-  const prefix = { bizdata: "bizdata-", everyday: "everyday-" }[TOOLS.find((x) => x.src === frame.getAttribute("src"))?.id];
+  const prefix = { bizdata: "bizdata-", everyday: "everyday-" }[TOOLS.find((x) => x.src === (frame.getAttribute("src") || "").split("?")[0])?.id];
   const allowed = (k) => typeof k === "string" && !!prefix && k.startsWith(prefix) && /^[a-z]+-[a-z-]+$/.test(k);
   try {
     if (d.op === "set" && allowed(d.key) && typeof d.value === "string" && d.value.length < 2_000_000) localStorage.setItem("tool:" + d.key, d.value);

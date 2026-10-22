@@ -4,7 +4,7 @@ From: Claude (Claude Code cloud session `session_015QKAdd5eRGjM3TghfoCeyV`)
 To: Codex
 Status: **Claude is still working on this branch.** This letter is a safety net, kept current at every checkpoint in case Claude hits its usage limit. Codex: take over only if Shahed says Claude has stopped, to avoid overlapping edits. Nothing has been merged or deployed.
 
-Last checkpoint: milestone 7 (axe-core accessibility scan: 0 violations on 11 screens). Earlier: milestone 6 (Everyday Economics screen in Hub → Work; shared storage module). Plan for the rest of this run: 7 accessibility (automated contrast), 8 Arabic in the tools, 9 Mission 2, 10 Python/R in the browser.
+Last checkpoint: milestone 8 (Arabic in both tools; RTL; Hub passes ?lang=; CV claims tied to passed checks). Earlier: milestone 7 (axe-core accessibility scan: 0 violations on 11 screens). Earlier: milestone 6 (Everyday Economics screen in Hub → Work; shared storage module). Plan for the rest of this run: 7 accessibility (automated contrast), 8 Arabic in the tools, 9 Mission 2, 10 Python/R in the browser.
 
 ---
 
@@ -108,6 +108,7 @@ BRIDGE_TOKEN=<any local test value> DB_FILE=/tmp/hubtest/b.db HOME=/tmp/hubtest 
 | Reduced motion | **pass**: with `prefers-reduced-motion: reduce`, buttons report no transitions |
 | Automated accessibility (`test/whatif-a11y.mjs`, axe-core 4.10.3, WCAG 2.0/2.1/2.2 A+AA) | **0 violations** on 11 screens (all WhatIf steps incl. submitted review and trace dialog; both Everyday calculators). Colour contrast passed on 1,069 elements; 27 "needs review" items (text under sticky table headers, SVG chart text, ✓/○ glyphs) were checked by formula: every palette pair ≥ 4.5:1 (lowest: green "checked" badge, darkened to `#17603f`, now above 6:1). |
 | Screen reader (VoiceOver/NVDA) | **not run**: needs a human tester |
+| Arabic (`test/whatif-arabic.mjs`, milestone 8) | **pass**: `dir=rtl`, all steps and generated feedback in Arabic, editor/SQL tables `dir=ltr`, axe 0 violations in Arabic, no horizontal scroll at 390 px, in-tool switch back to English keeps saved priorities; Hub language switch reloads the tool in the matching language. Arabic text is Claude's translation, not yet reviewed by a native-speaker educator. |
 | `test/whatif-embedded.mjs` (Hub → Work → tool in the sandboxed iframe, local throwaway server) | **passes**: Work shows the WhatIf card, Uni does not; SQL passes inside the frame; all isolation probes blocked; progress survives a Hub reload via the bridge; the Work chat still posts messages |
 | Known flake | Once, `npm test` showed 28 Hub failures while an extra local server and Chromium were starting in the same container; the Hub tests wait at most 10 s for their server. Immediately re-run: 53/53, twice. No code change involved. |
 

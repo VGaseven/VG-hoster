@@ -193,3 +193,24 @@ test("Excel bridge SQL examples run on the sandbox data", () => {
   const lookup = run(base, BRIDGE.find((b) => b.id === "lookup").sql);
   assert.ok(lookup.values.some((r) => r[2] === null), "the exact join leaves the lower-case key unmatched, as the notes say");
 });
+
+test("Arabic: generated feedback and labels switch language; English stays the default", async () => {
+  const { setLang } = await import("../public/tools/shared/i18n.js");
+  try {
+    setLang("ar");
+    const g = gradeSql("delayed", `SELECT shipment_id FROM shipments WHERE status = 'held_at_port'`);
+    assert.ok(g.messages.length && g.messages.every((m) => /[؀-ۿ]/.test(m.text)), JSON.stringify(g.messages));
+    const prep = prepare(base);
+    assert.match(violations(prep, { ...EMPTY_PLAN, backup: "eu", coverWeeks: 4 })[0].text, /[؀-ۿ]/);
+  } finally { setLang("en"); }
+  assert.match(gradeSql("delayed", `SELECT shipment_id FROM shipments WHERE status = 'held_at_port'`).messages[0].text, /[a-z]/);
+});
+
+test("CV bullets only claim the data-quality skills whose checks passed", () => {
+  const sub = { checks: { delayed: { pass: true, messages: [] }, exposure: { pass: false, messages: [] }, freight: { pass: false, messages: [] } } };
+  const ev = evaluate(base, { ...goodSubmission(base, "mix-1"), checks: Object.fromEntries(Object.entries(sub.checks).map(([k, v]) => [k, { ...v, messages: [] }])) });
+  const rec = buildRecord({ scenario: base, mode: "assisted", hints: 1, revealed: false, queries: [], checks: sub.checks, plan: EMPTY_PLAN, assumptions: {}, evidence: [], defense: {}, evaluation: ev, startedAt: "x" });
+  const text = cvBullets(rec).join(" ");
+  assert.match(text, /blank arrival date/);
+  assert.doesNotMatch(text, /mismatched join key|duplicated invoices/);
+});

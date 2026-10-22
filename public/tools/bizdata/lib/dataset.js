@@ -1,6 +1,7 @@
 // Rotterdam Port Bottleneck: synthetic, seeded dataset for a fictional company.
 // Every number here is simulated. Nothing describes a real company, port authority report or market.
 import { rng, randInt } from "./prng.js";
+import { lang } from "../../shared/i18n.js";
 
 export const MISSION_ID = "rotterdam-port-bottleneck";
 export const DATASET_VERSION = "rotterdam-v1";
@@ -129,7 +130,7 @@ export function buildScenario(seed = BASE_SEED) {
 export const BRIEFING_DELAY = { min: 1.5, mode: 3, max: 7 };
 
 // ---- Column documentation (shown in the evidence explorer) ----
-export const SCHEMA = {
+const SCHEMA_EN = {
   mission_info: { _about: "One row of mission constants.", as_of_date: "Decision date. All 'late' calculations compare with this date, not today's date.", horizon_weeks: "Planning horizon for the forecast.", emergency_budget_eur: "Cash the COO can approve for this disruption.", antwerp_slots: "Barge slots available from Antwerp this week: the most containers you can reroute.", service_target: "Required fill rate (share of demand served from stock).", holding_rate_per_year: "Cost of holding inventory per year, as a share of its value.", markdown_rate: "Discount needed to clear stock above the excess-cover threshold at the end of the horizon.", excess_cover_weeks: "Stock above this many weeks of demand at week 8 counts as excess.", currency: "All money is in euros (EUR)." },
   products: { _about: "One row per product.", product_id: "Product key, upper case (P-101…).", unit_value_eur: "Landed cost per unit (EUR).", gross_margin_per_unit_eur: "Margin lost for each unit of demand not served.", weekly_demand_units: "Average units sold per week (planning forecast).", units_per_pallet: "Units that fit on one pallet position." },
   inventory: { _about: "Stock at the Venlo DC on the as-of date.", on_hand_units: "Units physically available to ship.", safety_stock_units: "Current policy buffer (1 week of demand).", reorder_point_units: "Current policy trigger for a new order (2.5 weeks)." },
@@ -139,6 +140,19 @@ export const SCHEMA = {
   backup_suppliers: { _about: "Emergency buy options, priced as a premium over normal landed cost.", premium_pct: "Extra cost over unit_value_eur, as a share.", lead_time_weeks: "Weeks until goods reach the DC." },
   warehouse: { _about: "DC space.", free_pallet_positions: "Empty pallet spaces today.", overflow_rate_eur_pallet_week: "3PL overflow storage price per pallet per week.", lease_block_pallets: "Extra space available by short-term lease.", lease_cost_eur_week: "Lease price per week (minimum 8 weeks)." },
 };
+
+const SCHEMA_AR = {
+  mission_info: { _about: "صف واحد من ثوابت المهمة.", as_of_date: "تاريخ القرار. كل حسابات «التأخر» تُقارَن بهذا التاريخ، لا بتاريخ اليوم.", horizon_weeks: "أفق التخطيط للتوقع.", emergency_budget_eur: "النقد الذي يمكن لمدير العمليات اعتماده لهذا الاضطراب.", antwerp_slots: "خانات النقل النهري المتاحة من أنتويرب هذا الأسبوع: أقصى عدد من الحاويات يمكنك إعادة توجيهها.", service_target: "معدل التلبية المطلوب (نسبة الطلب المخدوم من المخزون).", holding_rate_per_year: "تكلفة الاحتفاظ بالمخزون سنويًا كنسبة من قيمته.", markdown_rate: "التخفيض اللازم لتصفية المخزون الزائد عن حد التغطية في نهاية الأفق.", excess_cover_weeks: "المخزون الذي يتجاوز هذا العدد من أسابيع الطلب في الأسبوع 8 يُعد فائضًا.", currency: "كل المبالغ باليورو (EUR)." },
+  products: { _about: "صف لكل منتج.", product_id: "مفتاح المنتج، بأحرف كبيرة (P-101…).", unit_value_eur: "تكلفة الوحدة الواصلة (يورو).", gross_margin_per_unit_eur: "الهامش المفقود لكل وحدة طلب غير مخدومة.", weekly_demand_units: "متوسط الوحدات المبيعة أسبوعيًا (توقع التخطيط).", units_per_pallet: "الوحدات التي تتسع لها منصّة واحدة." },
+  inventory: { _about: "المخزون في مركز توزيع فينلو في تاريخ القرار.", on_hand_units: "الوحدات المتاحة فعليًا للشحن.", safety_stock_units: "مخزون الأمان في السياسة الحالية (طلب أسبوع).", reorder_point_units: "نقطة إعادة الطلب في السياسة الحالية (2.5 أسبوع)." },
+  shipments: { _about: "الشحنات البحرية الواردة.", product_id: "يجب أن يطابق products.product_id. تحقّق من طريقة كتابته.", quantity_units: "عدد الوحدات في الشحنة.", eta_date: "موعد الوصول المتوقع إلى المركز بحسب الناقل (تاريخ ISO).", actual_arrival_date: "تاريخ الاستلام في المركز. قد يكون فارغًا حتى عندما تكون الحالة 'arrived'.", status: "arrived (وصلت) أو in_transit (في البحر) أو held_at_port (في روتردام بانتظار الإفراج)." },
+  freight_invoices: { _about: "رسوم الشحن المستوردة من بوابة وكيل الشحن.", invoice_id: "رقم الفاتورة. يجب أن تظهر كل فاتورة مرة واحدة.", amount_eur: "مبلغ الفاتورة (يورو)." },
+  reroute_options: { _about: "عروض نقل حاوية محتجزة عبر أنتويرب.", extra_cost_eur: "التكلفة الإضافية عند إعادة التوجيه (يورو).", arrival_days: "الأيام من اليوم حتى وصولها إلى المركز عند إعادة التوجيه." },
+  backup_suppliers: { _about: "خيارات الشراء الطارئ، مسعّرة كعلاوة على التكلفة العادية.", premium_pct: "التكلفة الإضافية فوق unit_value_eur كنسبة.", lead_time_weeks: "الأسابيع حتى وصول البضاعة إلى المركز." },
+  warehouse: { _about: "مساحة المركز.", free_pallet_positions: "مواضع المنصّات الفارغة اليوم.", overflow_rate_eur_pallet_week: "سعر التخزين الخارجي لكل منصّة أسبوعيًا.", lease_block_pallets: "مساحة إضافية متاحة بالاستئجار قصير الأجل.", lease_cost_eur_week: "سعر الاستئجار أسبوعيًا (بحد أدنى 8 أسابيع)." },
+};
+/** Column notes in the page language (English in tests). */
+export const SCHEMA = lang() === "ar" ? Object.fromEntries(Object.entries(SCHEMA_EN).map(([t, cols]) => [t, { ...cols, ...SCHEMA_AR[t] }])) : SCHEMA_EN;
 
 /** SQL script that loads a scenario into an empty SQLite database. */
 export function toSqlScript(scenario) {

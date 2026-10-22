@@ -111,7 +111,7 @@ The **realized outcome** (one seeded draw, the same for every plan) is shown aft
 
 ## 8. Known limitations
 
-- The tool's own interface is English only; the Hub card and heading are bilingual.
+- Arabic: both tools are fully bilingual (English/Arabic, right-to-left layout), following the Hub's language or an in-tool switch. Data values that students type in SQL (table, column, status and supplier names) stay as stored; code, SQL results and IDs stay left-to-right. Exported records (JSON/Markdown) are in English. Translations were written by Claude and have not been reviewed by a native-speaker educator.
 - Automated accessibility scan (axe-core, WCAG 2.2 AA rules): 0 violations on 11 screens; contrast checked by formula where axe could not decide. Not yet tested with a real screen reader by a person.
 - Fonts load from Google Fonts (as the Hub does).
 - Records live in one browser on one device; there is no server-side backup or sync.

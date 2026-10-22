@@ -1,21 +1,22 @@
 // Strategy model for the Rotterdam mission. Transparent weekly simulation; every rule is listed in ASSUMPTIONS.
 // It is a teaching model of a fictional company, not a forecast of any real port or market.
 import { rng, triangular, normal } from "./prng.js";
+import { L } from "../../shared/i18n.js";
 import { BRIEFING_DELAY, daysBetween } from "./dataset.js";
 
 export const ASSUMPTIONS = [
-  "Time runs in weeks from the as-of date (week 1 = days 0–6). The horizon is 8 weeks.",
-  "Delayed shipments (not arrived and past ETA) are released together when Rotterdam congestion clears, after a delay of L weeks. They can be sold from week ⌊L⌋+1.",
-  "L follows the port's published estimate: triangular, minimum 1.5, most likely 3, maximum 7 weeks, unless you change the assumption sliders.",
-  "Shipments still at sea with a future ETA arrive on time; the carrier has re-sequenced them after the congestion.",
-  "A rerouted container arrives after its quoted arrival_days, for its quoted extra cost. Only containers held at the port can be rerouted.",
-  "Demand each week = weekly_demand_units × (1 + demand shift) × a common random factor (mean 1, standard deviation 8%).",
-  "Unmet demand is lost (no backorders); each lost unit costs gross_margin_per_unit_eur.",
-  "Emergency buys cover the chosen number of weeks of demand for each product with a delayed shipment that is not fully rerouted. Their premium is a cost; the goods themselves become inventory.",
-  "Bringing the next regular order forward adds 2 weeks of demand per exposed product, arriving in week 7, at normal cost.",
-  "Holding cost = ending stock value × 25% ÷ 52 per week. Pallets above free space pay 3PL overflow per week; a lease adds space for a fixed weekly fee over the whole horizon.",
-  "Stock above 6 weeks of demand at the end of week 8 is excess and is cleared at a 15% markdown.",
-  "Cash used = emergency purchases at their full price + reroute fees + lease + early orders. It must stay within the emergency budget.",
+  L("Time runs in weeks from the as-of date (week 1 = days 0–6). The horizon is 8 weeks.", "يُحسب الزمن بالأسابيع من تاريخ القرار (الأسبوع 1 = الأيام 0–6). الأفق 8 أسابيع."),
+  L("Delayed shipments (not arrived and past ETA) are released together when Rotterdam congestion clears, after a delay of L weeks. They can be sold from week ⌊L⌋+1.", "يُفرج عن الشحنات المتأخرة (لم تصل وتجاوزت الموعد المتوقع) معًا عند انتهاء ازدحام روتردام، بعد تأخير قدره L أسابيع. يمكن بيعها من الأسبوع ⌊L⌋+1."),
+  L("L follows the port's published estimate: triangular, minimum 1.5, most likely 3, maximum 7 weeks, unless you change the assumption sliders.", "يتبع L تقدير الميناء المنشور: توزيع مثلثي، أدنى 1.5 والأرجح 3 وأقصى 7 أسابيع، ما لم تغيّر مؤشرات الافتراضات."),
+  L("Shipments still at sea with a future ETA arrive on time; the carrier has re-sequenced them after the congestion.", "الشحنات التي ما زالت في البحر وموعدها المتوقع لم يحن تصل في موعدها؛ أعاد الناقل جدولتها بعد الازدحام."),
+  L("A rerouted container arrives after its quoted arrival_days, for its quoted extra cost. Only containers held at the port can be rerouted.", "تصل الحاوية المعاد توجيهها بعد arrival_days المذكورة، بالتكلفة الإضافية المعروضة. لا يمكن إعادة توجيه إلا الحاويات المحتجزة في الميناء."),
+  L("Demand each week = weekly_demand_units × (1 + demand shift) × a common random factor (mean 1, standard deviation 8%).", "الطلب كل أسبوع = weekly_demand_units × (1 + تغيّر الطلب) × عامل عشوائي مشترك (متوسطه 1 وانحرافه المعياري 8%)."),
+  L("Unmet demand is lost (no backorders); each lost unit costs gross_margin_per_unit_eur.", "الطلب غير الملبّى يضيع (لا طلبات مؤجلة)؛ كل وحدة ضائعة تكلّف gross_margin_per_unit_eur."),
+  L("Emergency buys cover the chosen number of weeks of demand for each product with a delayed shipment that is not fully rerouted. Their premium is a cost; the goods themselves become inventory.", "يغطي الشراء الطارئ عدد أسابيع الطلب المختار لكل منتج لديه شحنة متأخرة لم يُعد توجيهها بالكامل. علاوته تكلفة؛ أما البضاعة فتصبح مخزونًا."),
+  L("Bringing the next regular order forward adds 2 weeks of demand per exposed product, arriving in week 7, at normal cost.", "تقديم الطلب المعتاد التالي يضيف طلب أسبوعين لكل منتج معرّض، يصل في الأسبوع 7، بالتكلفة العادية."),
+  L("Holding cost = ending stock value × 25% ÷ 52 per week. Pallets above free space pay 3PL overflow per week; a lease adds space for a fixed weekly fee over the whole horizon.", "تكلفة الاحتفاظ = قيمة المخزون في نهاية الأسبوع × 25% ÷ 52 أسبوعيًا. المنصّات التي تتجاوز المساحة الفارغة تدفع رسوم تخزين خارجي أسبوعيًا؛ والاستئجار يضيف مساحة برسم أسبوعي ثابت طوال الأفق."),
+  L("Stock above 6 weeks of demand at the end of week 8 is excess and is cleared at a 15% markdown.", "المخزون الذي يتجاوز طلب 6 أسابيع في نهاية الأسبوع 8 فائض ويُصفّى بتخفيض 15%."),
+  L("Cash used = emergency purchases at their full price + reroute fees + lease + early orders. It must stay within the emergency budget.", "النقد المستخدم = المشتريات الطارئة بسعرها الكامل + رسوم إعادة التوجيه + الاستئجار + الطلبات المبكرة. يجب أن يبقى ضمن الميزانية الطارئة."),
 ];
 
 export const EMPTY_PLAN = { reroute: [], backup: "none", coverWeeks: 0, earlyOrder: false, lease: false };
@@ -61,8 +62,8 @@ const unitsOf = (prep, id) => prep.products.flatMap((p) => p.delayed).find((d) =
 export function violations(prep, plan) {
   const out = [];
   const cash = planCash(prep, plan);
-  if (cash > prep.info.emergency_budget_eur) out.push({ kind: "budget", text: `Uses €${cash.toLocaleString("en-GB")} cash; the emergency budget is €${prep.info.emergency_budget_eur.toLocaleString("en-GB")}.` });
-  if (plan.reroute.length > prep.info.antwerp_slots) out.push({ kind: "slots", text: `Reroutes ${plan.reroute.length} containers; only ${prep.info.antwerp_slots} Antwerp slots are available.` });
+  if (cash > prep.info.emergency_budget_eur) out.push({ kind: "budget", text: L(`Uses €${cash.toLocaleString("en-GB")} cash; the emergency budget is €${prep.info.emergency_budget_eur.toLocaleString("en-GB")}.`, `تستخدم €${cash.toLocaleString("en-GB")} نقدًا؛ والميزانية الطارئة €${prep.info.emergency_budget_eur.toLocaleString("en-GB")}.`) });
+  if (plan.reroute.length > prep.info.antwerp_slots) out.push({ kind: "slots", text: L(`Reroutes ${plan.reroute.length} containers; only ${prep.info.antwerp_slots} Antwerp slots are available.`, `تعيد توجيه ${plan.reroute.length} حاويات؛ والمتاح ${prep.info.antwerp_slots} خانات فقط في أنتويرب.`) });
   return out;
 }
 const backupOf = (prep, productId, kind) => prep.backup.find((b) => b.product_id === productId && (kind === "eu" ? b.supplier.includes("(EU)") : b.supplier.includes("(TR)")));
@@ -152,15 +153,15 @@ export function referencePlans(prep) {
   const best = byValue.slice(0, slots).map((x) => x.id);
   const biggest = [...prep.reroute].sort((a, b) => unitsOf(prep, b.shipment_id) - unitsOf(prep, a.shipment_id)).slice(0, slots).map((r) => r.shipment_id);
   return [
-    { id: "hold", label: "Hold steady (do nothing)", plan: { ...EMPTY_PLAN } },
-    { id: "reroute-best", label: `Reroute the ${slots} best-value containers`, plan: { ...EMPTY_PLAN, reroute: best } },
-    { id: "reroute-big", label: `Reroute the ${slots} largest containers`, plan: { ...EMPTY_PLAN, reroute: biggest } },
-    { id: "eu-1", label: "EU backup buy, 1 week's cover", plan: { ...EMPTY_PLAN, backup: "eu", coverWeeks: 1 } },
-    { id: "eu-2", label: "EU backup buy, 2 weeks' cover", plan: { ...EMPTY_PLAN, backup: "eu", coverWeeks: 2 } },
-    { id: "tr-2", label: "Turkey backup buy, 2 weeks' cover", plan: { ...EMPTY_PLAN, backup: "tr", coverWeeks: 2 } },
-    { id: "early", label: "Bring the next order forward", plan: { ...EMPTY_PLAN, earlyOrder: true } },
-    { id: "mix-1", label: "Reroute best-value + EU 1 week", plan: { ...EMPTY_PLAN, reroute: best, backup: "eu", coverWeeks: 1 } },
-    { id: "mix-tr", label: "Reroute best-value + Turkey 1.5 weeks", plan: { ...EMPTY_PLAN, reroute: best, backup: "tr", coverWeeks: 1.5 } },
+    { id: "hold", label: L("Hold steady (do nothing)", "الثبات (عدم فعل شيء)"), plan: { ...EMPTY_PLAN } },
+    { id: "reroute-best", label: L(`Reroute the ${slots} best-value containers`, `إعادة توجيه أفضل ${slots} حاويات قيمةً`), plan: { ...EMPTY_PLAN, reroute: best } },
+    { id: "reroute-big", label: L(`Reroute the ${slots} largest containers`, `إعادة توجيه أكبر ${slots} حاويات`), plan: { ...EMPTY_PLAN, reroute: biggest } },
+    { id: "eu-1", label: L("EU backup buy, 1 week's cover", "شراء احتياطي أوروبي، تغطية أسبوع"), plan: { ...EMPTY_PLAN, backup: "eu", coverWeeks: 1 } },
+    { id: "eu-2", label: L("EU backup buy, 2 weeks' cover", "شراء احتياطي أوروبي، تغطية أسبوعين"), plan: { ...EMPTY_PLAN, backup: "eu", coverWeeks: 2 } },
+    { id: "tr-2", label: L("Turkey backup buy, 2 weeks' cover", "شراء احتياطي تركي، تغطية أسبوعين"), plan: { ...EMPTY_PLAN, backup: "tr", coverWeeks: 2 } },
+    { id: "early", label: L("Bring the next order forward", "تقديم موعد الطلب التالي"), plan: { ...EMPTY_PLAN, earlyOrder: true } },
+    { id: "mix-1", label: L("Reroute best-value + EU 1 week", "إعادة توجيه الأفضل قيمةً + شراء أوروبي لأسبوع"), plan: { ...EMPTY_PLAN, reroute: best, backup: "eu", coverWeeks: 1 } },
+    { id: "mix-tr", label: L("Reroute best-value + Turkey 1.5 weeks", "إعادة توجيه الأفضل قيمةً + شراء تركي لـ1.5 أسبوع"), plan: { ...EMPTY_PLAN, reroute: best, backup: "tr", coverWeeks: 1.5 } },
   ];
 }
 

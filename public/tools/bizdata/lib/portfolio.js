@@ -1,6 +1,7 @@
 // Private, replayable completion records. Stored only in this browser unless the student exports a file.
 // CV bullets describe only what was actually done here: a simulated mission, synthetic data, the mode and help used.
 import { MISSION_ID, DATASET_VERSION, BASE_SEED, COMPANY } from "./dataset.js";
+import { L } from "../../shared/i18n.js";
 
 export const RECORD_VERSION = 1;
 
@@ -23,9 +24,10 @@ export function buildRecord({ scenario, mode, hints, revealed, queries, checks, 
 
 /** What the mode label honestly supports. Guided or hinted work is never shown as independent mastery. */
 export function demonstrated(record) {
-  if (record.mode === "independent" && !record.assistance.hintsUsed && !record.assistance.referenceRevealed && record.variant === "fresh variant") return "Completed independently on a fresh variant";
-  if (record.mode === "guided") return "Completed with guidance (worked example)";
-  return `Completed with assistance (${record.assistance.hintsUsed} hint${record.assistance.hintsUsed === 1 ? "" : "s"}${record.assistance.referenceRevealed ? ", reference query shown" : ""})`;
+  if (record.mode === "independent" && !record.assistance.hintsUsed && !record.assistance.referenceRevealed && record.variant === "fresh variant") return L("Completed independently on a fresh variant", "أُنجز باستقلالية على نسخة جديدة");
+  if (record.mode === "guided") return L("Completed with guidance (worked example)", "أُنجز بإرشاد (مثال محلول)");
+  const n = record.assistance.hintsUsed, shown = record.assistance.referenceRevealed;
+  return L(`Completed with assistance (${n} hint${n === 1 ? "" : "s"}${shown ? ", reference query shown" : ""})`, `أُنجز بمساعدة (${n} تلميح${shown ? "، مع عرض الاستعلام المرجعي" : ""})`);
 }
 
 /** Editable CV bullets. Only facts from the record; no invented impact, employer or credential. */
@@ -33,10 +35,13 @@ export function cvBullets(record) {
   const checks = Object.entries(record.checks).filter(([, v]) => v.pass).map(([k]) => k);
   const facts = record.evaluation;
   const bullets = [
-    `BizData simulated mission "Rotterdam Port Bottleneck" (fictional company, synthetic data): ${demonstrated(record)}.`,
+    L(`BizData simulated mission "Rotterdam Port Bottleneck" (fictional company, synthetic data): ${demonstrated(record)}.`, `مهمة BizData المحاكاة «اختناق ميناء روتردام» (شركة خيالية، بيانات اصطناعية): ${demonstrated(record)}.`),
   ];
-  if (checks.length) bullets.push(`Wrote SQL queries in a browser sandbox that passed ${checks.length} result check${checks.length > 1 ? "s" : ""} (${checks.join(", ")}), including handling a blank arrival date and a mismatched join key.`);
-  bullets.push(`Compared mitigation strategies under a stated port-delay forecast and defended a recommendation against budget, capacity and service-level constraints (rubric ${facts.total}/${facts.max}).`);
+  // Each data-quality claim only when the check that proves it passed.
+  const handled = [checks.includes("delayed") && L("a blank arrival date", "تاريخ وصول فارغ"), checks.includes("exposure") && L("a mismatched join key", "مفتاح ربط غير متطابق"), checks.includes("freight") && L("duplicated invoices", "فواتير مكررة")].filter(Boolean);
+  const including = handled.length ? L(`, including handling ${handled.join(" and ")}`, `، بما في ذلك معالجة ${handled.join(" و")}`) : "";
+  if (checks.length) bullets.push(L(`Wrote SQL queries in a browser sandbox that passed ${checks.length} result check${checks.length > 1 ? "s" : ""} (${checks.join(", ")})${including}.`, `كتبت استعلامات SQL في بيئة معزولة داخل المتصفح نجحت في ${checks.length} من تحققات النتائج (${checks.join("، ")})${including}.`));
+  bullets.push(L(`Compared mitigation strategies under a stated port-delay forecast and defended a recommendation against budget, capacity and service-level constraints (rubric ${facts.total}/${facts.max}).`, `قارنت استراتيجيات معالجة وفق توقع معلن لتأخير الميناء ودافعت عن توصية في ضوء قيود الميزانية والطاقة الاستيعابية ومستوى الخدمة (التقييم ${facts.total}/${facts.max}).`));
   return bullets;
 }
 
