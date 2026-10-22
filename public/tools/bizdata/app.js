@@ -470,18 +470,18 @@ function renderForecast() {
   if (!S.options.some((o) => planLabel(o.plan) === "Hold steady (do nothing)") && planLabel(S.plan) !== "Hold steady (do nothing)") rows.push({ name: "Base", label: "Hold steady (do nothing)", plan: EMPTY_PLAN, baseline: true });
   const results = rows.map((r) => ({ ...r, e: evaluatePlan(S.prep, r.plan, S.sample), v: violations(S.prep, r.plan) }));
   const maxCost = Math.max(...results.map((r) => r.e.p90)) * 1.08;
-  const W = 560, rowH = 46, pad = 150, chartH = results.length * rowH + 30;
-  const x = (v) => pad + (W - pad - 16) * (v / maxCost);
+  const W = 600, rowH = 46, pad = 200, right = 78, chartH = results.length * rowH + 30;
+  const x = (v) => pad + (W - pad - right) * (v / maxCost);
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", `0 0 ${W} ${chartH}`); svg.setAttribute("class", "chart"); svg.setAttribute("role", "img");
   svg.setAttribute("aria-label", "Expected disruption cost per plan with the P10 to P90 range");
   const add = (tag, attrs, text) => { const el = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v); if (text) el.textContent = text; svg.append(el); return el; };
   results.forEach((r, i) => {
     const y = 10 + i * rowH;
-    add("text", { x: 0, y: y + 18, class: "c-label" }, `${r.name}: ${r.label.length > 22 ? r.label.slice(0, 21) + "…" : r.label}`);
+    add("text", { x: 0, y: y + 18, class: "c-label" }, `${r.name}: ${r.label.length > 26 ? r.label.slice(0, 25) + "…" : r.label}`);
     add("line", { x1: x(r.e.p10), x2: x(r.e.p90), y1: y + 14, y2: y + 14, class: "c-range" });
     add("rect", { x: pad, y: y + 6, width: Math.max(1, x(r.e.expectedCost) - pad), height: 16, rx: 4, class: "c-bar" + (r.current ? " now" : "") + (r.v.length ? " broken" : "") });
-    add("text", { x: x(r.e.p90) + 4, y: y + 18, class: "c-val" }, eur(r.e.expectedCost));
+    add("text", { x: x(r.e.p90) + 6, y: y + 18, class: "c-val" }, eur(r.e.expectedCost));
   });
   add("text", { x: pad, y: chartH - 4, class: "c-axis" }, "Bar: expected cost · line: P10–P90 range (same scenarios for every plan)");
   const table = tableEl(["Option", "Plan", "Cash", "Expected cost", "P10–P90", "Fill rate", "Service target met", "Excess stock", "Constraints"],
@@ -589,7 +589,7 @@ function renderPortfolio() {
   const sec = $("step-portfolio"), list = store.get("bizdata-portfolio", []);
   sec.replaceChildren(h("h2", { id: "h-portfolio", text: "Private portfolio" }),
     h("p", { class: "callout", text: "Records are saved only in this browser on this device and are never shared. Export a file to keep a copy. Public sharing is not available in this release." }),
-    list.length ? list.map((r) => recordCard(r)) : h("p", { class: "muted", text: "No records yet. Submit a recommendation to create your first BizData completion record." }));
+    ...(list.length ? list.map((r) => recordCard(r)) : [h("p", { class: "muted", text: "No records yet. Submit a recommendation to create your first BizData completion record." })]));
 }
 function recordCard(r) {
   const bullets = cvBullets(r).join("\n");

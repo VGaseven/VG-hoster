@@ -2,7 +2,9 @@
 
 From: Claude (Claude Code cloud session `session_015QKAdd5eRGjM3TghfoCeyV`)
 To: Codex
-Status: **Claude has stopped editing this branch.** It is yours to continue. Nothing has been merged or deployed.
+Status: **Claude is still working on this branch.** This letter is a safety net, kept current at every checkpoint in case Claude hits its usage limit. Codex: take over only if Shahed says Claude has stopped, to avoid overlapping edits. Nothing has been merged or deployed.
+
+Last checkpoint: milestone 2 (the tool runs end to end in a browser). See §5 for test evidence.
 
 ---
 
@@ -56,17 +58,19 @@ All new tool files are static and live under `public/tools/bizdata/` (served by 
 | `lib/rubric.js` | 5-criterion rubric (10 points), feedback in 4 categories, decision quality vs realized outcome | Done, tested |
 | `lib/portfolio.js` | Completion record, honest "demonstrated" label, CV bullets, Markdown export | Done, tested |
 | `lib/bridge.js` | 4 curated Excel ↔ SQL/R/Python mappings with stated differences | Done; SQL tested |
-| `sql-worker.js` | Web Worker: sql.js (SQLite WASM), fresh read-only DB per run, 1,000-row cap, friendly errors | Written, **not run in a browser yet** |
-| `app.js` | Whole UI: KPI strip with lineage dialogs, steps (Briefing, Investigate, Compare strategies, Decide & defend, Review, Portfolio), SQL workbench (predict → run → explain), spreadsheet filters, strategy builder + chart, defense gate, review, portfolio replay/export | Written, **syntax-checked only, never loaded in a browser** |
-| `index.html` | Page shell | Written, untested in a browser |
+| `sql-worker.js` | Web Worker: sql.js (SQLite WASM), fresh read-only DB per run, 1,000-row cap, friendly errors | **Browser-tested** (read-only refusal, 4 s timeout, reset) |
+| `app.js` | Whole UI: KPI strip with lineage dialogs, steps (Briefing, Investigate, Compare strategies, Decide & defend, Review, Portfolio), SQL workbench (predict → run → explain), spreadsheet filters, strategy builder + chart, defense gate, review, portfolio replay/export | **Browser-tested end to end** (§5) |
+| `index.html`, `app.css` | Page shell; Hub-look stylesheet (light, responsive, visible focus, reduced motion) | **Browser-tested** at 1280 px and 390 px |
+| `server.js` | Two explicit routes serve `node_modules/sql.js/dist/sql-wasm-browser.{js,wasm}` at `/tools/bizdata/vendor/` (nothing else from node_modules) | Done |
+| `test/whatif-journey.mjs` | Manual browser test of the full student journey (Playwright + Chromium) | Passes (§5) |
 | `test/bizdata.test.js` | 14 Node tests using real SQLite (sql.js) | **14/14 pass** |
 | `package.json` / lock | Adds `sql.js@1.15.1` dependency | Installed, 0 vulnerabilities |
 | `.gitignore` | Exception so `public/tools/bizdata/lib/` is tracked (the root `lib/` Python rule was hiding it) | Done |
 
-### Not yet created (the page will not work until these exist)
+### Not yet done
 
-1. **`public/tools/bizdata/app.css`**: no stylesheet yet. The page will render unstyled.
-2. **Vendor files for the worker:** `public/tools/bizdata/vendor/` is empty. The worker calls `importScripts("vendor/sql-wasm-browser.js")` and loads `vendor/sql-wasm-browser.wasm`. Planned approach: add two explicit routes in `server.js` that send `node_modules/sql.js/dist/sql-wasm-browser.js` and `.wasm` (do not expose the whole `node_modules`). Copying the two files into `vendor/` also works but adds about 650 KB to git.
+1. *(done in milestone 1: `app.css`)*
+2. *(done in milestone 1: vendor routes in `server.js`)*
 3. **Hub wiring under Work:** nothing in `public/hub.js` or `public/index.html` points to the new tool yet on this branch. The working pattern exists on `claude/hub-work-bizdata-sandbox` (commit `e6f7c5e`): a `TOOLS` registry in `hub.js`, a Tool card at the top of the Work section, a `#tool=<id>` route, a `<section id="tool">` with an `<iframe src="/tools/bizdata/">`, a "Chat with the team about it" button linking to the Work group chat, and a `toolChat` label fix (set the text in JS because `translate()` runs before late strings exist). Port that pattern; do **not** port its `biz-data-sandbox/media` route (the new tool must not depend on the extension).
 4. **`docs/BIZDATA_STACK_SANDBOX.md`:** scenario data dictionary, assumptions (already in `lib/model.js` `ASSUMPTIONS`), rubric, and the execution-vs-simulation table.
 5. **Browser end-to-end test** of the full student journey, keyboard and phone widths.
@@ -98,8 +102,10 @@ BRIDGE_TOKEN=<any local test value> DB_FILE=/tmp/hubtest/b.db HOME=/tmp/hubtest 
 | `node --test test/bizdata.test.js` | **14 / 14 pass** |
 | `npm test` (39 Hub tests + 14 tool tests) | **53 / 53 pass** |
 | `node --check` on `app.js`, `sql-worker.js`, all `lib/*.js` | pass (syntax only) |
-| Browser test of the new tool | **not run** (no CSS, no vendor route, no Hub wiring yet) |
-| Keyboard / responsive / reduced-motion checks | **not run** |
+| `test/whatif-journey.mjs` in Chromium (tool opened directly at `/tools/bizdata/`, local throwaway server) | **passes, no page or console errors.** Covered: guided SQL for all 3 tasks with checks passing; KPI trace dialog; `DELETE` refused as read-only; endless recursive query stopped after ~4.3 s, then reset and Ctrl+Enter run works; two plans saved and compared; submit gate blocks until complete; review 9/10 (one deliberate wrong weak-spot answer), decision "defensible", outcome shown separately; record saved; replay re-ran the saved SQL and reproduced score and outcome; Markdown export; state survives reload; independent fresh variant has blank editor, no hints, no spreadsheet helper; no horizontal scroll at 390 px on all six steps |
+| Keyboard | Ctrl+Enter run and Tab/Esc in the editor tested; a full keyboard-only pass of every control is **not yet run** |
+| Reduced motion | CSS rule present; **not verified** in a browser |
+| Known flake | Once, `npm test` showed 28 Hub failures while an extra local server and Chromium were starting in the same container; the Hub tests wait at most 10 s for their server. Immediately re-run: 53/53, twice. No code change involved. |
 
 What the 14 tool tests prove: deterministic seeds; data traps present; dataset loads into real SQLite; every reference query passes on the base mission and 3 variants; alternative valid queries pass; wrong analyses fail with specific messages (blank date ≠ late, late vessel at sea, missing days-late column, exact join drops the lower-case key, duplicate invoices); student SQL cannot write (read-only); missing data handled in the model; repeatable results; ≥2 strategy families defensible on 5 seeds and no reference plan below 80% fill; budget and slot constraints; full-mark defense vs weak defense vs over-budget; decision credit independent of the realized draw; portfolio honesty (guided ≠ independent, no credential language); Excel bridge SQL runs.
 
@@ -112,18 +118,17 @@ What the 14 tool tests prove: deterministic seeds; data traps present; dataset l
 - **The dataset uses Fisher–Yates shuffling**, not a random `sort()` comparator; the latter gives different scenarios in different browsers.
 - **Data is synthetic and the company is fictional** (Kestrel Home Goods B.V.; "Port Ledger Daily" is a fictional outlet). Keep the "Simulated" labels.
 - **Root `.gitignore` has `lib/`** (Python leftovers). The exception `!public/tools/bizdata/lib/` must stay, or the core modules disappear from commits.
-- **Known gap in `app.js`:** `submit()` builds the record's query list with an index-mismatch risk (`.filter(Boolean)` before mapping to `CHECKS[i]`). If a task was never run, labels can shift. Fix by mapping over `CHECKS` first and then filtering.
-- **Known gap:** `app.js` has not been exercised, so expect runtime bugs on first load.
+- *(fixed)* `submit()` query-list index mismatch; portfolio cards rendered as "[object HTMLElement]" (`replaceChildren` does not flatten arrays; use spread); active step button unreadable on hover; chart labels clipped.
 - **Isolation of the iframe (planned, unverified):** the tool is same-origin with the Hub. Student SQL never runs as JavaScript, so it cannot read Hub storage. The tool's JavaScript itself does not call `/api/*`. A test for "no `/api/` in tool files" and a check of the public routes are still to be added. Tool files are public static files (like the Hub's own `hub.js`) and must contain no data or secrets.
 - **Do not:** deploy; merge into `master` or the Mac's running branch; force-push; delete `claude/hub-work-bizdata-sandbox`, `feature/biz-data-sandbox` or the user's Notion entries; ask Shahed for tokens in chat.
 
 ## 7. Exact next steps for Codex
 
-1. **First action:** check out `claude/bizdata-stack-sandbox`, run `npm ci && npm test`, and confirm 53/53 pass on your machine.
+1. **First action:** check out `claude/bizdata-stack-sandbox`, run `npm ci && npm test`, and confirm 53/53 pass on your machine. Then start a local server (§4) and run `test/whatif-journey.mjs`.
 2. Obtain and inspect the cloud handoff ZIP (`codex/cloud-chat-state-slice`, `02bff9a`: README, git bundle, patch, feature inventory) and the Mac branch `claude/hub-core-chat-implementation`. Decide the true Hub baseline. Rebase or merge this tool onto it **without overwriting** chat work (the tool is self-contained under `public/tools/bizdata/` plus a small `hub.js` / `index.html` / `hub.css` change).
-3. Add the two `sql.js` vendor routes in `server.js` and a Node test that they return 200 with the right content types.
-4. Write `public/tools/bizdata/app.css` (Hub look: lavender `#f6f2ff` page, white cards, plum text `#3b3355`, accent `#7b5cd6`, Nunito / Baloo 2; light only; responsive; visible focus; `prefers-reduced-motion`).
-5. Load `/tools/bizdata/` in a browser and fix runtime bugs. Then run the full journey: guided run → both checks pass → compare 2 plans → link evidence → submit → review → portfolio replay "verified" → fresh variant in independent mode. Also check timeouts and cancel (e.g. `WITH RECURSIVE r(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM r) SELECT * FROM r`), keyboard-only use, and 390 px width.
+3. *(done)* vendor routes. Still to add: a Node test that they return 200 with the right content types.
+4. *(done)* `app.css`.
+5. *(done)* browser journey. Still to do: full keyboard-only pass and reduced-motion check.
 6. Wire the tool into Hub → Work using the pattern from `claude/hub-work-bizdata-sandbox` (section 3, item 3). Run `node scripts/version-hub-assets.mjs`.
 7. Add `docs/BIZDATA_STACK_SANDBOX.md` and a README section: what exists, what executes, what is simulated, what is planned.
 8. Audit against the full BizData spec and report real vs simulated vs missing. Verify public routes expose no Hub data (`/api/*` must return 401 without a token).

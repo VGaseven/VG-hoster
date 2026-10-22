@@ -33,7 +33,7 @@ export function cvBullets(record) {
   const checks = Object.entries(record.checks).filter(([, v]) => v.pass).map(([k]) => k);
   const facts = record.evaluation;
   const bullets = [
-    `Completed the BizData simulated mission "Rotterdam Port Bottleneck" (fictional company, synthetic data); ${demonstrated(record).toLowerCase()}.`,
+    `BizData simulated mission "Rotterdam Port Bottleneck" (fictional company, synthetic data): ${demonstrated(record)}.`,
   ];
   if (checks.length) bullets.push(`Wrote SQL queries in a browser sandbox that passed ${checks.length} result check${checks.length > 1 ? "s" : ""} (${checks.join(", ")}), including handling a blank arrival date and a mismatched join key.`);
   bullets.push(`Compared mitigation strategies under a stated port-delay forecast and defended a recommendation against budget, capacity and service-level constraints (rubric ${facts.total}/${facts.max}).`);
