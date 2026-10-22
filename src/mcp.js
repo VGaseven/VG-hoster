@@ -30,6 +30,7 @@ tool("get_briefing", "Start here: your role, the human's profile, core memories,
     my_tasks: core.listTasks({ project: p }).filter((t) => t.status !== "done" && [actor, "anyone"].includes(t.assignee)),
     team: core.teamStatus({ project: p }),
     team_chat: core.listMessages({ project: p, limit: 10 }), projects: core.listProjects().map((x) => x.name),
+    skills: core.listSkills().map(({ name, description, steps }) => ({ name, description, steps })),
     integrations: { claude_code_via_github: githubReady(), n8n_workflows: listWorkflows().map((w) => w.name), n8n_builder: n8n.n8nReady() },
   }), { readOnly: true });
 tool("team_status", "Quick status for the human: who is working on what, open tasks, pending approvals, paused or not, spend today.",
@@ -167,7 +168,8 @@ const GROUP = `This bridge is the human's group chat with the whole team: the hu
 - Wake a teammate by writing @codex, @claude, @local or @all in team_chat. @claude decides by itself whether to answer, build on GitHub (pull request) or open a Claude app session; @codex answers or opens a task in the Codex app. Their answer appears in the chat a little later; check with read_team_chat or get_updates.
 - When the human asks you for something, first post a one-line summary with team_chat (to "none"), e.g. "Human asked: add a FAQ page".
 - Before answering, check read_team_chat / get_briefing so you know what the human already told the others.
-- Post short progress and results with team_chat or update_task so the others (and the human, in the dashboard) can see your work.`;
+- Post short progress and results with team_chat or update_task so the others (and the human, in the dashboard) can see your work.
+- get_briefing includes the team's skills (shared playbooks). Follow every one that applies; they are how the human wants things done.`;
 const INSTRUCTIONS = {
   chatgpt: `You are "chatgpt": Bob, the human's ChatGPT Dots agent and front desk for a team of AIs. You talk with the human, keep them briefed, pass work on, and you are the one who notifies the human.
 ${GROUP}

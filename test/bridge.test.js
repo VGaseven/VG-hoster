@@ -10,7 +10,7 @@ import path from "node:path";
 
 const TOKEN = "test-token", HOOK_SECRET = "hook-secret", CHAT = "42";
 const tgQueue = [], tgSent = [], ghIssues = [], n8nCalls = [], n8nStore = [];
-let mock, bridge, base, mockUrl, tmp, updateId = 1;
+let mock, bridge, base, mockUrl, tmp, updateId = 1, lastSystem = "";
 const privatePrompts=[];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -29,6 +29,7 @@ before(async () => {
       if (req.url === "/gh/repos/o/r/issues") { ghIssues.push(b); return json(201, { number: 7, html_url: "https://github.com/o/r/issues/7" }); }
       if (req.url === "/anth/v1/messages") {
         const last = JSON.stringify(b.messages.at(-1).content);
+        lastSystem = JSON.stringify(b.system);
         if(last.includes("DM-ONLY-SENTINEL"))privatePrompts.push(b);
         if(last.includes("DM-FAIL-SECRET"))return json(400,{type:"error",error:{type:"invalid_request_error",message:"DM-FAIL-SECRET"}});
         const text = /please research markets/.test(last) ? "ROUTE: SESSION Market research" : /please build the faq/.test(last) ? "ROUTE: BUILD Add a FAQ page" : "Of course! Happy to help the team.";
@@ -395,6 +396,16 @@ test("hub remembers a device with a signed cookie, never the token itself", asyn
   assert.equal((await get(`${base}/mcp?agent=claude`, { method: "POST", headers: { Cookie: cookie } })).status, 401, "device cookie doesn't open MCP");
   const out = await get(`${base}/api/logout`, { method: "POST" });
   assert.match(out.headers.get("set-cookie"), /hub_device=; .*Max-Age=0/);
+});
+
+test("shared skills reach the briefing and the agents' replies", async () => {
+  await mcp("claude", "save_skill", { name: "connected-memory", description: "never make the human repeat herself", steps: "Read the team chat before answering." });
+  const brief = await mcp("chatgpt", "get_briefing");
+  assert.ok(brief.json.skills.some((k) => k.name === "connected-memory" && k.steps.includes("Read the team chat")));
+  const r = await mcp("chatgpt", "ask_claude", { prompt: "hello" });
+  assert.equal(r.error, false, r.text);
+  assert.match(lastSystem, /Team playbooks/);
+  assert.match(lastSystem, /connected-memory: never make the human repeat herself/);
 });
 
 test('Hub direct messages never leak into group, agent updates, search, other agents or projects', async () => {

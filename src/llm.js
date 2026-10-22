@@ -37,6 +37,19 @@ function checkBudget(project) {
   if (p?.budget_usd && s.project_usd >= p.budget_usd) throw new Error(`Project budget of $${p.budget_usd} reached`);
 }
 
+// Shared playbooks (save_skill), so agents answering in the hub chat follow the same skills as everyone else.
+const SKILL_CHARS = 3000, SKILLS_CHARS = 12000;
+export function skillsText() {
+  let out = "";
+  for (const k of all("SELECT name, description, steps FROM skills ORDER BY name")) {
+    const steps = k.steps.length > SKILL_CHARS ? k.steps.slice(0, SKILL_CHARS) + "\n…(cut; read it in full with list_skills)" : k.steps;
+    const block = `### ${k.name}: ${k.description}\n${steps}\n\n`;
+    if (out.length + block.length > SKILLS_CHARS) { out += `(more playbooks: call list_skills)\n`; break; }
+    out += block;
+  }
+  return out.trim() || "(none)";
+}
+
 const DISPLAY = { claude: "Claude", chatgpt: "Codex (ChatGPT)", codex: "Codex (ChatGPT)", local: "the Local AI (a free model on Shahed's own PC)" };
 export function teamContext(agent, project = "default") {
   const other = agent === "claude" ? "Codex (ChatGPT)" : "Claude";
@@ -63,6 +76,9 @@ ${recent.map((m) => `- (${m.author}) ${m.text}`).join("\n") || "(none)"}
 
 Open tasks:
 ${tasks.map((t) => `- [${t.id}] ${t.title} -> ${t.assignee} (${t.status})`).join("\n") || "(none)"}
+
+Team playbooks (follow every one that applies to this message):
+${skillsText()}
 
 If you learn something worth keeping long-term, end your reply with lines like "REMEMBER: <fact>".`;
 }
