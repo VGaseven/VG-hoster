@@ -217,13 +217,13 @@ function openLineage(id) {
 function renderSteps() {
   $("steps").replaceChildren(...STEPS.map((s, i) => h("li", {}, h("button", { type: "button", class: "step-btn", "aria-current": s.id === S.step ? "step" : null, onclick: () => go(s.id) }, h("span", { class: "step-no", text: String(i + 1) }), s.label))));
 }
-function go(step) {
+function go(step, { focus = true } = {}) {
   S.step = step; save();
   for (const s of STEPS) $("step-" + s.id).hidden = s.id !== step;
   renderSteps();
   ({ briefing: renderBriefing, evidence: renderEvidence, strategy: renderStrategy, defend: renderDefend, review: renderReview, portfolio: renderPortfolio })[step]();
   const heading = $("h-" + step);
-  if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: false }); }
+  if (heading) { heading.tabIndex = -1; if (focus) heading.focus({ preventScroll: false }); }
 }
 
 function renderBriefing() {
@@ -662,19 +662,19 @@ function save() {
     results: Object.fromEntries(Object.entries(S.results).map(([k, v]) => [k, { ...v, result: v.result ? { ...v.result, values: v.result.values.slice(0, 200) } : undefined }])),
     queries: S.queries.slice(-50), hintsShown: S.hintsShown, hints: S.hints, revealed: S.revealed, viewed: [...S.viewed], evidence: [...S.evidence], plan: S.plan, assumptions: S.assumptions, options: S.options, defense: S.defense, evaluation: S.evaluation, record: S.record, startedAt: S.startedAt });
 }
-function start(seed, mode, step) {
+function start(seed, mode, step, { focus = true } = {}) {
   S.step = step;
   newState(seed, mode);
   if (sandbox) sandbox.load(toSqlScript(S.scenario)); else sandbox = new Sandbox(toSqlScript(S.scenario));
   for (const r of document.querySelectorAll('input[name="mode"]')) r.checked = r.value === mode;
-  save(); renderSimNote(); renderKpis(); go(step);
+  save(); renderSimNote(); renderKpis(); go(step, { focus });
 }
 function renderSimNote() {
   $("simNote").textContent = `Simulated: ${COMPANY.name} is fictional and every figure is synthetic (dataset ${DATASET_VERSION}, seed ${S.seed}). This is not live market, port or company data.`;
 }
 function restore() {
   const w = store.get("bizdata-wip", null);
-  if (!w || typeof w.seed !== "number") return start(BASE_SEED, "guided", "briefing");
+  if (!w || typeof w.seed !== "number") return start(BASE_SEED, "guided", "briefing", { focus: false });
   newState(w.seed, w.mode || "guided");
   Object.assign(S, { step: w.step || "briefing", table: w.table || "shipments", filters: w.filters || S.filters, checkId: w.checkId || "delayed", code: { ...S.code, ...w.code }, dirty: w.dirty || {}, predictions: w.predictions || {}, explanations: w.explanations || {},
     results: w.results || {}, queries: w.queries || [], hintsShown: w.hintsShown || {}, hints: w.hints || 0, revealed: !!w.revealed, viewed: new Set(w.viewed || []), evidence: new Set(w.evidence || []),
@@ -682,7 +682,7 @@ function restore() {
   S.sample = draws(S.seed, S.assumptions);
   sandbox = new Sandbox(toSqlScript(S.scenario));
   for (const r of document.querySelectorAll('input[name="mode"]')) r.checked = r.value === S.mode;
-  renderSimNote(); renderKpis(); go(S.step);
+  renderSimNote(); renderKpis(); go(S.step, { focus: false });
 }
 
 // ---------- boot ----------

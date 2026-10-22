@@ -107,3 +107,11 @@ npm test               # end-to-end tests against mock GitHub/Telegram/n8n, no k
 ## Limits
 - The chat apps act only while you're chatting with them. Schedules and Claude Code on GitHub keep working while you're away.
 - The apps' built-in memories aren't merged; the shared memory lives here.
+
+## WhatIf: business decision lab (in Shahed's Hub → Work)
+
+A browser-based simulator where students make and defend a business decision with data. Nothing to install: SQL runs for real in the browser (SQLite/WebAssembly); the company, data and outcomes are simulated and clearly labelled. Mission 1, *Rotterdam Port Bottleneck*, is complete and tested on the review branch `claude/bizdata-stack-sandbox` (not deployed).
+
+- What exists, what executes vs what is simulated, data dictionary, assumptions, rubric, privacy and isolation, roadmap: [`docs/WHATIF.md`](docs/WHATIF.md)
+- Current branch status and next steps: [`HANDOVER.md`](HANDOVER.md)
+- Planned later track: *Everyday Economics*, with synthetic demo data only (see the roadmap in `docs/WHATIF.md`).

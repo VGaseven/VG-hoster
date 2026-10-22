@@ -4,7 +4,7 @@ From: Claude (Claude Code cloud session `session_015QKAdd5eRGjM3TghfoCeyV`)
 To: Codex
 Status: **Claude is still working on this branch.** This letter is a safety net, kept current at every checkpoint in case Claude hits its usage limit. Codex: take over only if Shahed says Claude has stopped, to avoid overlapping edits. Nothing has been merged or deployed.
 
-Last checkpoint: milestone 3 (WhatIf is wired into Hub → Work in a sandboxed iframe; isolation verified). See §5.
+Last checkpoint: milestone 4 (keyboard pass, `docs/WHATIF.md`, README section, audit). See §5 and `docs/WHATIF.md`.
 
 ---
 
@@ -73,8 +73,8 @@ All new tool files are static and live under `public/tools/bizdata/` (served by 
 2. *(done in milestone 1: vendor routes in `server.js`)*
 3. *(done in milestone 3)* **Hub wiring under Work.** Ported from `claude/hub-work-bizdata-sandbox` without its extension route: `TOOLS` registry in `public/hub.js` (WhatIf, section `work` only), Tool card at the top of Work and in project search, `#tool=bizdata` route, `<section id="tool">` with a **sandboxed** iframe, "Chat with the team about it" → Work group chat, English/Arabic heading. Original note kept below for history:
    Nothing in `public/hub.js` or `public/index.html` pointed to the new tool before milestone 3. The working pattern exists on `claude/hub-work-bizdata-sandbox` (commit `e6f7c5e`): a `TOOLS` registry in `hub.js`, a Tool card at the top of the Work section, a `#tool=<id>` route, a `<section id="tool">` with an `<iframe src="/tools/bizdata/">`, a "Chat with the team about it" button linking to the Work group chat, and a `toolChat` label fix (set the text in JS because `translate()` runs before late strings exist). Port that pattern; do **not** port its `biz-data-sandbox/media` route (the new tool must not depend on the extension).
-4. **`docs/BIZDATA_STACK_SANDBOX.md`:** scenario data dictionary, assumptions (already in `lib/model.js` `ASSUMPTIONS`), rubric, and the execution-vs-simulation table.
-5. **Browser end-to-end test** of the full student journey, keyboard and phone widths.
+4. *(done in milestone 4)* **`docs/WHATIF.md`**: what exists, executes vs simulated, data dictionary, assumptions, rubric, privacy and isolation, limitations, roadmap including Everyday Economics with Shahed's six corrections. README section added.
+5. *(done)* Browser end-to-end tests (`test/whatif-journey.mjs`, `test/whatif-embedded.mjs`) and a keyboard pass.
 
 ## 4. Install, run and test
 
@@ -104,8 +104,9 @@ BRIDGE_TOKEN=<any local test value> DB_FILE=/tmp/hubtest/b.db HOME=/tmp/hubtest 
 | `npm test` (39 Hub tests + 14 tool tests) | **53 / 53 pass** |
 | `node --check` on `app.js`, `sql-worker.js`, all `lib/*.js` | pass (syntax only) |
 | `test/whatif-journey.mjs` in Chromium (tool opened directly at `/tools/bizdata/`, local throwaway server) | **passes, no page or console errors.** Covered: guided SQL for all 3 tasks with checks passing; KPI trace dialog; `DELETE` refused as read-only; endless recursive query stopped after ~4.3 s, then reset and Ctrl+Enter run works; two plans saved and compared; submit gate blocks until complete; review 9/10 (one deliberate wrong weak-spot answer), decision "defensible", outcome shown separately; record saved; replay re-ran the saved SQL and reproduced score and outcome; Markdown export; state survives reload; independent fresh variant has blank editor, no hints, no spreadsheet helper; no horizontal scroll at 390 px on all six steps |
-| Keyboard | Ctrl+Enter run and Tab/Esc in the editor tested; a full keyboard-only pass of every control is **not yet run** |
-| Reduced motion | CSS rule present; **not verified** in a browser |
+| Keyboard (milestone 4, Chromium) | **pass**: first Tab reaches "Skip to the mission" (fixed: focus was moved to the heading on load); visible focus ring on every tabbed control; KPI trace opens with Enter, closes with Esc and focus returns to the KPI; steps by Enter; checkbox by Space, radio by arrow keys, slider by arrow keys; Ctrl+Enter runs SQL |
+| Reduced motion | **pass**: with `prefers-reduced-motion: reduce`, buttons report no transitions |
+| Screen reader, automated contrast checker | **not run** |
 | `test/whatif-embedded.mjs` (Hub → Work → tool in the sandboxed iframe, local throwaway server) | **passes**: Work shows the WhatIf card, Uni does not; SQL passes inside the frame; all isolation probes blocked; progress survives a Hub reload via the bridge; the Work chat still posts messages |
 | Known flake | Once, `npm test` showed 28 Hub failures while an extra local server and Chromium were starting in the same container; the Hub tests wait at most 10 s for their server. Immediately re-run: 53/53, twice. No code change involved. |
 
@@ -141,7 +142,7 @@ What the 14 tool tests prove: deterministic seeds; data traps present; dataset l
 4. *(done)* `app.css`.
 5. *(done)* browser journey. Still to do: full keyboard-only pass and reduced-motion check.
 6. *(done)* Hub → Work wiring with a sandboxed iframe (§3 isolation design).
-7. Add `docs/BIZDATA_STACK_SANDBOX.md` and a README section: what exists, what executes, what is simulated, what is planned.
+7. *(done)* `docs/WHATIF.md` and README section.
 8. Audit against the full BizData spec and report real vs simulated vs missing. *(Public-route and iframe isolation checks are done and tested.)*
 9. Only then start the Everyday Economics track, following the corrections in section 1.
 10. Commit and push after each milestone and keep this file updated. Do not deploy without Shahed's separate approval.
