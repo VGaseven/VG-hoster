@@ -61,6 +61,7 @@ One chat for you, Bob (ChatGPT Dots), the Claude app, Claude Code, Codex and the
 7. **Telegram:** create a bot with @BotFather and set `TELEGRAM_BOT_TOKEN`. Message the bot once, then open `https://api.telegram.org/bot<token>/getUpdates` to find your chat id and set `TELEGRAM_CHAT_ID`. Send `/status` to test it.
 8. **n8n (optional):** create workflows that start with a **Webhook** node and set
    `N8N_WORKFLOWS={"send_email":{"url":"https://n8n…/webhook/…","description":"Email a customer"}}`. AIs see them via `list_workflows`/`trigger_workflow`.
+9. **Obsidian (optional):** set `OBSIDIAN_VAULT` to your vault folder on the bridge's computer. Every AI can then use `obsidian_list`, `obsidian_search`, `obsidian_read` and `obsidian_write` (writes send you a notification; the `.obsidian` settings folder and anything outside the vault are off limits).
 
 **Test it:** tell Dots *"Have Claude Code add a FAQ section to the homepage."* You should get a Telegram ping with the GitHub issue, then a PR to review. Merge the PR, and the task turns done.
 

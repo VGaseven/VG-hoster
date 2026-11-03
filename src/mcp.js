@@ -8,6 +8,7 @@ import { notify } from "./notify.js";
 import * as n8n from "./n8n.js";
 const { listWorkflows, triggerWorkflow } = n8n;
 import { githubReady } from "./github.js";
+import * as obsidian from "./obsidian.js";
 
 export const AGENTS = ["claude", "chatgpt", "claude-code"];
 const Agent = z.enum(["claude", "chatgpt", "codex", "local"]); // agents the bridge can call; local = free AI on the PC's GPU
@@ -31,7 +32,7 @@ tool("get_briefing", "Start here: your role, the human's profile, core memories,
     team: core.teamStatus({ project: p }),
     team_chat: core.listMessages({ project: p, limit: 10 }), projects: core.listProjects().map((x) => x.name),
     skills: core.listSkills().map(({ name, description, steps }) => ({ name, description, steps })),
-    integrations: { claude_code_via_github: githubReady(), n8n_workflows: listWorkflows().map((w) => w.name), n8n_builder: n8n.n8nReady() },
+    integrations: { claude_code_via_github: githubReady(), n8n_workflows: listWorkflows().map((w) => w.name), n8n_builder: n8n.n8nReady(), obsidian_vault: obsidian.obsidianReady() },
   }), { readOnly: true });
 tool("team_status", "Quick status for the human: who is working on what, open tasks, pending approvals, paused or not, spend today.",
   { project: z.string().optional() }, (a) => core.teamStatus(a), { readOnly: true });
@@ -144,6 +145,17 @@ tool("n8n_run_webhook", "Run an active n8n workflow that starts with a Webhook n
 tool("n8n_executions", "Recent n8n runs and whether they succeeded (optionally for one workflow).", { workflowId: z.string().optional(), limit: z.number().default(10) },
   (a) => n8n.n8nExecutions(a), { readOnly: true });
 tool("n8n_delete_workflow", "Delete an n8n workflow.", { id: z.string() }, (a, actor) => { core.log(actor, "n8n_delete_workflow", a.id); return n8n.n8nDeleteWorkflow(a); });
+
+// Obsidian: the human's notes vault on the bridge's computer (OBSIDIAN_VAULT). Reading is free; writing tells the human.
+tool("obsidian_list", "List notes in the human's Obsidian vault, newest first (optionally inside one folder).",
+  { folder: z.string().default(""), limit: z.number().default(200) }, (a) => obsidian.obsidianList(a), { readOnly: true });
+tool("obsidian_search", "Search the human's Obsidian notes; every word must appear. Returns note paths with a snippet.",
+  { query: z.string(), limit: z.number().default(20) }, (a) => obsidian.obsidianSearch(a), { readOnly: true });
+tool("obsidian_read", "Read one note from the human's Obsidian vault, e.g. \"Projects/Madar.md\".", { path: z.string() },
+  (a) => obsidian.obsidianRead(a), { readOnly: true });
+tool("obsidian_write", "Write a note in the human's Obsidian vault. mode: create (new note only), append (add to the end) or overwrite.",
+  { path: z.string(), content: z.string(), mode: z.enum(["create", "append", "overwrite"]).default("create") },
+  (a, actor) => { core.assertRunning(); core.log(actor, "obsidian_write", `${a.mode} ${a.path}`); return obsidian.obsidianWrite(a); });
 
 // Scheduling & notifications
 tool("create_schedule", "Run a prompt on a schedule (cron, e.g. '0 9 * * 1-5' = weekdays 9am).",

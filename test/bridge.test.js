@@ -70,12 +70,18 @@ process.stdin.on("data", (d) => (input += d)).on("end", () => {
   fs.writeFileSync(a[a.indexOf("-o") + 1], "Added faq.html with a FAQ heading.");
 });`);
   fs.chmodSync(fake, 0o755);
+  // A small Obsidian vault, with app settings the agents must never see.
+  fs.mkdirSync(path.join(tmp, "vault", "Projects"), { recursive: true });
+  fs.mkdirSync(path.join(tmp, "vault", ".obsidian"));
+  fs.writeFileSync(path.join(tmp, "vault", "Projects", "Madar.md"), "# Madar\nArrival booking to spread commute traffic.\n");
+  fs.writeFileSync(path.join(tmp, "vault", ".obsidian", "app.json"), "{}");
+  fs.writeFileSync(path.join(tmp, "secret.md"), "outside the vault");
   const port = 20000 + Math.floor(Math.random() * 20000);
   base = `http://127.0.0.1:${port}`;
   bridge = spawn(process.execPath, ["--no-warnings", "server.js"], {
     cwd: path.join(import.meta.dirname, ".."),
     env: { PATH: process.env.PATH, RATE_LIMIT_PER_MIN: "10000", AI_ENGINE: "api", CLAUDE_CHAT_MODE: "quick", BRIDGE_DIR: path.join(tmp, "live"), WORK_DIR: path.join(tmp, "work"), CODEX_BIN: path.join(tmp, "codex"),
-      SELF_UPDATE_NO_RESTART: "1", HOME: tmp, ANTHROPIC_API_KEY: "x", ANTHROPIC_BASE_URL: `${mockUrl}/anth`, N8N_API_URL: `${mockUrl}/n8napi`, N8N_API_KEY: "k", PORT: String(port), BRIDGE_TOKEN: TOKEN, DB_FILE: path.join(tmp, "b.db"), TRUST_PROXY: "0",
+      SELF_UPDATE_NO_RESTART: "1", HOME: tmp, ANTHROPIC_API_KEY: "x", ANTHROPIC_BASE_URL: `${mockUrl}/anth`, N8N_API_URL: `${mockUrl}/n8napi`, N8N_API_KEY: "k", OBSIDIAN_VAULT: path.join(tmp, "vault"), PORT: String(port), BRIDGE_TOKEN: TOKEN, DB_FILE: path.join(tmp, "b.db"), TRUST_PROXY: "0",
       GITHUB_TOKEN: "gh", GITHUB_REPO: "o/r", GITHUB_API_URL: `${mockUrl}/gh`, GITHUB_WEBHOOK_SECRET: HOOK_SECRET,
       TELEGRAM_BOT_TOKEN: "T", TELEGRAM_CHAT_ID: CHAT, TELEGRAM_API_URL: `${mockUrl}/tg`,
       N8N_WORKFLOWS: JSON.stringify({ ping: { url: `${mockUrl}/n8n/hook`, description: "test hook" } }) },
@@ -235,6 +241,22 @@ test("agents build, switch on and run n8n workflows through the bridge", async (
   assert.match((await api(`approvals/${aid}`, "POST", { approve: true })).body, /Ran webhook "hello" \(HTTP 200\)/);
   assert.match((await mcp("claude", "n8n_delete_workflow", { id: "w1" })).text, /Needs the human's approval/);
   assert.ok((await mcp("claude", "n8n_run_webhook", { path: "../etc" })).text.includes("approval"), "path check runs after approval");
+});
+
+test("agents search, read and write the human's Obsidian notes, and can't leave the vault", async () => {
+  assert.deepEqual((await mcp("chatgpt", "obsidian_list")).json.notes.map((n) => n.path), ["Projects/Madar.md"]);
+  assert.equal((await mcp("claude", "obsidian_search", { query: "commute madar" })).json[0].path, "Projects/Madar.md");
+  assert.match((await mcp("claude", "obsidian_read", { path: "Projects/Madar" })).json.content, /Arrival booking/);
+  assert.match((await mcp("claude", "obsidian_write", { path: "Inbox/Idea.md", content: "first" })).text, /Created "Inbox\/Idea.md"/);
+  assert.match((await mcp("claude", "obsidian_write", { path: "Inbox/Idea.md", content: "again" })).text, /already exists/);
+  await mcp("claude", "obsidian_write", { path: "Inbox/Idea.md", content: "second", mode: "append" });
+  assert.equal(fs.readFileSync(path.join(tmp, "vault", "Inbox", "Idea.md"), "utf8"), "first\nsecond");
+  for (const bad of ["../secret.md", ".obsidian/app.json", "Projects/../../secret"]) {
+    assert.ok((await mcp("claude", "obsidian_read", { path: bad })).error, bad);
+    assert.ok((await mcp("claude", "obsidian_write", { path: bad, content: "x", mode: "overwrite" })).error, bad);
+  }
+  assert.equal(fs.readFileSync(path.join(tmp, "secret.md"), "utf8"), "outside the vault");
+  assert.equal((await mcp("claude", "get_briefing")).json.integrations.obsidian_vault, true);
 });
 
 test("group chat: an @mention wakes that teammate, and Bob's get_updates shows what's new", async () => {
