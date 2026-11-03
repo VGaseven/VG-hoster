@@ -47,7 +47,7 @@ export function resumeAll(_args, actor) {
 // The env lists add to the built-in ones, so tools added later are still covered even if an older .env sets these lists.
 const envSet = (name, builtIn) => new Set([...builtIn.split(","), ...(process.env[name] ?? "").split(",")].map((s) => s.trim()).filter(Boolean));
 const RED = envSet("REQUIRE_APPROVAL", "forget,delete_file,create_schedule,delete_task,trigger_workflow,n8n_run_webhook,n8n_delete_workflow");
-const YELLOW = envSet("NOTIFY_ACTIONS", "build_task,self_update,save_project,set_role,save_skill,import_memories,set_schedule_enabled,dispatch_task,n8n_save_workflow,n8n_set_active");
+const YELLOW = envSet("NOTIFY_ACTIONS", "build_task,self_update,save_project,set_role,save_skill,import_memories,set_schedule_enabled,dispatch_task,n8n_save_workflow,n8n_set_active,obsidian_write");
 export const levelOf = (name) => (RED.has(name) ? "red" : YELLOW.has(name) ? "yellow" : "green");
 
 // Stops ChatGPT and Claude from ping-ponging forever.
