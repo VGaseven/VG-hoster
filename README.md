@@ -91,6 +91,10 @@ skills: `list_skills` `save_skill` `run_skill` · coworkers: `ask_claude` `ask_c
 files: `write_file` `read_file` `list_files` `file_history` `delete_file` · web: `web_search` `fetch_url` · n8n: `list_workflows` `trigger_workflow` ·
 scheduling: `create_schedule` `list_schedules` `set_schedule_enabled` `notify_human` · oversight: `pending_approvals` `pause_all` `activity_log` `usage`
 
+## Naqlthon research assistant
+
+The [Naqlthon setup proposal and Obsidian knowledge pack](docs/naqlthon/README.md) describe an n8n research assistant directed by Claude and Codex through this bridge. Includes source notes, agent instructions, and connected setup checks. It has not been deployed or connected to a live vault.
+
 ## Run locally
 Needs Node 22.13 or newer. Data is stored in SQLite at `data/bridge.db`, with daily backups (the last 7 are kept).
 ```bash
