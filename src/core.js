@@ -448,13 +448,15 @@ export function postMessage({ text, project = "default" }, actor) {
 // Mention someone to wake them: @claude, @codex, @local, or @all. They answer on the PC (subscriptions, no API cost).
 // Bob (ChatGPT Dots) and the chat apps can't be woken from here; they read new posts with get_updates.
 export const CHAT_AUTHOR = { claude: "claude", chatgpt: "codex", codex: "codex", local: "local" };
-const MENTIONS = { claude: ["claude"], codex: ["codex"], chatgpt: ["codex"], gpt: ["codex"], local: ["local"], all: ["claude", "codex"], everyone: ["claude", "codex"] };
+const MENTIONS = { claude: ["claude"], codex: ["codex"], chatgpt: ["codex"], gpt: ["codex"], local: ["local"], all: ["claude", "codex", "local"], everyone: ["claude", "codex", "local"] };
 const BUILDER = new Set(["claude-code", "claudecode", "code", "github"]);
 const CLOUD = new Set(["cloud", "claude-cloud"]);
 const mentionWords = (text) => [...String(text).matchAll(/@([a-z][a-z-]*[a-z])/gi)].map((m) => m[1].toLowerCase());
 export function mentionsIn(text) {
   const found = new Set();
   for (const w of mentionWords(text)) for (const a of MENTIONS[w] || []) found.add(a);
+  // @all only wakes the Local AI when one is set up; otherwise its answer would just be a second Codex reply.
+  if (!process.env.LOCAL_MODEL && !mentionWords(text).includes("local")) found.delete("local");
   return [...found];
 }
 // @cloud queues the message for a Claude Code session in Shahed's Claude app. A scheduled check (about hourly) opens one session
@@ -584,7 +586,8 @@ export function teamChat({ text, to = "auto", project = "default" }, actor = "hu
   // Shahed's choice: every message to Claude opens its own chat in her Claude app (CLAUDE_CHAT_MODE=quick answers in the chat instead).
   // Claude's own posts never open new chats, so sessions can't spawn each other.
   let session = false;
-  if (agents.includes("claude") && process.env.CLAUDE_CHAT_MODE !== "quick" && actor !== "claude" && !cloud) {
+  // @all is a roll call: Claude answers in the chat right away like everyone else. Only a direct @claude opens a session.
+  if (agents.includes("claude") && mentionWords(text).includes("claude") && process.env.CLAUDE_CHAT_MODE !== "quick" && actor !== "claude" && !cloud) {
     agents = agents.filter((a) => a !== "claude");
     queueForCloud({ text, project, actor });
     session = true;
