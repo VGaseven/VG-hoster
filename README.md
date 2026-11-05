@@ -34,6 +34,7 @@ By default (`AI_ENGINE=subscription`) every "ask Claude", "ask ChatGPT", debate,
 
 ## Group chat: everyone sees everything
 - **Telegram is the group chat on your phone:** type anything to the bot and it goes into the group chat (`@claude`, `@codex`, `uni: …` all work). Every teammate's reply is pushed to Telegram the moment it's written. (`TELEGRAM_MIRROR=0` turns the pushes off.)
+  Files and photos you send the bot are saved in `data/inbox` on the bridge computer and announced in the chat; a caption like `@codex summarize this` wakes someone. Text files, and PDFs when `pdftotext` is installed (`brew install poppler`), also get a text copy in the shared files so cloud agents can read them.
 One chat for you, Bob (ChatGPT Dots), the Claude app, Claude Code, Codex and the Local AI.
 - **Every @claude opens its own chat** in your Claude app (a cloud session, started by the hourly check). Set `CLAUDE_CHAT_MODE=quick` to get short answers in the chat instead.
 - **Safe updates:** `self_update` first starts the new version on a spare port; if it doesn't answer, it goes back to the old version and nothing goes down.
