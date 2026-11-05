@@ -351,13 +351,14 @@ async function loadSettings() {
   const p = (await api("projects")).find((x) => x.name === P()) || {};
   $("jName").value = p.name || ""; $("jDesc").value = p.description || ""; $("jLead").value = p.lead || "anyone";
   $("jTemp").value = p.temperature ?? ""; $("jBudget").value = p.budget_usd ?? ""; $("jClaude").value = p.claude_model || ""; $("jGpt").value = p.gpt_model || "";
-  const base = location.origin + location.pathname.replace(/\/$/, "") + "/mcp";
-  const tok = getToken() ? `&token=${getToken()}` : "";
+  const root = location.origin + location.pathname.replace(/\/$/, "").replace(/\/classic$/, "");
+  const base = root + "/mcp";
+  const tok = `&token=${getToken() || "YOUR-PASSWORD"}`;
   const h = (await api("overview")).health, ok = (b) => (b ? "✓" : "✗");
   $("connect").innerHTML = `ChatGPT (Dots) connector URL:<pre>${esc(base)}?agent=chatgpt${esc(tok)}</pre>Claude.ai connector URL:<pre>${esc(base)}?agent=claude${esc(tok)}</pre>
     Claude Code:<pre>claude mcp add --transport http bridge "${esc(base)}?agent=claude-code${esc(tok)}"</pre>Keep these private — they contain your token.
     <p>${h.engine === "subscription" ? `AI: your subscriptions (Claude Code ${esc(h.engines.claude)} · Codex ${esc(h.engines.codex)} · Local AI ${esc(h.engines.local)}) <button id="engCheck">Test them</button>` : `${ok(h.claude)} Claude API · ${ok(h.chatgpt)} OpenAI API`} · ${ok(h.github)} GitHub dispatch · ${ok(h.github_webhook)} GitHub webhook · ${ok(h.telegram)} Telegram · n8n: ${h.n8n.length ? esc(h.n8n.join(", ")) : "✗"}</p>
-    <p>GitHub webhook URL (Payload: application/json; events: Issues, Issue comments, Pull requests):</p><pre>${esc(location.origin + location.pathname.replace(/\/$/, ""))}/github/webhook</pre>`;
+    <p>GitHub webhook URL (Payload: application/json; events: Issues, Issue comments, Pull requests):</p><pre>${esc(root)}/github/webhook</pre>`;
   const ec = $("engCheck");
   if (ec) ec.onclick = async () => {
     ec.disabled = true; ec.textContent = "Testing…";
