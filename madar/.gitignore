@@ -5,3 +5,6 @@ dist/
 .env
 .env.local
 next-env.d.ts
+
+# الملف الجذري للمستودع يتجاهل lib/ (قالب Python)؛ نحتاج مكتبة الواجهة
+!apps/web/lib/
