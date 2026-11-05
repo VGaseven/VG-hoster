@@ -47,6 +47,8 @@ before(async () => {
         return json(404, { message: "not found" });
       }
       if (req.url === "/n8n/hook") { n8nCalls.push(b); return json(200, { ok: true }); }
+      if (req.url === "/tg/botT/getFile") return json(200, { ok: true, result: { file_path: `documents/${b.file_id}` } });
+      if (req.url === "/tg/file/botT/documents/f-notes") { res.writeHead(200); return res.end("NaqlThon brief: deadline Friday"); }
       if (req.url === "/tg/botT/getUpdates") { if (!tgQueue.length) await sleep(100); return json(200, { ok: true, result: tgQueue.splice(0) }); }
       if (req.url.startsWith("/tg/botT/")) { tgSent.push({ method: req.url.split("/").pop(), ...b }); return json(200, { ok: true, result: {} }); }
       json(404, {});
@@ -513,4 +515,22 @@ test("hub sections and project details: recorded status, last step and safe link
   assert.equal((await api("project-meta", "POST", { project: "aim-chaos", status: "50%" })).status, 400);
   assert.equal((await api("project-meta", "POST", { project: "aim-chaos", links: [{ label: "x", url: "javascript:alert(1)" }] })).status, 400);
   assert.equal((await api("project-meta", "POST", { project: "nope", status: "active" })).status, 400);
+});
+
+test("files sent on Telegram are saved and shared with the team", async () => {
+  const sent = tgSent.length;
+  tgSend({ message: { message_id: 9, from: { id: Number(CHAT) }, chat: { id: Number(CHAT), type: "private" },
+    document: { file_id: "f-notes", file_name: "../brief.md", file_size: 31 } } });
+  const reply = await waitFor(() => tgSent.slice(sent).find((m) => m.method === "sendMessage" && /File saved/.test(m.text)));
+  assert.match(reply.text, /nobody \(just posted\)/, "no caption: nobody is woken");
+  const saved = path.join(tmp, "inbox", "_brief.md");
+  assert.equal(fs.readFileSync(saved, "utf8"), "NaqlThon brief: deadline Friday", "saved inside the inbox, name made safe");
+  assert.match((await mcp("codex", "read_file", { path: "inbox/_brief.md.txt" })).text, /deadline Friday/, "cloud agents can read the text copy");
+  const chat = await mcp("claude", "read_team_chat", {});
+  assert.match(chat.text, /Shahed sent a file: _brief\.md/);
+  tgSend({ message: { message_id: 10, from: { id: Number(CHAT) }, chat: { id: Number(CHAT), type: "private" },
+    caption: "/pause", document: { file_id: "f-notes", file_name: "brief.md", file_size: 31 } } });
+  await waitFor(() => tgSent.slice(sent).filter((m) => /File saved/.test(m.text || "")).length === 2);
+  assert.ok(fs.existsSync(path.join(tmp, "inbox", "brief.md")));
+  assert.equal((await api("overview")).body.paused, false, "a caption is never a command");
 });
