@@ -99,7 +99,7 @@ tool("debate", "Both AIs answer, critique each other, then a final combined answ
   { question: z.string(), rounds: z.number().min(0).max(3).default(1), project, judge: Agent.default("claude") }, (a, actor) => core.debate(a, actor));
 tool("review", "One AI drafts, the other reviews, the drafter revises.", { request: z.string(), drafter: Agent.default("chatgpt"), project },
   (a, actor) => core.review(a, actor));
-tool("team_chat", "Post to the shared group chat that the human, Bob, Claude, Codex and the Local AI all see. Write @claude, @codex, @local or @all in the text to wake them; they answer in the chat a little later. Write @claude-code to have Claude Code build it on GitHub (a pull request link comes back; add repo:owner/name to pick the repository). Write @cloud to have a Claude session open in the human's Claude app (about hourly).",
+tool("team_chat", "Post to the shared group chat that the human, Bob, Claude, Codex and the Local AI all see. Write @claude, @codex, @local or @all (everyone answers in the chat) in the text to wake them; they answer in the chat a little later. Write @claude-code to have Claude Code build it on GitHub (a pull request link comes back; add repo:owner/name to pick the repository). Write @cloud to have a Claude session open in the human's Claude app (about hourly).",
   { text: z.string(), to: z.enum(["none", "claude", "codex", "chatgpt", "local", "both"]).default("none"), project },
   (a, actor) => core.teamChat(a, actor));
 tool("build_task", "Have Codex (or Claude) build a task on Shahed's computer with permission to change files, in a private branch team/<id>. The pull-request link is posted to the team chat when done.",

@@ -20,7 +20,7 @@ Just type: everything goes to the group chat, and every teammate's reply comes h
 • @claude …: Claude answers, builds, or opens a session
 • @codex …: Codex answers or builds
 • @local …: the free AI on your computer
-• @all …: Claude + Codex
+• @all …: everyone answers here (Claude, Codex, Local AI). Bob sees it next time he checks in
 • No @: Codex answers
 • Start with uni: / work: to pick a project
 • Send a file or photo: it's saved for the team. Add a caption like "@codex summarize this"
@@ -36,8 +36,10 @@ const inboxDir = () => path.resolve(process.env.INBOX_DIR || path.join(path.dirn
 const fileUrl = (p) => `${telegramApi().replace(/\/bot([^/]*)$/, "/file/bot$1")}/${p}`;
 const TEXT_FILE = /\.(txt|md|csv|tsv|json|html?|xml|ya?ml)$/i;
 const safeName = (n) => String(n || "").replace(/[\/\\\0-\x1f:]/g, "_").replace(/^\.+/, "").slice(-120) || "file";
+// launchd starts the bridge without Homebrew on the PATH, so look in Homebrew's folders too.
+const PDFTOTEXT = ["/opt/homebrew/bin/pdftotext", "/usr/local/bin/pdftotext"].find((p) => fs.existsSync(p)) || "pdftotext";
 const pdfText = (file) => new Promise((resolve) =>
-  execFile("pdftotext", ["-layout", file, "-"], { maxBuffer: 20e6, timeout: 60000 }, (e, out) => resolve(e ? null : out)));
+  execFile(PDFTOTEXT, ["-layout", file, "-"], { maxBuffer: 20e6, timeout: 60000 }, (e, out) => resolve(e ? null : out)));
 const size = (b) => (b >= 1e6 ? `${(b / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1e3))} KB`);
 
 async function saveAttachment(msg, project) {

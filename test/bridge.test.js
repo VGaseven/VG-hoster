@@ -534,3 +534,10 @@ test("files sent on Telegram are saved and shared with the team", async () => {
   assert.ok(fs.existsSync(path.join(tmp, "inbox", "brief.md")));
   assert.equal((await api("overview")).body.paused, false, "a caption is never a command");
 });
+
+test("@all is a roll call: Claude and Codex answer in the chat, Local only when set up", async () => {
+  const r = await mcp("chatgpt", "team_chat", { text: "@all quick roll call", project: "default" });
+  assert.ok(!r.error, r.text);
+  assert.match(r.text, /claude/); assert.match(r.text, /codex/);
+  assert.doesNotMatch(r.text, /local|cloud session/);
+});
