@@ -18,10 +18,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   }
   return {
     databaseUrl: env.DATABASE_URL ?? 'postgres://madar:madar@localhost:5432/madar',
-    port: Number(env.PORT ?? 4000),
+    port: Number(env.PORT ?? 4100),
     jwtSecret,
     devLogin: env.AUTH_DEV_LOGIN === 'true' || (env.NODE_ENV !== 'production' && env.AUTH_DEV_LOGIN !== 'false'),
-    webOrigin: env.WEB_ORIGIN ?? 'http://localhost:3000',
+    webOrigin: env.WEB_ORIGIN ?? 'http://localhost:3100',
     googleMapsApiKey: env.GOOGLE_MAPS_API_KEY || undefined,
     estimateCacheTtlMin: Number(env.ESTIMATE_CACHE_TTL_MIN ?? 60),
     reminderWebhookUrl: env.REMINDER_WEBHOOK_URL || undefined,
@@ -30,7 +30,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
           issuer: env.OIDC_ISSUER,
           clientId: env.OIDC_CLIENT_ID,
           clientSecret: env.OIDC_CLIENT_SECRET || undefined,
-          redirectUri: env.OIDC_REDIRECT_URI ?? 'http://localhost:3000/api/auth/oidc/callback',
+          redirectUri: env.OIDC_REDIRECT_URI ?? 'http://localhost:3100/api/auth/oidc/callback',
         }
       : undefined,
     hrApi: env.HR_API_URL ? { url: env.HR_API_URL, token: env.HR_API_TOKEN } : undefined,

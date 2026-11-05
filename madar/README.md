@@ -15,18 +15,20 @@
 
 الواجهة تمرّر `/api/*` إلى الخادم (Next rewrites) لتبقى الجلسة في ملف تعريف ارتباط `httpOnly` على النطاق نفسه.
 
-## التشغيل محليًا
+## التشغيل محليًا (خطوة بخطوة)
 
-```bash
-cp .env.example .env            # اختياري — القيم الافتراضية تعمل للتطوير
-docker compose up -d db         # أو PostgreSQL محلي بالمستخدم madar/madar
-npm install
-npm run db:seed                 # ينشئ الجداول وبيانات تجريبية (يمسح الموجود)
-npm run dev:api                 # http://localhost:4000/api
-npm run dev:web                 # http://localhost:3000
-```
+1. ثبّت [Node.js](https://nodejs.org) (نسخة LTS) و[Docker Desktop](https://www.docker.com/products/docker-desktop/) وافتح Docker Desktop.
+2. حمّل الكود وادخل مجلد مدار:
+   ```bash
+   git clone -b claude/adoring-hawking-s7mzhi https://github.com/VGaseven/VG-hoster.git
+   cd VG-hoster/madar
+   ```
+3. شغّل قاعدة البيانات: `docker compose up -d db`
+4. ثبّت الحزم وأنشئ البيانات التجريبية: `npm run setup`
+5. شغّل التطبيق: `npm run dev` (اتركه يعمل)
+6. افتح **http://localhost:3100** وادخل بـ `sara@demo.madar.sa` (موظفة) أو `admin@demo.madar.sa` (مسؤول).
 
-ادخل بأحد الحسابات التجريبية من صفحة الدخول: `sara@demo.madar.sa` (موظفة) أو `admin@demo.madar.sa` (مسؤول الجهة).
+المنافذ: الواجهة 3100 والخادم 4100 (بعيدًا عن 3000 الذي تستخدمه برامج أخرى غالبًا). للإيقاف: Ctrl+C.
 
 الاختبارات (تحتاج قاعدة `madar_test`):
 

@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-const API = process.env.API_URL ?? 'http://localhost:4000';
+const API = process.env.API_URL ?? 'http://localhost:4100';
 export default {
   reactStrictMode: true,
   // نمرّر /api إلى خادم NestJS لتبقى الجلسة في ملف تعريف ارتباط httpOnly على النطاق نفسه

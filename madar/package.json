@@ -3,13 +3,21 @@
   "private": true,
   "version": "0.1.0",
   "description": "مدار — توزيع مواعيد الحضور المرن وتقدير الرحلات",
-  "workspaces": ["apps/api", "apps/web"],
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
   "scripts": {
+    "setup": "npm install && npm run db:seed",
+    "dev": "concurrently -k -n api,web -c green,cyan \"npm run dev -w apps/api\" \"npm run dev -w apps/web\"",
     "build": "npm run build -w apps/api && npm run build -w apps/web",
     "test": "npm test -w apps/api",
     "db:migrate": "npm run db:migrate -w apps/api",
     "db:seed": "npm run db:seed -w apps/api",
     "dev:api": "npm run dev -w apps/api",
     "dev:web": "npm run dev -w apps/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.5"
   }
 }
