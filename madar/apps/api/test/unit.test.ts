@@ -88,4 +88,6 @@ test('Google Maps navigation link', () => {
   assert.equal(u.searchParams.get('destination'), '24.7646,46.6402');
   assert.equal(u.searchParams.get('travelmode'), 'driving');
   assert.equal(u.searchParams.get('origin'), null);
+  const fromDistrict = new URL(googleMapsDirectionsUrl({ lat: 24.7646, lng: 46.6402 }, 'DRIVE', { lat: 24.827, lng: 46.64 }));
+  assert.equal(fromDistrict.searchParams.get('origin'), '24.827,46.64');
 });

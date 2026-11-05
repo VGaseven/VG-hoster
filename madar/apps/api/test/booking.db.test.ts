@@ -52,7 +52,7 @@ const code = async (p: Promise<unknown>) => {
 before(async () => {
   ({ orgId, siteId } = await seed(db));
   admin = await actorFor('admin@demo.madar.sa');
-  await db.query(`UPDATE policies SET booking_horizon_days=30 WHERE site_id=$1`, [siteId]);
+  await db.query(`UPDATE policies SET booking_horizon_days=30, require_change_approval=true, change_cutoff_hours=12 WHERE site_id=$1`, [siteId]);
   // موظفون إضافيون لاختبار التزامن
   for (let i = 0; i < 14; i++) {
     await db.query(`INSERT INTO employees(org_id, external_id, name, email, site_id) VALUES ($1,$2,$3,$4,$5)`, [orgId, `T${i}`, `موظف ${i}`, `t${i}@test.sa`, siteId]);
@@ -173,13 +173,16 @@ test('HR + attendance import feed the compliance dashboard', async () => {
   // حجز في الماضي مع حضور معتمد (نُدخله مباشرة لأن الحجز في الماضي ممنوع عبر الخدمة)
   const past = addDays(localDate(TZ), -1);
   await slots.ensureSlots(siteId, past, past);
-  const slot = (await db.one(`SELECT * FROM slots WHERE site_id=$1 AND date=$2 ORDER BY start_time LIMIT 1`, [siteId, past]))
-    ?? (await db.one(`INSERT INTO slots(site_id,date,start_time,end_time,quota) VALUES ($1,$2,'07:00','07:30',5) RETURNING *`, [siteId, past]));
-  const emps = await db.query(`SELECT id, external_id FROM employees WHERE external_id IN ('E001','E002','E003')`);
+  // نبدأ من يوم سابق نظيف (نحذف بيانات العرض التجريبية لذلك اليوم)
+  await db.query(`DELETE FROM attendance WHERE date=$1`, [past]);
+  await db.query(`DELETE FROM bookings WHERE date=$1`, [past]);
+  const slot = (await db.one(`INSERT INTO slots(site_id,date,start_time,end_time,quota) VALUES ($1,$2,'05:00','05:30',5)
+    ON CONFLICT (site_id,date,start_time) DO UPDATE SET quota=5 RETURNING *`, [siteId, past]))!;
+  const emps = await db.query(`SELECT id, external_id FROM employees WHERE external_id IN ('T5','T6','T7')`);
   for (const e of emps) await db.query(`INSERT INTO bookings(employee_id, slot_id, date) VALUES ($1,$2,$3)`, [e.id, slot.id, past]);
   const end = slot.end_time.slice(0, 5);
   const late = `${String(Number(end.slice(0, 2)) + 1).padStart(2, '0')}:${end.slice(3)}`;
-  const att = await integ.importCsv(admin, 'attendance', `external_id,date,check_in\nE001,${past},${slot.start_time.slice(0, 5)}\nE002,${past},${late}\nZZZ,${past},07:00`);
+  const att = await integ.importCsv(admin, 'attendance', `external_id,date,check_in\nT5,${past},${slot.start_time.slice(0, 5)}\nT6,${past},${late}\nZZZ,${past},07:00`);
   assert.equal(att.ok, 2);
 
   const c = await new DashboardService(db).compliance(siteId, past, past, TZ);
@@ -197,4 +200,23 @@ test('reminders are dispatched once', async () => {
   assert.equal(await r.dispatchDue(), 1);
   assert.equal(await r.dispatchDue(), 0);
   assert.match(sent[0].text, /موعد/);
+});
+
+test('admin roster shows each employee timing and status; summary gives usual time and reliability', async () => {
+  const { PeopleService } = await import('../src/dashboard/people.service');
+  const people = new PeopleService(db);
+  const date = workday(11);
+  const roster = await people.roster(siteId, date, TZ);
+  const t10 = roster.find((r) => r.externalId === 'T10')!;
+  assert.equal(t10.status, 'booked');
+  assert.ok(t10.start, 'shows arrival slot');
+  const leaveDay = workday(12);
+  const onLeave = (await people.roster(siteId, leaveDay, TZ)).find((r) => r.externalId === 'T10')!;
+  assert.equal(onLeave.status, 'leave');
+  assert.ok(roster.every((r) => r.name), 'only named employees');
+  const summary = await people.summary(siteId, TZ);
+  const e2 = summary.find((r) => r.externalId === 'E002')!;
+  assert.equal(e2.usualStart, '07:00');
+  assert.ok(e2.pastBookings > 0);
+  assert.ok(e2.onTimeRate === null || (e2.onTimeRate >= 0 && e2.onTimeRate <= 1));
 });

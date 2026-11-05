@@ -10,6 +10,7 @@ import { DB, Db } from '../db/db';
 import { SlotsService, slotView } from '../slots/slots.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { DashboardService } from './dashboard.service';
+import { PeopleService } from './people.service';
 import { HttpHrSource, IntegrationsService } from '../integrations/integrations.service';
 import { AppConfig, CONFIG } from '../config';
 
@@ -36,6 +37,7 @@ export class AdminController {
     @Inject(DashboardService) private readonly dash: DashboardService,
     @Inject(IntegrationsService) private readonly integrations: IntegrationsService,
     @Inject(CONFIG) private readonly cfg: AppConfig,
+    @Inject(PeopleService) private readonly people: PeopleService,
   ) {}
 
   /** يتحقق أن المقر يتبع جهة المسؤول (عزل الجهات) */
@@ -128,6 +130,20 @@ export class AdminController {
       this.dash.alerts(siteId, a.tz),
     ]);
     return { from, to, distribution, compliance, alerts };
+  }
+
+  /** جدول مواعيد الموظفين ليوم معين */
+  @Get('sites/:siteId/roster')
+  async roster(@CurrentActor() a: Actor, @Param('siteId') siteId: string, @Query('date') date?: string) {
+    await this.site(a, siteId);
+    return this.people.roster(siteId, date ? parse(zDate, date) : localDate(a.tz), a.tz);
+  }
+
+  /** ملخص كل موظف: موعده المعتاد والتزامه */
+  @Get('sites/:siteId/employees')
+  async employees(@CurrentActor() a: Actor, @Param('siteId') siteId: string) {
+    await this.site(a, siteId);
+    return this.people.summary(siteId, a.tz);
   }
 
   @Get('changes')

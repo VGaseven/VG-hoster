@@ -94,6 +94,14 @@ export class EmployeeController {
     return { ok: true };
   }
 
+  /** «موعدي المعتاد» — يُقترح تلقائيًا ويُحجز به الأسبوع بضغطة */
+  @Put('preferred-time')
+  async setPreferred(@CurrentActor() a: Actor, @Body() body: unknown) {
+    const { start } = parse(z.object({ start: z.string().regex(/^\d{2}:\d{2}$/).nullable() }), body);
+    await this.db.query(`UPDATE employees SET preferred_start=$2 WHERE id=$1`, [a.id, start]);
+    return { ok: true };
+  }
+
   @Put('travel-mode')
   async setMode(@CurrentActor() a: Actor, @Body() body: unknown) {
     const { travelMode } = parse(z.object({ travelMode: z.enum(['DRIVE', 'TRANSIT', 'TWO_WHEELER', 'WALK']) }), body);

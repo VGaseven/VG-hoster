@@ -54,29 +54,48 @@ export async function seed(db: Db) {
     );
     empIds.push(e!.id);
   }
+  // افتراضات مرنة: التغيير يُعتمد تلقائيًا إن وُجد مكان، ويمكن التغيير قبل الموعد بساعتين
   await db.query(
-    `INSERT INTO policies(site_id, earliest_arrival, latest_arrival, slot_minutes, default_quota, default_min_staff, booking_horizon_days, change_cutoff_hours)
-     VALUES ($1,'06:30','09:00',30,4,1,14,12)`,
+    `INSERT INTO policies(site_id, earliest_arrival, latest_arrival, slot_minutes, default_quota, default_min_staff,
+                          booking_horizon_days, change_cutoff_hours, require_change_approval)
+     VALUES ($1,'06:30','09:00',30,4,1,14,2,false)`,
     [site.id],
   );
-  // بعض الحجوزات لتظهر لوحة التوزيع
   const slots = new SlotsService(db);
   const today = localDate('Asia/Riyadh');
-  const end = addDays(today, 14);
-  await slots.ensureSlots(site.id, addDays(today, 1), end);
-  let d = addDays(today, 1);
-  let booked = 0;
-  while (booked < 3 && d <= end) {
-    if ([0, 1, 2, 3, 4].includes(weekday(d))) {
-      const daySlots = await db.query(`SELECT id FROM slots WHERE site_id=$1 AND date=$2 ORDER BY start_time`, [site.id, d]);
-      for (const [i, empId] of empIds.slice(1).entries()) {
-        const slot = daySlots[(i * 2 + booked) % daySlots.length];
-        await db.query(`INSERT INTO bookings(employee_id, slot_id, date) VALUES ($1,$2,$3)`, [empId, slot.id, d]);
-        await db.query(`UPDATE slots SET booked_count=booked_count+1 WHERE id=$1`, [slot.id]);
+  const usual = ['06:30', '07:00', '07:00', '07:30', '07:30', '08:00', '08:30', '08:00'];
+  for (const [i, id] of empIds.entries()) await db.query(`UPDATE employees SET preferred_start=$2 WHERE id=$1`, [id, usual[i]]);
+
+  // أسبوعان سابقان مع حضور معتمد، واليوم، وأيام قادمة — ليظهر جدول المواعيد والالتزام
+  const from = addDays(today, -14);
+  const end = addDays(today, 7);
+  await slots.ensureSlots(site.id, from, end);
+  let seedRand = 7;
+  const rand = () => ((seedRand = (seedRand * 9301 + 49297) % 233280) / 233280);
+  for (let d = from; d <= end; d = addDays(d, 1)) {
+    if (![0, 1, 2, 3, 4].includes(weekday(d))) continue;
+    const daySlots = await db.query(`SELECT id, start_time, end_time, quota, booked_count FROM slots WHERE site_id=$1 AND date=$2 ORDER BY start_time`, [site.id, d]);
+    for (const [i, empId] of empIds.entries()) {
+      if (d > today && i === 0) continue; // سارة تحجز بنفسها في العرض
+      if (rand() < 0.12) continue; // بعض الأيام بلا حجز
+      const want = usual[i];
+      const slot = daySlots.find((x) => x.start_time.startsWith(want) && x.booked_count < x.quota) ?? daySlots.find((x) => x.booked_count < x.quota);
+      if (!slot) continue;
+      // وقت انطلاق تقريبي (٢٥–٤٥ دقيقة قبل بداية الوقت)
+      await db.query(
+        `INSERT INTO bookings(employee_id, slot_id, date, planned_departure) VALUES ($1,$2,$3, (($3::date + $4::time) AT TIME ZONE 'Asia/Riyadh') - make_interval(mins => $5))`,
+        [empId, slot.id, d, slot.start_time, 25 + (i * 7) % 20],
+      );
+      await db.query(`UPDATE slots SET booked_count=booked_count+1 WHERE id=$1`, [slot.id]);
+      slot.booked_count++;
+      if (d < today && rand() > 0.08) {
+        const [h, m] = slot.start_time.split(':').map(Number);
+        const lateBy = rand() < 0.15 ? 35 + Math.floor(rand() * 20) : Math.floor(rand() * 28) - 5;
+        const t = h * 60 + m + lateBy;
+        const hhmm = `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+        await db.query(`INSERT INTO attendance(employee_id, date, check_in_at) VALUES ($1,$2,($2::date + $3::time) AT TIME ZONE 'Asia/Riyadh')`, [empId, d, hhmm]);
       }
-      booked++;
     }
-    d = addDays(d, 1);
   }
   return { orgId: org.id, siteId: site.id };
 }

@@ -256,11 +256,13 @@ export class BookingsService {
     const rows = await this.db.query(
       `SELECT b.id, b.date, b.status, b.planned_departure, s.*, b.id AS booking_id, s.id AS slot_id_,
               st.lat, st.lng, st.name AS site_name, e.travel_mode,
+              dd.lat AS o_lat, dd.lng AS o_lng, dd.name AS district_name,
               cr.id AS cr_id, cr.status AS cr_status, ns.start_time AS cr_start, ns.end_time AS cr_end
          FROM bookings b
          JOIN slots s ON s.id=b.slot_id
          JOIN sites st ON st.id=s.site_id
          JOIN employees e ON e.id=b.employee_id
+         LEFT JOIN districts dd ON dd.id=e.district_id
          LEFT JOIN change_requests cr ON cr.booking_id=b.id AND cr.status='pending'
          LEFT JOIN slots ns ON ns.id=cr.new_slot_id
         WHERE b.employee_id=$1 AND b.status='active' AND b.date BETWEEN $2 AND $3
@@ -270,7 +272,9 @@ export class BookingsService {
     return rows.map((r) => ({
       ...this.view({ id: r.booking_id, date: r.date, status: r.status, planned_departure: r.planned_departure }, { ...r, id: r.slot_id_ }, actor),
       site: { name: r.site_name, lat: r.lat, lng: r.lng },
-      navigationUrl: googleMapsDirectionsUrl({ lat: r.lat, lng: r.lng }, r.travel_mode),
+      // الملاحة تبدأ من مركز حي الانطلاق الذي اختاره الموظف (وليس موقعه الحالي)
+      navigationUrl: googleMapsDirectionsUrl({ lat: r.lat, lng: r.lng }, r.travel_mode, r.o_lat == null ? undefined : { lat: r.o_lat, lng: r.o_lng }),
+      district: r.district_name ?? null,
       pendingChange: r.cr_id ? { id: r.cr_id, start: hhmm(r.cr_start), end: hhmm(r.cr_end) } : null,
     }));
   }

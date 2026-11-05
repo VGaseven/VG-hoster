@@ -12,6 +12,7 @@ import { BookingsService } from './bookings/bookings.service';
 import { EmployeeController } from './bookings/employee.controller';
 import { DashboardService } from './dashboard/dashboard.service';
 import { AdminController } from './dashboard/admin.controller';
+import { PeopleService } from './dashboard/people.service';
 import { IntegrationsService } from './integrations/integrations.service';
 import { RemindersService, WebhookNotifier } from './reminders/reminders.service';
 import { TripsService } from './routes/trips.service';
@@ -71,6 +72,7 @@ class DbLifecycle implements OnModuleDestroy {
     { provide: SlotsService, useFactory: (db: Db) => new SlotsService(db), inject: [DB] },
     { provide: BookingsService, useFactory: (db: Db, s: SlotsService) => new BookingsService(db, s), inject: [DB, SlotsService] },
     { provide: TripsService, useFactory: (db: Db, e: TripEstimator) => new TripsService(db, e), inject: [DB, ESTIMATOR] },
+    { provide: PeopleService, useFactory: (db: Db) => new PeopleService(db), inject: [DB] },
     { provide: DashboardService, useFactory: (db: Db) => new DashboardService(db), inject: [DB] },
     { provide: IntegrationsService, useFactory: (db: Db) => new IntegrationsService(db), inject: [DB] },
     { provide: RemindersService, useFactory: (db: Db, c: AppConfig) => new RemindersService(db, new WebhookNotifier(c.reminderWebhookUrl)), inject: [DB, CONFIG] },

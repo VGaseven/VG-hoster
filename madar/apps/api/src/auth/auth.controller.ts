@@ -73,7 +73,7 @@ export class AuthController {
   @Get('me')
   async me(@CurrentActor() a: Actor) {
     return this.db.one(
-      `SELECT e.id, e.name, e.email, e.role, e.eligible, e.travel_mode AS "travelMode",
+      `SELECT e.id, e.name, e.email, e.role, e.eligible, e.travel_mode AS "travelMode", to_char(e.preferred_start,'HH24:MI') AS "preferredStart",
               s.id AS "siteId", s.name AS "siteName", d.name AS "district", d.id AS "districtId",
               o.name AS "orgName", o.timezone
          FROM employees e JOIN organizations o ON o.id=e.org_id

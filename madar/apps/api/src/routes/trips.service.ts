@@ -30,12 +30,13 @@ export class TripsService {
     const slotStart = zonedToUtc(slot.date, slot.start_time, actor.tz);
     if (slotStart <= now) throw new AppError('PAST_SLOT', 'هذه الفترة بدأت بالفعل', 409);
     const dest = { lat: ctx.d_lat, lng: ctx.d_lng };
-    const navigationUrl = googleMapsDirectionsUrl(dest, ctx.travel_mode);
+    const origin = ctx.o_lat == null ? undefined : { lat: ctx.o_lat, lng: ctx.o_lng };
+    const navigationUrl = googleMapsDirectionsUrl(dest, ctx.travel_mode, origin);
     if (ctx.o_lat == null) {
       return { plan: null, navigationUrl, message: 'أضف حي الانطلاق لعرض تقديرات الرحلة' };
     }
     const plan = await planArrival(this.estimator, {
-      origin: { lat: ctx.o_lat, lng: ctx.o_lng },
+      origin: origin!,
       dest,
       mode: ctx.travel_mode,
       slotStart,
