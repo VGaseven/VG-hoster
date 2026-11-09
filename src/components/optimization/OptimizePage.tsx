@@ -57,7 +57,10 @@ export function OptimizePage() {
   }, [result, weights]);
 
   useEffect(() => {
-    if (ranked && conflict) useStore.getState().setLastOptimization({ conflictId: conflict.id, options: ranked });
+    if (ranked && conflict) {
+      useStore.getState().setLastOptimization({ conflictId: conflict.id, options: ranked });
+      if (ranked.some((o) => o.feasible)) useStore.getState().markAlternativeProposed(conflict.projectIds);
+    }
   }, [ranked, conflict]);
 
   return (

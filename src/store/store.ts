@@ -100,6 +100,7 @@ interface State {
   setHighlight: (segs: string[]) => void;
   setNotificationsOpen: (v: boolean) => void;
   setLastOptimization: (o: State['lastOptimization']) => void;
+  markAlternativeProposed: (ids: string[]) => void;
 }
 
 let toastId = 1;
@@ -261,6 +262,11 @@ export const useStore = create<State>()(
       setHighlight: (highlightSegments) => set({ highlightSegments }),
       setNotificationsOpen: (notificationsOpen) => set({ notificationsOpen }),
       setLastOptimization: (lastOptimization) => set({ lastOptimization }),
+      markAlternativeProposed: (ids) => {
+        const target = new Set(ids);
+        if (!get().projects.some((p) => target.has(p.id) && (p.status === 'conflict_detected' || p.status === 'under_review'))) return;
+        set({ projects: get().projects.map((p) => (target.has(p.id) && (p.status === 'conflict_detected' || p.status === 'under_review') ? { ...p, status: 'alternative_proposed' as const } : p)) });
+      },
     }),
     {
       name: 'rasd-state-v1',
