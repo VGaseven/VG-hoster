@@ -1,5 +1,5 @@
 {
-  "note": "SYNTHETIC demonstration data for the RASD prototype (Naqlthon 5). Not real government roadworks. Road names real; geometry schematic/approximate.",
+  "note": "HYPOTHETICAL demonstration data for RASD (Naqlthon 5). Scope: one district — حي العليا, Riyadh. Not real government roadworks. Road names real; geometry schematic/approximate.",
   "seed": 20261201,
   "organizations": {
     "municipality": {
@@ -78,7 +78,7 @@
   ],
   "demoConflictProject": {
     "id": "RASD-D01",
-    "title": "إعادة رصف شاملة — شارع العليا بين التحلية والعروبة",
+    "title": "إعادة رصف شاملة — شارع العليا بين التحلية والعروبة (مشروع افتراضي)",
     "orgId": "roads",
     "category": "road_maintenance",
     "closures": [
@@ -90,7 +90,7 @@
     ],
     "proposed": {
       "start": "2026-12-12",
-      "end": "2026-12-30"
+      "end": "2026-12-23"
     },
     "workHours": {
       "start": 0,
@@ -101,10 +101,10 @@
     "latestEnd": "2027-02-28",
     "closureType": "full",
     "affectedLanes": 3,
-    "neighborhood": "برج المملكة",
+    "neighborhood": "شمال العليا",
     "schedule": {
       "start": "2026-12-12",
-      "end": "2026-12-30"
+      "end": "2026-12-23"
     },
     "estimatedCostSar": 4085000,
     "status": "submitted",
@@ -137,7 +137,7 @@
       "latestEnd": "2027-01-31",
       "closureType": "partial",
       "affectedLanes": 2,
-      "neighborhood": "حي العليا",
+      "neighborhood": "وسط العليا",
       "schedule": {
         "start": "2026-12-06",
         "end": "2026-12-24"
@@ -160,22 +160,22 @@
         }
       ],
       "proposed": {
-        "start": "2026-12-15",
-        "end": "2027-01-08"
+        "start": "2026-12-10",
+        "end": "2026-12-24"
       },
       "workHours": {
         "start": 0,
         "end": 24
       },
       "priority": "medium",
-      "earliestStart": "2026-12-10",
+      "earliestStart": "2026-12-08",
       "latestEnd": "2027-02-20",
       "closureType": "partial",
       "affectedLanes": 2,
-      "neighborhood": "حي العليا",
+      "neighborhood": "وسط العليا",
       "schedule": {
-        "start": "2026-12-15",
-        "end": "2027-01-08"
+        "start": "2026-12-10",
+        "end": "2026-12-24"
       },
       "estimatedCostSar": 5938000,
       "status": "submitted",
@@ -184,12 +184,12 @@
     },
     {
       "id": "RASD-P03",
-      "title": "مد ألياف بصرية — طريق الملك فهد شمال العروبة",
+      "title": "مد ألياف بصرية — طريق الملك فهد بين مكة والتحلية",
       "orgId": "telecom",
       "category": "telecom",
       "closures": [
         {
-          "segmentId": "KFR-URB-KAR",
+          "segmentId": "KFR-MAK-THL",
           "from": 0.3,
           "to": 0.8
         }
@@ -207,7 +207,7 @@
       "latestEnd": "2027-02-28",
       "closureType": "partial",
       "affectedLanes": 3,
-      "neighborhood": "حي الورود",
+      "neighborhood": "جنوب العليا",
       "schedule": {
         "start": "2027-01-05",
         "end": "2027-01-25"
@@ -219,12 +219,12 @@
     },
     {
       "id": "RASD-P04",
-      "title": "تطوير الأرصفة والإنارة — شارع العليا (شمال)",
+      "title": "تطوير الأرصفة والإنارة — شارع العليا بين مكة والتحلية",
       "orgId": "municipality",
       "category": "municipal",
       "closures": [
         {
-          "segmentId": "OLY-URB-KAR",
+          "segmentId": "OLY-MAK-THL",
           "from": 0,
           "to": 1
         }
@@ -242,7 +242,7 @@
       "latestEnd": "2027-03-01",
       "closureType": "full",
       "affectedLanes": 3,
-      "neighborhood": "حي الورود",
+      "neighborhood": "جنوب العليا",
       "schedule": {
         "start": "2027-01-10",
         "end": "2027-02-01"
@@ -277,7 +277,7 @@
       "latestEnd": "2027-02-28",
       "closureType": "partial",
       "affectedLanes": 2,
-      "neighborhood": "برج المملكة",
+      "neighborhood": "شمال العليا",
       "schedule": {
         "start": "2027-01-03",
         "end": "2027-01-12"
@@ -312,7 +312,7 @@
       "latestEnd": "2027-02-28",
       "closureType": "partial",
       "affectedLanes": 1,
-      "neighborhood": "برج المملكة",
+      "neighborhood": "شمال العليا",
       "schedule": {
         "start": "2027-01-20",
         "end": "2027-01-28"
@@ -347,7 +347,7 @@
       "latestEnd": "2027-02-28",
       "closureType": "partial",
       "affectedLanes": 2,
-      "neighborhood": "برج المملكة",
+      "neighborhood": "شمال العليا",
       "schedule": {
         "start": "2027-02-05",
         "end": "2027-02-14"
@@ -359,14 +359,14 @@
     },
     {
       "id": "RASD-P08",
-      "title": "إصلاح طارئ لمغذٍّ كهربائي — طريق مكة المكرمة",
+      "title": "إصلاح طارئ لمغذٍّ كهربائي — طريق مكة المكرمة (العليا)",
       "orgId": "electricity",
       "category": "electricity",
       "closures": [
         {
-          "segmentId": "MAK-TAK-KFR",
-          "from": 0.35,
-          "to": 0.75
+          "segmentId": "MAK-KFR-OLY",
+          "from": 0.2,
+          "to": 0.6
         }
       ],
       "proposed": {
@@ -382,7 +382,7 @@
       "latestEnd": "2026-12-20",
       "closureType": "partial",
       "affectedLanes": 2,
-      "neighborhood": "حي أم الحمام الشرقي",
+      "neighborhood": "جنوب العليا",
       "schedule": {
         "start": "2026-12-08",
         "end": "2026-12-20"
@@ -394,14 +394,14 @@
     },
     {
       "id": "RASD-P09",
-      "title": "إعادة سفلتة — طريق مكة المكرمة بين التخصصي والملك فهد",
+      "title": "إعادة سفلتة — طريق مكة المكرمة بين الملك فهد والعليا",
       "orgId": "roads",
       "category": "road_maintenance",
       "closures": [
         {
-          "segmentId": "MAK-TAK-KFR",
-          "from": 0.5,
-          "to": 1
+          "segmentId": "MAK-KFR-OLY",
+          "from": 0.4,
+          "to": 0.9
         }
       ],
       "proposed": {
@@ -417,7 +417,7 @@
       "latestEnd": "2027-02-15",
       "closureType": "partial",
       "affectedLanes": 2,
-      "neighborhood": "حي أم الحمام الشرقي",
+      "neighborhood": "جنوب العليا",
       "schedule": {
         "start": "2026-12-12",
         "end": "2026-12-28"
@@ -429,7 +429,7 @@
     },
     {
       "id": "RASD-P10",
-      "title": "صيانة دورية ليلية — طريق مكة المكرمة شرق العليا",
+      "title": "صيانة دورية ليلية — طريق مكة المكرمة (المدخل الشرقي)",
       "orgId": "roads",
       "category": "road_maintenance",
       "closures": [
@@ -452,7 +452,7 @@
       "latestEnd": "2027-02-28",
       "closureType": "partial",
       "affectedLanes": 1,
-      "neighborhood": "حي السليمانية",
+      "neighborhood": "جنوب العليا",
       "schedule": {
         "start": "2027-02-01",
         "end": "2027-02-10"
@@ -464,12 +464,12 @@
     },
     {
       "id": "RASD-P11",
-      "title": "صيانة غرف تفتيش — شارع التخصصي (جنوب)",
+      "title": "صيانة غرف تفتيش — طريق التحلية بين الملك فهد والعليا",
       "orgId": "water",
       "category": "water",
       "closures": [
         {
-          "segmentId": "TAK-MAK-THL",
+          "segmentId": "THL-KFR-OLY",
           "from": 0.2,
           "to": 0.5
         }
@@ -487,7 +487,7 @@
       "latestEnd": "2026-12-31",
       "closureType": "partial",
       "affectedLanes": 1,
-      "neighborhood": "حي أم الحمام الشرقي",
+      "neighborhood": "جنوب العليا",
       "schedule": {
         "start": "2026-12-01",
         "end": "2026-12-05"
@@ -499,13 +499,13 @@
     },
     {
       "id": "RASD-P12",
-      "title": "توسعة شبكة الجيل الخامس — طريق الملك عبدالله",
+      "title": "توسعة شبكة الجيل الخامس — طريق العروبة (المدخل الشرقي)",
       "orgId": "telecom",
       "category": "telecom",
       "closures": [
         {
-          "segmentId": "KAR-TAK-KFR",
-          "from": 0.4,
+          "segmentId": "URB-OLY-E",
+          "from": 0.3,
           "to": 0.6
         }
       ],
@@ -522,7 +522,7 @@
       "latestEnd": "2027-03-01",
       "closureType": "partial",
       "affectedLanes": 1,
-      "neighborhood": "حي الرحمانية",
+      "neighborhood": "شمال العليا",
       "schedule": {
         "start": "2027-02-15",
         "end": "2027-02-25"
@@ -534,7 +534,7 @@
     },
     {
       "id": "RASD-P13",
-      "title": "إصلاح فواصل تمدد جسر — طريق الملك فهد جنوب طريق مكة",
+      "title": "إصلاح فواصل تمدد جسر — طريق الملك فهد (المدخل الجنوبي)",
       "orgId": "roads",
       "category": "road_maintenance",
       "closures": [
@@ -545,8 +545,8 @@
         }
       ],
       "proposed": {
-        "start": "2027-01-15",
-        "end": "2027-01-22"
+        "start": "2027-02-12",
+        "end": "2027-02-19"
       },
       "workHours": {
         "start": 0,
@@ -554,13 +554,13 @@
       },
       "priority": "high",
       "earliestStart": "2027-01-10",
-      "latestEnd": "2027-02-10",
+      "latestEnd": "2027-02-28",
       "closureType": "partial",
       "affectedLanes": 2,
-      "neighborhood": "حي المعذر الشمالي",
+      "neighborhood": "جنوب العليا",
       "schedule": {
-        "start": "2027-01-15",
-        "end": "2027-01-22"
+        "start": "2027-02-12",
+        "end": "2027-02-19"
       },
       "estimatedCostSar": 2133000,
       "status": "scheduled",

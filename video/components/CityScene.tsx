@@ -10,6 +10,7 @@ import { lngLatToKm } from '@/data/network';
 import { generateBuildings } from '@/data/buildings';
 import { closureLine } from '@/engine/spatial/geometry';
 import type { ClosureExtent } from '@/types';
+import { renderKit, videoKit, videoKitHidden } from '../kit';
 
 export interface Camera {
   /** centre in local km (east, north) relative to Kingdom Centre */
@@ -202,7 +203,10 @@ export const CityScene: React.FC<CitySceneProps> = ({ width: W, height: H, camer
     // buildings — painter's algorithm (far → near), walls then roof
     const margin = Math.max(W, H) * 0.25;
     const items: { depth: number; bp: [number, number, number][]; tp: [number, number, number][]; h: number }[] = [];
+    const kitOn = !!videoKit();
+    const hiddenIds = videoKitHidden();
     for (const bd of BUILDINGS) {
+      if (kitOn && hiddenIds.has(bd.id)) continue;
       const c0 = proj(bd.km[0].x, bd.km[0].y, 0);
       if (!c0 || c0[0] < -margin || c0[0] > W + margin || c0[1] < -margin * 2 || c0[1] > H + margin) continue;
       const base = bd.base * 0.001;
@@ -247,6 +251,13 @@ export const CityScene: React.FC<CitySceneProps> = ({ width: W, height: H, camer
       }
     }
     ctx.globalAlpha = 1;
+    // optional licensed models (public/models/kitbash), same camera, composited on top
+    const kitCanvas = kitOn ? renderKit(camera, W, H) : null;
+    if (kitCanvas) {
+      ctx.globalAlpha = buildingOpacity;
+      ctx.drawImage(kitCanvas, 0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
   });
 
   return (

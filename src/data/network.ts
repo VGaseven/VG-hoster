@@ -1,5 +1,8 @@
 /**
- * RASD demonstration road network — Olaya / King Fahd Road corridor, Riyadh.
+ * RASD demonstration road network — ONE district: حي العليا (Al Olaya), Riyadh.
+ * The simulation scope is the district's own main roads (King Fahd Rd, Olaya St, crossed by
+ * Makkah Rd, Prince Mohammed bin Abdulaziz Rd (Tahlia) and Al Urubah Rd) plus short
+ * boundary entries where traffic enters/leaves the district.
  *
  * Road NAMES are real Riyadh roads. Geometry is a SIMPLIFIED, hand-traced schematic of
  * their alignment (straight blocks between major intersections), calibrated against
@@ -52,7 +55,6 @@ interface RoadDef {
 
 /** North–south roads (constant v). */
 const NS_ROADS: (RoadDef & { v: number })[] = [
-  { id: 'TAK', name: 'شارع التخصصي', nameEn: 'Al Takhassusi St', cls: 'secondary', lanes: 3, speed: 60, v: -1.5 },
   { id: 'KFR', name: 'طريق الملك فهد', nameEn: 'King Fahd Rd', cls: 'motorway', lanes: 5, speed: 75, v: -0.12 },
   { id: 'OLY', name: 'شارع العليا', nameEn: 'Olaya St', cls: 'primary', lanes: 3, speed: 60, v: 0.3 },
 ];
@@ -62,16 +64,16 @@ const EW_ROADS: (RoadDef & { u: number })[] = [
   { id: 'MAK', name: 'طريق مكة المكرمة', nameEn: 'Makkah Al Mukarramah Rd', cls: 'motorway', lanes: 4, speed: 70, u: -3.2 },
   { id: 'THL', name: 'طريق الأمير محمد بن عبدالعزيز (التحلية)', nameEn: 'Prince Mohammed bin Abdulaziz Rd (Tahlia)', cls: 'primary', lanes: 3, speed: 50, u: -1.5 },
   { id: 'URB', name: 'طريق العروبة', nameEn: 'Al Urubah Rd', cls: 'primary', lanes: 3, speed: 60, u: 0.15 },
-  { id: 'KAR', name: 'طريق الملك عبدالله', nameEn: 'King Abdullah Rd', cls: 'motorway', lanes: 4, speed: 80, u: 3.3 },
 ];
 
-const U_SOUTH = -4.2;
-const U_NORTH = 4.3;
-const V_WEST = -2.5;
-const V_EAST = 1.6;
+/** District boundary entries (short stubs just outside حي العليا). */
+export const U_SOUTH = -3.85;
+export const U_NORTH = 0.8;
+export const V_WEST = -0.75;
+export const V_EAST = 0.95;
 
-const DIR_AR: Record<string, string> = { S: 'جنوباً', N: 'شمالاً', W: 'غرباً', E: 'شرقاً' };
-const DIR_EN: Record<string, string> = { S: 'southbound exit', N: 'northbound exit', W: 'westbound exit', E: 'eastbound exit' };
+const DIR_AR: Record<string, string> = { S: 'مدخل جنوبي', N: 'مدخل شمالي', W: 'مدخل غربي', E: 'مدخل شرقي' };
+const DIR_EN: Record<string, string> = { S: 'south entry', N: 'north entry', W: 'west entry', E: 'east entry' };
 
 function buildNetwork() {
   const nodes: NetworkNode[] = [];
@@ -138,10 +140,8 @@ function buildNetwork() {
   // Zones (neighbourhood / landmark centroids). Centroids from OpenStreetMap place nodes
   // (neighbourhoods) and approximate landmark positions; connectors are local access streets.
   const zones: { id: string; name: string; nameEn: string; coord: LngLat; access: string[] }[] = [
-    { id: 'Z-OLAYA', name: 'حي العليا', nameEn: 'Al Olaya District', coord: [46.6834, 24.6924], access: ['I-KFR-MAK', 'I-OLY-MAK', 'I-KFR-THL', 'I-OLY-THL'] },
-    { id: 'Z-WURUD', name: 'حي الورود', nameEn: 'Al Wurud District', coord: [46.6785, 24.7244], access: ['I-OLY-URB', 'I-OLY-KAR'] },
-    { id: 'Z-RAHMANIYAH', name: 'حي الرحمانية', nameEn: 'Ar Rahmaniyah District', coord: [46.6594, 24.7161], access: ['I-TAK-URB', 'I-KFR-URB', 'I-TAK-KAR', 'I-KFR-KAR'] },
-    { id: 'Z-SULAYMANIYAH', name: 'حي السليمانية', nameEn: 'As Sulaymaniyah District', coord: [46.7025, 24.6986], access: ['I-OLY-MAK', 'I-OLY-THL'] },
+    { id: 'Z-OLAYA', name: 'جنوب العليا', nameEn: 'South Olaya', coord: [46.6834, 24.6924], access: ['I-KFR-MAK', 'I-OLY-MAK', 'I-KFR-THL', 'I-OLY-THL'] },
+    { id: 'Z-OLAYA-MID', name: 'وسط العليا (التحلية)', nameEn: 'Central Olaya (Tahlia)', coord: uvToLngLat(-0.75, 0.62), access: ['I-OLY-THL', 'I-OLY-URB'] },
     { id: 'Z-KINGDOM', name: 'برج المملكة', nameEn: 'Kingdom Centre', coord: [46.6744, 24.7114], access: ['I-KFR-URB', 'I-OLY-URB', 'I-KFR-THL', 'I-OLY-THL'] },
     { id: 'Z-FAISALIAH', name: 'برج الفيصلية', nameEn: 'Al Faisaliah Tower', coord: [46.6853, 24.6903], access: ['I-KFR-MAK', 'I-KFR-THL', 'I-OLY-MAK'] },
   ];
@@ -206,8 +206,19 @@ export const NETWORK_BOUNDS: [LngLat, LngLat] = (() => {
   ];
 })();
 
-export const RIYADH_OVERVIEW = { center: [46.6853, 24.7136] as LngLat, zoom: 10.6 };
-export const STUDY_AREA_VIEW = { center: [46.6744, 24.7114] as LngLat, zoom: 13.2, pitch: 55, bearing: -25 };
+/** Centre of the single-district simulation (حي العليا). */
+export const DISTRICT_CENTER: LngLat = uvToLngLat(-1.55, 0.1);
+export const DISTRICT_NAME_AR = 'حي العليا';
+/** Approximate district outline (schematic, for orientation only). */
+export const DISTRICT_OUTLINE: LngLat[] = [
+  uvToLngLat(-3.35, -0.4),
+  uvToLngLat(-3.35, 0.78),
+  uvToLngLat(0.45, 0.78),
+  uvToLngLat(0.45, -0.4),
+  uvToLngLat(-3.35, -0.4),
+];
+export const DISTRICT_OVERVIEW = { center: DISTRICT_CENTER, zoom: 13.4 };
+export const STUDY_AREA_VIEW = { center: DISTRICT_CENTER, zoom: 14.1, pitch: 58, bearing: -25 };
 
 export const GEOMETRY_NOTE_AR =
   'أسماء الطرق حقيقية، والمسارات مخطط مبسّط تقريبي (±٢٠٠–٤٠٠ م) لعدم توفر اتصال بـ OpenStreetMap أثناء البناء.';

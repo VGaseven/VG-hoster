@@ -146,12 +146,12 @@ describe('traffic & routing properties', () => {
 
   it('a citizen route never uses a fully closed block, and the published closure is reported', () => {
     const p = { ...createSeedProjects().find((x) => x.id === 'RASD-P04')!, status: 'approved' as const };
-    const plan = planJourney([p], 'Z-WURUD', 'G-OLY-N', '2027-01-14', 10, false);
+    const plan = planJourney([p], 'Z-OLAYA-MID', 'G-OLY-S', '2027-01-14', 10, false);
     expect(plan.now).not.toBeNull();
-    expect(plan.now!.segIds).not.toContain('OLY-URB-KAR');
+    expect(plan.now!.segIds).not.toContain('OLY-MAK-THL');
     expect(plan.now!.timeMin).toBeGreaterThanOrEqual(plan.normal!.timeMin - 1e-9);
     // outside working hours (07–19) the road is open again
-    expect(planJourney([p], 'Z-WURUD', 'G-OLY-N', '2027-01-14', 22, false).affecting).toHaveLength(0);
+    expect(planJourney([p], 'Z-OLAYA-MID', 'G-OLY-S', '2027-01-14', 22, false).affecting).toHaveLength(0);
   });
 
   it('outcome metrics: coordinating the same block never increases closure episodes', () => {

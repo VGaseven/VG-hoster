@@ -30,7 +30,8 @@ improvement — every number is computed from the model.
 
 ## 2. Data
 
-* `src/data/network.ts` — study network for the Olaya / King Fahd Rd corridor. A local frame
+* `src/data/network.ts` — single-district study network (حي العليا only). Earlier drafts covered
+  several neighbourhoods; the scope was reduced to one district on request. A local frame
   (`u` along King Fahd Rd ≈ 25° W of N, `v` across) places 3 N–S roads × 4 E–W roads; 26 nodes
   (12 intersections, 14 gates) + 6 zones (OSM neighbourhood centroids / landmarks) linked by
   non-closable local connectors. 31 closable blocks. Geometry is schematic (see README);
@@ -140,6 +141,14 @@ processes) or `npm run export-sim`.
 * `tests/e2e/acceptance.spec.ts` — Playwright acceptance tests (map, 2D/3D, click-to-register,
   conflict evidence, options/approval, compare, citizen, tutorial, clock, scenario player, CSV,
   persistence, judge demo, language).
+
+## 8b. Optional licensed building kit
+
+`src/data/kitbash.ts` (manifest schema + deterministic seeded placement on district footprints),
+`src/components/map/kitScene.ts` (GLB loading → InstancedMesh per mesh), `KitbashLayer.ts` (MapLibre
+custom layer sharing the GL context), `video/kit.ts` (offscreen Three.js renderer with a camera
+derived analytically from the CityScene projection, composited per frame). Scripts:
+`scripts/glb.ts`, `models:index`, `models:sample`.
 
 ## 9. Known limitations
 

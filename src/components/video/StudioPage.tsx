@@ -5,6 +5,7 @@ import { RasdVideo, DEFAULT_VIDEO_PROPS, FPS, PRESETS, sceneFrames, type VideoPr
 import { Button, Panel, SectionTitle, Toggle } from '@/components/ui/ui';
 import { cn } from '@/utils/format';
 import '@fontsource/ibm-plex-sans-arabic/700.css';
+import { loadVideoKit, videoKit } from '../../../video/kit';
 
 interface Job {
   id: string;
@@ -23,6 +24,10 @@ export default function StudioPage() {
   const [job, setJob] = useState<Job | null>(null);
   const [server, setServer] = useState<'checking' | 'online' | 'offline'>('checking');
   const [err, setErr] = useState<string | null>(null);
+  const [kitReady, setKitReady] = useState(false);
+  useEffect(() => {
+    void loadVideoKit().then(() => setKitReady(!!videoKit()));
+  }, []);
   const poll = useRef<ReturnType<typeof setInterval> | null>(null);
   const preset = PRESETS[props.preset];
   const frames = sceneFrames(props.durationSec);
@@ -66,6 +71,7 @@ export default function StudioPage() {
         <div className="grid min-h-0 flex-1 place-items-center rounded-2xl border border-white/8 bg-black/40 p-4">
           <div dir="ltr" style={{ aspectRatio: `${preset.w}/${preset.h}`, maxHeight: '100%', maxWidth: '100%', height: preset.h >= preset.w ? '100%' : undefined, width: preset.h < preset.w ? '100%' : undefined }}>
             <Player
+              key={kitReady ? 'kit' : 'base'}
               component={RasdVideo}
               inputProps={props}
               durationInFrames={props.durationSec * FPS}
@@ -92,6 +98,7 @@ export default function StudioPage() {
       <aside className="scroll-thin w-[360px] shrink-0 space-y-4 overflow-y-auto border-r border-white/6 p-5">
         <Panel className="p-4">
           <SectionTitle icon={<Film size={16} />}>إعدادات الفيديو</SectionTitle>
+          {kitReady && <div className="mb-1 text-[11.5px] text-violet-300">نماذج المباني المرخّصة مفعّلة ({videoKit()?.models} نماذج)</div>}
           <div className="text-[12px] text-slate-400">السيناريو: حي العليا — مشروعان افتراضيان متقاربان (نفس بيانات التطبيق)</div>
           <div className="mt-3 text-xs font-semibold text-slate-400">الدقة</div>
           <div className="mt-1.5 grid grid-cols-2 gap-1.5">

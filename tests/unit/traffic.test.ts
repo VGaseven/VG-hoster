@@ -26,8 +26,8 @@ describe('traffic assignment', () => {
   it('removes fully closed links and reroutes traffic', () => {
     const full = { ...P('RASD-P04') };
     const r = assign(combineEffects([full]), 3);
-    expect(r.vcBySeg.get('OLY-URB-KAR')).toBe(Infinity);
-    for (const p of r.paths.values()) if (p) expect(p.segIds).not.toContain('OLY-URB-KAR');
+    expect(r.vcBySeg.get('OLY-MAK-THL')).toBe(Infinity);
+    for (const p of r.paths.values()) if (p) expect(p.segIds).not.toContain('OLY-MAK-THL');
     expect(hourlyDelay(r)).toBeGreaterThan(0);
   });
   it('sums independent lane closures but shares a coordinated work zone', () => {
@@ -39,7 +39,7 @@ describe('traffic assignment', () => {
   });
   it('respects working hours', () => {
     const night = P('RASD-P13'); // 00–06
-    const d = dayIndex('2027-01-16');
+    const d = dayIndex('2027-02-14');
     expect(effectsAt([night], d, 3).size).toBe(1);
     expect(effectsAt([night], d, 8).size).toBe(0);
   });

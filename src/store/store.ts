@@ -6,6 +6,7 @@ import { DEFAULT_WEIGHTS } from '@/engine/optimization/optimize';
 import { DEFAULT_ECONOMICS } from '@/engine/economics/economics';
 import { DEFAULT_OVERLAYS, type Overlays } from '@/components/map/overlays';
 import type { BaseStyle } from '@/components/map/styles';
+import type { KitStatus } from '@/components/map/RasdMap';
 import { HORIZON_DAYS, dayIndex } from '@/utils/date';
 import { getConflicts } from './derived';
 import { PersistedSchema } from './schema';
@@ -67,6 +68,8 @@ interface State {
   notificationsOpen: boolean;
   lastOptimization: { conflictId: string; options: OptimizationOption[] } | null;
   focusOption: OptimizationOption['kind'] | null;
+  kitStatus: KitStatus;
+  setKitStatus: (k: KitStatus) => void;
   reviewRequest: OptimizationOption['kind'] | null;
   show: { active: boolean; scene: number; playing: boolean };
 
@@ -164,6 +167,8 @@ export const useStore = create<State>()(
       notificationsOpen: false,
       lastOptimization: null,
       focusOption: null,
+      kitStatus: { state: 'none' },
+      setKitStatus: (kitStatus) => set({ kitStatus }),
       reviewRequest: null,
       show: { active: false, scene: 0, playing: true },
 

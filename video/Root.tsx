@@ -4,16 +4,21 @@ import '@fontsource/ibm-plex-sans-arabic/400.css';
 import '@fontsource/ibm-plex-sans-arabic/500.css';
 import '@fontsource/ibm-plex-sans-arabic/600.css';
 import '@fontsource/ibm-plex-sans-arabic/700.css';
+import { loadVideoKit } from './kit';
 import { DEFAULT_VIDEO_PROPS, FPS, PRESETS, RasdVideo, videoSchema, type VideoProps } from './compositions/RasdVideo';
 
 const FontGate: React.FC<VideoProps> = (props) => {
-  const [handle] = useState(() => delayRender('Loading Arabic font'));
+  const [handle] = useState(() => delayRender('Loading Arabic font and optional building kit'));
+  const [ready, setReady] = useState(false);
   useEffect(() => {
-    Promise.all(['400', '500', '600', '700'].map((w) => document.fonts.load(`${w} 32px "IBM Plex Sans Arabic"`, 'رصد')))
+    Promise.all([...['400', '500', '600', '700'].map((w) => document.fonts.load(`${w} 32px "IBM Plex Sans Arabic"`, 'رصد')), loadVideoKit()])
       .catch(() => undefined)
-      .finally(() => continueRender(handle));
+      .finally(() => {
+        setReady(true);
+        continueRender(handle);
+      });
   }, [handle]);
-  return <RasdVideo {...props} />;
+  return ready ? <RasdVideo {...props} /> : null;
 };
 
 export const RemotionRoot: React.FC = () => (

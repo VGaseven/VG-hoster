@@ -19,8 +19,9 @@ export interface Building {
   landmark?: string;
 }
 
-const V_LINES = [-2.5, -1.5, -0.12, 0.3, 1.6];
-const U_LINES = [-4.2, -3.2, -1.5, 0.15, 3.3, 4.3];
+/** Street grid of the single district (حي العليا) and its boundary strips. */
+const V_LINES = [-0.75, -0.12, 0.3, 0.95];
+const U_LINES = [-3.85, -3.2, -1.5, 0.15, 0.8];
 
 function box(id: string, u: number, v: number, du: number, dv: number, height: number, base = 0, landmark?: string): Building {
   const uv = [
@@ -48,7 +49,7 @@ export function generateBuildings(spacingKm = 0.075, seed = 7): Building[] {
         for (let v = v0 + spacingKm / 2; v < v1; v += spacingKm) {
           if (rnd() < 0.22) continue; // courtyards, parking, plots
           // proximity to King Fahd Rd / Olaya core → taller towers
-          const core = Math.exp(-((v - 0.09) ** 2) / 0.18) * Math.exp(-((u + 0.8) ** 2) / 9);
+          const core = Math.exp(-((v - 0.09) ** 2) / 0.18) * Math.exp(-((u + 1.4) ** 2) / 6);
           const nearRoad = Math.min(...V_LINES.map((x) => Math.abs(x - v)), ...U_LINES.map((x) => Math.abs(x - u))) < 0.16;
           let h = 6 + rnd() * 10;
           if (nearRoad) h += rnd() * 18;

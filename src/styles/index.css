@@ -105,6 +105,11 @@ body,
   color: #a5f3fc;
   font-weight: 600;
 }
+.rasd-label.district {
+  color: #c4b5fd;
+  font-size: 13px;
+  font-weight: 700;
+}
 .rasd-label.road {
   color: #64748b;
   font-size: 10px;

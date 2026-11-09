@@ -1,128 +1,35 @@
 {
  "type": "FeatureCollection",
- "note": "SYNTHETIC demonstration data for the RASD prototype (Naqlthon 5). Not real government roadworks. Road names real; geometry schematic/approximate.",
+ "note": "HYPOTHETICAL demonstration data for RASD (Naqlthon 5). Scope: one district — حي العليا, Riyadh. Not real government roadworks. Road names real; geometry schematic/approximate.",
  "features": [
   {
    "type": "Feature",
    "properties": {
-    "id": "TAK-S-MAK",
-    "name": "شارع التخصصي",
-    "nameEn": "Al Takhassusi St",
-    "class": "secondary",
-    "lanesPerDirection": 3,
-    "freeSpeedKmh": 60,
-    "closable": true
+    "kind": "district-outline",
+    "name": "حي العليا (تقريبي)"
    },
    "geometry": {
     "type": "LineString",
     "coordinates": [
      [
-      46.678669,
-      24.671364
+      46.684932,
+      24.682526
      ],
      [
-      46.674456,
-      24.679524
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "TAK-MAK-THL",
-    "name": "شارع التخصصي",
-    "nameEn": "Al Takhassusi St",
-    "class": "secondary",
-    "lanesPerDirection": 3,
-    "freeSpeedKmh": 60,
-    "closable": true
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.674456,
-      24.679524
+      46.695493,
+      24.687059
      ],
      [
-      46.667295,
-      24.693397
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "TAK-THL-URB",
-    "name": "شارع التخصصي",
-    "nameEn": "Al Takhassusi St",
-    "class": "secondary",
-    "lanesPerDirection": 3,
-    "freeSpeedKmh": 60,
-    "closable": true
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.667295,
-      24.693397
+      46.679485,
+      24.718068
      ],
      [
-      46.660344,
-      24.706862
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "TAK-URB-KAR",
-    "name": "شارع التخصصي",
-    "nameEn": "Al Takhassusi St",
-    "class": "secondary",
-    "lanesPerDirection": 3,
-    "freeSpeedKmh": 60,
-    "closable": true
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.660344,
-      24.706862
+      46.668925,
+      24.713536
      ],
      [
-      46.647075,
-      24.732568
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "TAK-KAR-N",
-    "name": "شارع التخصصي",
-    "nameEn": "Al Takhassusi St",
-    "class": "secondary",
-    "lanesPerDirection": 3,
-    "freeSpeedKmh": 60,
-    "closable": true
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.647075,
-      24.732568
-     ],
-     [
-      46.642862,
-      24.740728
+      46.684932,
+      24.682526
      ]
     ]
    }
@@ -142,8 +49,8 @@
     "type": "LineString",
     "coordinates": [
      [
-      46.691019,
-      24.676665
+      46.689544,
+      24.679521
      ],
      [
       46.686806,
@@ -205,7 +112,7 @@
   {
    "type": "Feature",
    "properties": {
-    "id": "KFR-URB-KAR",
+    "id": "KFR-URB-N",
     "name": "طريق الملك فهد",
     "nameEn": "King Fahd Rd",
     "class": "motorway",
@@ -221,33 +128,8 @@
       24.712163
      ],
      [
-      46.659425,
-      24.737869
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "KFR-KAR-N",
-    "name": "طريق الملك فهد",
-    "nameEn": "King Fahd Rd",
-    "class": "motorway",
-    "lanesPerDirection": 5,
-    "freeSpeedKmh": 75,
-    "closable": true
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.659425,
-      24.737869
-     ],
-     [
-      46.655212,
-      24.746029
+      46.669956,
+      24.717467
      ]
     ]
    }
@@ -267,8 +149,8 @@
     "type": "LineString",
     "coordinates": [
      [
-      46.694778,
-      24.678278
+      46.693303,
+      24.681134
      ],
      [
       46.690565,
@@ -330,7 +212,7 @@
   {
    "type": "Feature",
    "properties": {
-    "id": "OLY-URB-KAR",
+    "id": "OLY-URB-N",
     "name": "شارع العليا",
     "nameEn": "Olaya St",
     "class": "primary",
@@ -346,8 +228,8 @@
       24.713776
      ],
      [
-      46.663183,
-      24.739482
+      46.673715,
+      24.719081
      ]
     ]
    }
@@ -355,32 +237,7 @@
   {
    "type": "Feature",
    "properties": {
-    "id": "OLY-KAR-N",
-    "name": "شارع العليا",
-    "nameEn": "Olaya St",
-    "class": "primary",
-    "lanesPerDirection": 3,
-    "freeSpeedKmh": 60,
-    "closable": true
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.663183,
-      24.739482
-     ],
-     [
-      46.658971,
-      24.747643
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "MAK-W-TAK",
+    "id": "MAK-W-KFR",
     "name": "طريق مكة المكرمة",
     "nameEn": "Makkah Al Mukarramah Rd",
     "class": "motorway",
@@ -392,33 +249,8 @@
     "type": "LineString",
     "coordinates": [
      [
-      46.665507,
-      24.675683
-     ],
-     [
-      46.674456,
-      24.679524
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "MAK-TAK-KFR",
-    "name": "طريق مكة المكرمة",
-    "nameEn": "Makkah Al Mukarramah Rd",
-    "class": "motorway",
-    "lanesPerDirection": 4,
-    "freeSpeedKmh": 70,
-    "closable": true
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.674456,
-      24.679524
+      46.681168,
+      24.682405
      ],
      [
       46.686806,
@@ -471,8 +303,8 @@
       24.686439
      ],
      [
-      46.702199,
-      24.691432
+      46.696382,
+      24.688936
      ]
     ]
    }
@@ -480,7 +312,7 @@
   {
    "type": "Feature",
    "properties": {
-    "id": "THL-W-TAK",
+    "id": "THL-W-KFR",
     "name": "طريق الأمير محمد بن عبدالعزيز (التحلية)",
     "nameEn": "Prince Mohammed bin Abdulaziz Rd (Tahlia)",
     "class": "primary",
@@ -492,33 +324,8 @@
     "type": "LineString",
     "coordinates": [
      [
-      46.658346,
-      24.689556
-     ],
-     [
-      46.667295,
-      24.693397
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "THL-TAK-KFR",
-    "name": "طريق الأمير محمد بن عبدالعزيز (التحلية)",
-    "nameEn": "Prince Mohammed bin Abdulaziz Rd (Tahlia)",
-    "class": "primary",
-    "lanesPerDirection": 3,
-    "freeSpeedKmh": 50,
-    "closable": true
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.667295,
-      24.693397
+      46.674007,
+      24.696278
      ],
      [
       46.679645,
@@ -571,8 +378,8 @@
       24.700312
      ],
      [
-      46.695038,
-      24.705305
+      46.689221,
+      24.702808
      ]
     ]
    }
@@ -580,7 +387,7 @@
   {
    "type": "Feature",
    "properties": {
-    "id": "URB-W-TAK",
+    "id": "URB-W-KFR",
     "name": "طريق العروبة",
     "nameEn": "Al Urubah Rd",
     "class": "primary",
@@ -592,33 +399,8 @@
     "type": "LineString",
     "coordinates": [
      [
-      46.651395,
-      24.703021
-     ],
-     [
-      46.660344,
-      24.706862
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "URB-TAK-KFR",
-    "name": "طريق العروبة",
-    "nameEn": "Al Urubah Rd",
-    "class": "primary",
-    "lanesPerDirection": 3,
-    "freeSpeedKmh": 60,
-    "closable": true
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.660344,
-      24.706862
+      46.667056,
+      24.709743
      ],
      [
       46.672694,
@@ -671,108 +453,8 @@
       24.713776
      ],
      [
-      46.688087,
-      24.71877
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "KAR-W-TAK",
-    "name": "طريق الملك عبدالله",
-    "nameEn": "King Abdullah Rd",
-    "class": "motorway",
-    "lanesPerDirection": 4,
-    "freeSpeedKmh": 80,
-    "closable": true
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.638125,
-      24.728726
-     ],
-     [
-      46.647075,
-      24.732568
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "KAR-TAK-KFR",
-    "name": "طريق الملك عبدالله",
-    "nameEn": "King Abdullah Rd",
-    "class": "motorway",
-    "lanesPerDirection": 4,
-    "freeSpeedKmh": 80,
-    "closable": true
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.647075,
-      24.732568
-     ],
-     [
-      46.659425,
-      24.737869
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "KAR-KFR-OLY",
-    "name": "طريق الملك عبدالله",
-    "nameEn": "King Abdullah Rd",
-    "class": "motorway",
-    "lanesPerDirection": 4,
-    "freeSpeedKmh": 80,
-    "closable": true
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.659425,
-      24.737869
-     ],
-     [
-      46.663183,
-      24.739482
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "KAR-OLY-E",
-    "name": "طريق الملك عبدالله",
-    "nameEn": "King Abdullah Rd",
-    "class": "motorway",
-    "lanesPerDirection": 4,
-    "freeSpeedKmh": 80,
-    "closable": true
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.663183,
-      24.739482
-     ],
-     [
-      46.674817,
-      24.744476
+      46.68227,
+      24.716273
      ]
     ]
    }
@@ -880,7 +562,7 @@
   {
    "type": "Feature",
    "properties": {
-    "id": "CON-WURUD-OLY-URB",
+    "id": "CON-OLAYA-MID-OLY-THL",
     "name": "شارع محلي (وصلة وصول)",
     "nameEn": "Local access street",
     "class": "connector",
@@ -892,187 +574,37 @@
     "type": "LineString",
     "coordinates": [
      [
-      46.6785,
-      24.7244
-     ],
-     [
-      46.676453,
-      24.713776
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "CON-WURUD-OLY-KAR",
-    "name": "شارع محلي (وصلة وصول)",
-    "nameEn": "Local access street",
-    "class": "connector",
-    "lanesPerDirection": 1,
-    "freeSpeedKmh": 30,
-    "closable": false
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.6785,
-      24.7244
-     ],
-     [
-      46.663183,
-      24.739482
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "CON-RAHMANIYAH-TAK-URB",
-    "name": "شارع محلي (وصلة وصول)",
-    "nameEn": "Local access street",
-    "class": "connector",
-    "lanesPerDirection": 1,
-    "freeSpeedKmh": 30,
-    "closable": false
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.6594,
-      24.7161
-     ],
-     [
-      46.660344,
-      24.706862
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "CON-RAHMANIYAH-KFR-URB",
-    "name": "شارع محلي (وصلة وصول)",
-    "nameEn": "Local access street",
-    "class": "connector",
-    "lanesPerDirection": 1,
-    "freeSpeedKmh": 30,
-    "closable": false
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.6594,
-      24.7161
-     ],
-     [
-      46.672694,
-      24.712163
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "CON-RAHMANIYAH-TAK-KAR",
-    "name": "شارع محلي (وصلة وصول)",
-    "nameEn": "Local access street",
-    "class": "connector",
-    "lanesPerDirection": 1,
-    "freeSpeedKmh": 30,
-    "closable": false
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.6594,
-      24.7161
-     ],
-     [
-      46.647075,
-      24.732568
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "CON-RAHMANIYAH-KFR-KAR",
-    "name": "شارع محلي (وصلة وصول)",
-    "nameEn": "Local access street",
-    "class": "connector",
-    "lanesPerDirection": 1,
-    "freeSpeedKmh": 30,
-    "closable": false
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.6594,
-      24.7161
-     ],
-     [
-      46.659425,
-      24.737869
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "CON-SULAYMANIYAH-OLY-MAK",
-    "name": "شارع محلي (وصلة وصول)",
-    "nameEn": "Local access street",
-    "class": "connector",
-    "lanesPerDirection": 1,
-    "freeSpeedKmh": 30,
-    "closable": false
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.7025,
-      24.6986
-     ],
-     [
-      46.690565,
-      24.686439
-     ]
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "CON-SULAYMANIYAH-OLY-THL",
-    "name": "شارع محلي (وصلة وصول)",
-    "nameEn": "Local access street",
-    "class": "connector",
-    "lanesPerDirection": 1,
-    "freeSpeedKmh": 30,
-    "closable": false
-   },
-   "geometry": {
-    "type": "LineString",
-    "coordinates": [
-     [
-      46.7025,
-      24.6986
+      46.683108,
+      24.707661
      ],
      [
       46.683404,
       24.700312
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "id": "CON-OLAYA-MID-OLY-URB",
+    "name": "شارع محلي (وصلة وصول)",
+    "nameEn": "Local access street",
+    "class": "connector",
+    "lanesPerDirection": 1,
+    "freeSpeedKmh": 30,
+    "closable": false
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      46.683108,
+      24.707661
+     ],
+     [
+      46.676453,
+      24.713776
      ]
     ]
    }
@@ -1255,70 +787,6 @@
   {
    "type": "Feature",
    "properties": {
-    "id": "I-TAK-MAK",
-    "kind": "intersection",
-    "name": "تقاطع شارع التخصصي مع طريق مكة المكرمة",
-    "nameEn": "Al Takhassusi St × Makkah Al Mukarramah Rd"
-   },
-   "geometry": {
-    "type": "Point",
-    "coordinates": [
-     46.674456,
-     24.679524
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "I-TAK-THL",
-    "kind": "intersection",
-    "name": "تقاطع شارع التخصصي مع طريق الأمير محمد بن عبدالعزيز (التحلية)",
-    "nameEn": "Al Takhassusi St × Prince Mohammed bin Abdulaziz Rd (Tahlia)"
-   },
-   "geometry": {
-    "type": "Point",
-    "coordinates": [
-     46.667295,
-     24.693397
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "I-TAK-URB",
-    "kind": "intersection",
-    "name": "تقاطع شارع التخصصي مع طريق العروبة",
-    "nameEn": "Al Takhassusi St × Al Urubah Rd"
-   },
-   "geometry": {
-    "type": "Point",
-    "coordinates": [
-     46.660344,
-     24.706862
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "I-TAK-KAR",
-    "kind": "intersection",
-    "name": "تقاطع شارع التخصصي مع طريق الملك عبدالله",
-    "nameEn": "Al Takhassusi St × King Abdullah Rd"
-   },
-   "geometry": {
-    "type": "Point",
-    "coordinates": [
-     46.647075,
-     24.732568
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
     "id": "I-KFR-MAK",
     "kind": "intersection",
     "name": "تقاطع طريق الملك فهد مع طريق مكة المكرمة",
@@ -1361,22 +829,6 @@
     "coordinates": [
      46.672694,
      24.712163
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "I-KFR-KAR",
-    "kind": "intersection",
-    "name": "تقاطع طريق الملك فهد مع طريق الملك عبدالله",
-    "nameEn": "King Fahd Rd × King Abdullah Rd"
-   },
-   "geometry": {
-    "type": "Point",
-    "coordinates": [
-     46.659425,
-     24.737869
     ]
    }
   },
@@ -1431,64 +883,16 @@
   {
    "type": "Feature",
    "properties": {
-    "id": "I-OLY-KAR",
-    "kind": "intersection",
-    "name": "تقاطع شارع العليا مع طريق الملك عبدالله",
-    "nameEn": "Olaya St × King Abdullah Rd"
-   },
-   "geometry": {
-    "type": "Point",
-    "coordinates": [
-     46.663183,
-     24.739482
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "G-TAK-S",
-    "kind": "gate",
-    "name": "شارع التخصصي (جنوباً)",
-    "nameEn": "Al Takhassusi St (southbound exit)"
-   },
-   "geometry": {
-    "type": "Point",
-    "coordinates": [
-     46.678669,
-     24.671364
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "G-TAK-N",
-    "kind": "gate",
-    "name": "شارع التخصصي (شمالاً)",
-    "nameEn": "Al Takhassusi St (northbound exit)"
-   },
-   "geometry": {
-    "type": "Point",
-    "coordinates": [
-     46.642862,
-     24.740728
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
     "id": "G-KFR-S",
     "kind": "gate",
-    "name": "طريق الملك فهد (جنوباً)",
-    "nameEn": "King Fahd Rd (southbound exit)"
+    "name": "طريق الملك فهد (مدخل جنوبي)",
+    "nameEn": "King Fahd Rd (south entry)"
    },
    "geometry": {
     "type": "Point",
     "coordinates": [
-     46.691019,
-     24.676665
+     46.689544,
+     24.679521
     ]
    }
   },
@@ -1497,14 +901,14 @@
    "properties": {
     "id": "G-KFR-N",
     "kind": "gate",
-    "name": "طريق الملك فهد (شمالاً)",
-    "nameEn": "King Fahd Rd (northbound exit)"
+    "name": "طريق الملك فهد (مدخل شمالي)",
+    "nameEn": "King Fahd Rd (north entry)"
    },
    "geometry": {
     "type": "Point",
     "coordinates": [
-     46.655212,
-     24.746029
+     46.669956,
+     24.717467
     ]
    }
   },
@@ -1513,14 +917,14 @@
    "properties": {
     "id": "G-OLY-S",
     "kind": "gate",
-    "name": "شارع العليا (جنوباً)",
-    "nameEn": "Olaya St (southbound exit)"
+    "name": "شارع العليا (مدخل جنوبي)",
+    "nameEn": "Olaya St (south entry)"
    },
    "geometry": {
     "type": "Point",
     "coordinates": [
-     46.694778,
-     24.678278
+     46.693303,
+     24.681134
     ]
    }
   },
@@ -1529,14 +933,14 @@
    "properties": {
     "id": "G-OLY-N",
     "kind": "gate",
-    "name": "شارع العليا (شمالاً)",
-    "nameEn": "Olaya St (northbound exit)"
+    "name": "شارع العليا (مدخل شمالي)",
+    "nameEn": "Olaya St (north entry)"
    },
    "geometry": {
     "type": "Point",
     "coordinates": [
-     46.658971,
-     24.747643
+     46.673715,
+     24.719081
     ]
    }
   },
@@ -1545,14 +949,14 @@
    "properties": {
     "id": "G-MAK-W",
     "kind": "gate",
-    "name": "طريق مكة المكرمة (غرباً)",
-    "nameEn": "Makkah Al Mukarramah Rd (westbound exit)"
+    "name": "طريق مكة المكرمة (مدخل غربي)",
+    "nameEn": "Makkah Al Mukarramah Rd (west entry)"
    },
    "geometry": {
     "type": "Point",
     "coordinates": [
-     46.665507,
-     24.675683
+     46.681168,
+     24.682405
     ]
    }
   },
@@ -1561,14 +965,14 @@
    "properties": {
     "id": "G-MAK-E",
     "kind": "gate",
-    "name": "طريق مكة المكرمة (شرقاً)",
-    "nameEn": "Makkah Al Mukarramah Rd (eastbound exit)"
+    "name": "طريق مكة المكرمة (مدخل شرقي)",
+    "nameEn": "Makkah Al Mukarramah Rd (east entry)"
    },
    "geometry": {
     "type": "Point",
     "coordinates": [
-     46.702199,
-     24.691432
+     46.696382,
+     24.688936
     ]
    }
   },
@@ -1577,14 +981,14 @@
    "properties": {
     "id": "G-THL-W",
     "kind": "gate",
-    "name": "طريق الأمير محمد بن عبدالعزيز (التحلية) (غرباً)",
-    "nameEn": "Prince Mohammed bin Abdulaziz Rd (Tahlia) (westbound exit)"
+    "name": "طريق الأمير محمد بن عبدالعزيز (التحلية) (مدخل غربي)",
+    "nameEn": "Prince Mohammed bin Abdulaziz Rd (Tahlia) (west entry)"
    },
    "geometry": {
     "type": "Point",
     "coordinates": [
-     46.658346,
-     24.689556
+     46.674007,
+     24.696278
     ]
    }
   },
@@ -1593,14 +997,14 @@
    "properties": {
     "id": "G-THL-E",
     "kind": "gate",
-    "name": "طريق الأمير محمد بن عبدالعزيز (التحلية) (شرقاً)",
-    "nameEn": "Prince Mohammed bin Abdulaziz Rd (Tahlia) (eastbound exit)"
+    "name": "طريق الأمير محمد بن عبدالعزيز (التحلية) (مدخل شرقي)",
+    "nameEn": "Prince Mohammed bin Abdulaziz Rd (Tahlia) (east entry)"
    },
    "geometry": {
     "type": "Point",
     "coordinates": [
-     46.695038,
-     24.705305
+     46.689221,
+     24.702808
     ]
    }
   },
@@ -1609,14 +1013,14 @@
    "properties": {
     "id": "G-URB-W",
     "kind": "gate",
-    "name": "طريق العروبة (غرباً)",
-    "nameEn": "Al Urubah Rd (westbound exit)"
+    "name": "طريق العروبة (مدخل غربي)",
+    "nameEn": "Al Urubah Rd (west entry)"
    },
    "geometry": {
     "type": "Point",
     "coordinates": [
-     46.651395,
-     24.703021
+     46.667056,
+     24.709743
     ]
    }
   },
@@ -1625,46 +1029,14 @@
    "properties": {
     "id": "G-URB-E",
     "kind": "gate",
-    "name": "طريق العروبة (شرقاً)",
-    "nameEn": "Al Urubah Rd (eastbound exit)"
+    "name": "طريق العروبة (مدخل شرقي)",
+    "nameEn": "Al Urubah Rd (east entry)"
    },
    "geometry": {
     "type": "Point",
     "coordinates": [
-     46.688087,
-     24.71877
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "G-KAR-W",
-    "kind": "gate",
-    "name": "طريق الملك عبدالله (غرباً)",
-    "nameEn": "King Abdullah Rd (westbound exit)"
-   },
-   "geometry": {
-    "type": "Point",
-    "coordinates": [
-     46.638125,
-     24.728726
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "G-KAR-E",
-    "kind": "gate",
-    "name": "طريق الملك عبدالله (شرقاً)",
-    "nameEn": "King Abdullah Rd (eastbound exit)"
-   },
-   "geometry": {
-    "type": "Point",
-    "coordinates": [
-     46.674817,
-     24.744476
+     46.68227,
+     24.716273
     ]
    }
   },
@@ -1673,8 +1045,8 @@
    "properties": {
     "id": "Z-OLAYA",
     "kind": "zone",
-    "name": "حي العليا",
-    "nameEn": "Al Olaya District"
+    "name": "جنوب العليا",
+    "nameEn": "South Olaya"
    },
    "geometry": {
     "type": "Point",
@@ -1687,48 +1059,16 @@
   {
    "type": "Feature",
    "properties": {
-    "id": "Z-WURUD",
+    "id": "Z-OLAYA-MID",
     "kind": "zone",
-    "name": "حي الورود",
-    "nameEn": "Al Wurud District"
+    "name": "وسط العليا (التحلية)",
+    "nameEn": "Central Olaya (Tahlia)"
    },
    "geometry": {
     "type": "Point",
     "coordinates": [
-     46.6785,
-     24.7244
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "Z-RAHMANIYAH",
-    "kind": "zone",
-    "name": "حي الرحمانية",
-    "nameEn": "Ar Rahmaniyah District"
-   },
-   "geometry": {
-    "type": "Point",
-    "coordinates": [
-     46.6594,
-     24.7161
-    ]
-   }
-  },
-  {
-   "type": "Feature",
-   "properties": {
-    "id": "Z-SULAYMANIYAH",
-    "kind": "zone",
-    "name": "حي السليمانية",
-    "nameEn": "As Sulaymaniyah District"
-   },
-   "geometry": {
-    "type": "Point",
-    "coordinates": [
-     46.7025,
-     24.6986
+     46.683108,
+     24.707661
     ]
    }
   },

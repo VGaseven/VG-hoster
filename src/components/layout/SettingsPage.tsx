@@ -45,6 +45,16 @@ export function SettingsPage() {
             <li>الخريطة الفاتحة: <span className="num text-slate-400">{BASEMAP_LIGHT}</span></li>
             <li>الصور الفضائية: {satelliteAvailable() ? 'مُعدّة' : 'غير مُعدّة (VITE_SATELLITE_TILES)'}</li>
             <li>التضاريس: {terrainAvailable() ? 'مُعدّة' : 'غير مُعدّة (VITE_TERRAIN_TILES)'}</li>
+            <li data-testid="kit-status">
+              نماذج المباني المرخّصة (اختياري):{' '}
+              {s.kitStatus.state === 'ready'
+                ? `مفعّلة — ${s.kitStatus.name} (${s.kitStatus.models} نماذج، ${s.kitStatus.instances} موضعاً داخل حي العليا)`
+                : s.kitStatus.state === 'loading'
+                  ? 'جارٍ التحميل…'
+                  : s.kitStatus.state === 'error'
+                    ? `خطأ: ${s.kitStatus.message}`
+                    : 'غير موجودة — ضع ملفات GLB في public/models/kitbash ثم شغّل npm run models:index'}
+            </li>
             <li>محرك التوجيه: موجّه محلي على شبكة الدراسة (محاكاة) — OSRM اختياري</li>
             <li>
               خادم تصدير الفيديو المحلي:{' '}

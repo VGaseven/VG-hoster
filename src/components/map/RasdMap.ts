@@ -7,11 +7,14 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 const rtlPluginUrl = '/vendor/mapbox-gl-rtl-text.js';
 import { buffer } from '@turf/turf';
 import type { Conflict, LngLat, Project } from '@/types';
-import { NODES, SEGMENTS, STUDY_AREA_VIEW, ZONES } from '@/data/network';
+import { DISTRICT_NAME_AR, DISTRICT_OUTLINE, NODES, SEGMENTS, STUDY_AREA_VIEW, ZONES, uvToLngLat } from '@/data/network';
 import { buildingsGeoJSON, generateBuildings } from '@/data/buildings';
 import { ORGANIZATIONS } from '@/data/organizations';
 import { closureLine, projectMidpoint } from '@/engine/spatial/geometry';
 import { vehiclePositions, type VehicleSet } from '@/engine/traffic/vehicles';
+import { KIT_BASE_PATH, assignKitModels, loadKitManifest, replacedBuildingIds } from '@/data/kitbash';
+import { buildKitGroup, type LoadedKit } from './kitScene';
+import { createKitLayer, KIT_LAYER_ID } from './KitbashLayer';
 import { offlineStyle, styleFor, terrainAvailable, TERRAIN_ENCODING, TERRAIN_TILES, type BaseStyle } from './styles';
 
 let rtlRequested = false;
@@ -29,6 +32,12 @@ const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: 
 let BUILDINGS_CACHE: ReturnType<typeof buildingsGeoJSON> | null = null;
 const offlineBuildings = () => (BUILDINGS_CACHE ??= buildingsGeoJSON(generateBuildings()));
 
+export type KitStatus = { state: 'none' | 'loading' | 'ready' | 'error'; name?: string; models?: number; instances?: number; message?: string };
+
+const KIT_URL = `/${KIT_BASE_PATH}`;
+let manifestPromise: ReturnType<typeof loadKitManifest> | null = null;
+const kitManifest = () => (manifestPromise ??= loadKitManifest(KIT_URL));
+
 export interface RasdMapOptions {
   style: BaseStyle;
   interactive?: boolean;
@@ -39,6 +48,7 @@ export interface RasdMapOptions {
   onConflictClick?: (conflictId: string) => void;
   onFallback?: (reason: string) => void;
   onReady?: () => void;
+  onKit?: (s: KitStatus) => void;
   labels?: boolean;
   vehicleCount?: number;
 }
@@ -72,6 +82,10 @@ export class RasdMap {
   /** Automated browsers (tests) run software WebGL: animate vehicles at a lower rate. */
   private frameMs = typeof navigator !== 'undefined' && navigator.webdriver ? 250 : 50;
   private paused = false;
+  private kit: LoadedKit | null = null;
+  /** set on 'style.load' (map.isStyleLoaded() is false while any geojson source is updating) */
+  private styleReady = false;
+  private kitHidden = new Set<string>();
 
   constructor(container: HTMLElement, opts: RasdMapOptions) {
     ensureRtl();
@@ -92,6 +106,7 @@ export class RasdMap {
     });
     this.armFallback();
     this.map.on('style.load', () => {
+      this.styleReady = true;
       if (this.fallbackTimer) clearTimeout(this.fallbackTimer);
       this.installLayers();
       if (!this.ready) {
@@ -108,6 +123,39 @@ export class RasdMap {
     this.map.on('mousemove', 'rasd-network-hit', () => (this.map.getCanvas().style.cursor = 'pointer'));
     this.map.on('mouseleave', 'rasd-network-hit', () => (this.map.getCanvas().style.cursor = ''));
     this.startVehicleLoop();
+    void this.loadKit();
+  }
+
+  /** Optional licensed models: only when a valid manifest exists in public/models/kitbash. */
+  private async loadKit() {
+    const manifest = await kitManifest();
+    if (!manifest) {
+      this.opts.onKit?.({ state: 'none' });
+      return;
+    }
+    this.opts.onKit?.({ state: 'loading', name: manifest.name });
+    try {
+      const placements = assignKitModels(manifest);
+      const kit = await buildKitGroup(KIT_URL, manifest, placements);
+      if (this.destroyed) return;
+      if (!kit.models) throw new Error('no model could be loaded');
+      this.kit = kit;
+      this.kitHidden = replacedBuildingIds(placements);
+      this.opts.onKit?.({ state: 'ready', name: manifest.name, models: kit.models, instances: kit.instances });
+      if (this.styleReady) this.installKit();
+    } catch (e) {
+      this.opts.onKit?.({ state: 'error', name: manifest.name, message: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  private installKit() {
+    const m = this.map;
+    const on = !!this.kit && this.overlays.kitbash && this.overlays.buildings && this.isOfflineStyle;
+    if (m.getLayer(KIT_LAYER_ID)) m.removeLayer(KIT_LAYER_ID);
+    if (m.getLayer('rasd-buildings-3d')) m.setFilter('rasd-buildings-3d', on ? ['!', ['in', ['get', 'id'], ['literal', [...this.kitHidden]]]] : null);
+    if (!on) return;
+    // above ground layers (lines don't depth-test) so models occlude the roads behind them
+    m.addLayer(createKitLayer(this.kit!), m.getLayer('rasd-pick-line') ? 'rasd-pick-line' : undefined);
   }
 
   private armFallback() {
@@ -121,6 +169,7 @@ export class RasdMap {
   private useFallback(reason: string) {
     if (this.destroyed || this.usingFallback) return;
     this.usingFallback = true;
+    this.styleReady = false;
     this.map.setStyle(offlineStyle('dark'));
     this.opts.onFallback?.(reason);
   }
@@ -129,6 +178,7 @@ export class RasdMap {
     if (s === this.styleName && !this.usingFallback) return;
     this.styleName = s;
     this.usingFallback = s === 'offline';
+    this.styleReady = false;
     this.map.setStyle(styleFor(s) as string | StyleSpecification);
     this.armFallback();
   }
@@ -192,6 +242,9 @@ export class RasdMap {
         },
       });
     }
+    if (!m.getSource('rasd-district'))
+      m.addSource('rasd-district', { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: DISTRICT_OUTLINE } } });
+    m.addLayer({ id: 'rasd-district-line', type: 'line', source: 'rasd-district', paint: { 'line-color': '#8b7bff', 'line-width': 2, 'line-opacity': 0.75, 'line-dasharray': [3, 2] } });
     for (const id of ['rasd-network', 'rasd-closures', 'rasd-workzones', 'rasd-conflict-links', 'rasd-highlight', 'rasd-routes', 'rasd-vehicles', 'rasd-overlap', 'rasd-pick']) add(id);
 
     m.addLayer({
@@ -294,6 +347,7 @@ export class RasdMap {
     if (this.overlays.terrain) this.applyTerrain(true);
     this.applyOverlays();
     this.applyLabels();
+    if (this.kit) this.installKit();
   }
 
   private handleClick(e: maplibregl.MapMouseEvent) {
@@ -439,6 +493,12 @@ export class RasdMap {
     this.labelMarkers.forEach((m) => m.remove());
     this.labelMarkers = [];
     if (this.opts.labels === false || !this.overlays.neighborhoods) return;
+    {
+      const el = document.createElement('div');
+      el.className = 'rasd-label district';
+      el.textContent = `${DISTRICT_NAME_AR} — نطاق المحاكاة`;
+      this.labelMarkers.push(new maplibregl.Marker({ element: el }).setLngLat(uvToLngLat(-3.2, 0.6)).addTo(this.map));
+    }
     for (const z of ZONES) {
       const el = document.createElement('div');
       el.className = z.id === 'Z-KINGDOM' || z.id === 'Z-FAISALIAH' ? 'rasd-label landmark' : 'rasd-label';
@@ -450,7 +510,7 @@ export class RasdMap {
       const seen = new Set<string>();
       for (const s of SEGMENTS) {
         if (!s.closable || seen.has(s.roadId)) continue;
-        if (!/-(THL|URB|OLY|KFR)$/.test(s.id) && !/-(THL-URB|KFR-OLY)$/.test(s.id)) continue;
+        if (!['KFR-MAK-THL', 'OLY-THL-URB', 'MAK-KFR-OLY', 'THL-KFR-OLY', 'URB-KFR-OLY'].includes(s.id)) continue;
         seen.add(s.roadId);
         const mid: LngLat = [(s.coords[0][0] + s.coords[s.coords.length - 1][0]) / 2, (s.coords[0][1] + s.coords[s.coords.length - 1][1]) / 2];
         const el = document.createElement('div');
@@ -474,6 +534,7 @@ export class RasdMap {
     const prev = this.overlays;
     this.overlays = { ...o };
     if (prev.terrain !== o.terrain) this.applyTerrain(o.terrain);
+    if ((prev.kitbash !== o.kitbash || prev.buildings !== o.buildings) && this.kit && this.styleReady) this.installKit();
     this.applyOverlays();
     if (prev.neighborhoods !== o.neighborhoods) this.applyLabels();
   }
@@ -593,11 +654,12 @@ export class RasdMap {
   tour(onDone?: () => void) {
     this.stopCameraAnimation();
     this.anim = 'tour';
+    // single-district tour: حي العليا only
     const stops: { center: LngLat; zoom: number; pitch: number; bearing: number; hold: number }[] = [
-      { center: [46.6853, 24.7136], zoom: 11.3, pitch: 30, bearing: 0, hold: 2600 },
-      { center: [46.6744, 24.7114], zoom: 14.8, pitch: 68, bearing: -40, hold: 3200 },
-      { center: [46.6853, 24.6903], zoom: 15.2, pitch: 65, bearing: 30, hold: 3200 },
-      { center: [46.6705, 24.7255], zoom: 14.6, pitch: 60, bearing: -90, hold: 3200 },
+      { center: STUDY_AREA_VIEW.center, zoom: 13.3, pitch: 35, bearing: -25, hold: 2200 },
+      { center: [46.6744, 24.7114], zoom: 15.4, pitch: 68, bearing: -40, hold: 3000 },
+      { center: uvToLngLat(-1.5, 0.1), zoom: 15.2, pitch: 64, bearing: 20, hold: 3000 },
+      { center: [46.6853, 24.6903], zoom: 15.3, pitch: 65, bearing: 60, hold: 3000 },
       { ...STUDY_AREA_VIEW, hold: 1500 },
     ];
     let i = 0;

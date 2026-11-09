@@ -6,7 +6,7 @@ import { CityScene, type Camera, type SceneClosure } from '../components/CitySce
 import { camAt, kmCam } from '../camera/camera';
 import { getVideoData } from '../data';
 import { vehiclePositions } from '@/engine/traffic/vehicles';
-import { ZONES } from '@/data/network';
+import { DISTRICT_CENTER, ZONES } from '@/data/network';
 import { ORGANIZATIONS } from '@/data/organizations';
 import { CATEGORY_LABELS, KIND_LABELS, SEVERITY_LABELS } from '@/engine/conflicts/detect';
 import { fmtShort } from '@/utils/date';
@@ -42,7 +42,8 @@ export function sceneFrames(durationSec: number) {
 }
 
 const FONT = '"IBM Plex Sans Arabic", system-ui, sans-serif';
-const RIYADH: LngLat = [46.6853, 24.7136];
+/** single-district scope: حي العليا */
+const RIYADH: LngLat = DISTRICT_CENTER;
 
 function useScale() {
   const { width, height } = useVideoConfig();
@@ -110,7 +111,7 @@ const SceneIntro: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => {
   const { width: W, height: H, fps } = useVideoConfig();
   const s = useScale();
   const d = getVideoData();
-  const cam = camAt([{ at: 0, cam: kmCam(RIYADH, zoomFor(H, 13), 30, 0) }, { at: 1, cam: kmCam(RIYADH, zoomFor(H, 9.5), 42, -20) }], f / dur, p.cameraStyle);
+  const cam = camAt([{ at: 0, cam: kmCam(RIYADH, zoomFor(H, 7), 30, -10) }, { at: 1, cam: kmCam(RIYADH, zoomFor(H, 5.5), 42, -25) }], f / dur, p.cameraStyle);
   const t = spring({ frame: f - 8, fps, config: { damping: 20 } });
   return (
     <AbsoluteFill>
@@ -126,6 +127,7 @@ const SceneIntro: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => {
         <div dir="rtl" style={{ fontSize: 26 * s, color: '#cbd5e1', marginTop: 22 * s, maxWidth: '80%', lineHeight: 1.6 }}>
           خدمة تجمع خطط الإغلاقات، تكشف تعارضها وتقارن بدائلها، وتُظهر الإغلاقات مسبقاً لمستخدمي الطريق.
         </div>
+        <div dir="rtl" style={{ fontSize: 22 * s, color: '#94a3b8', marginTop: 14 * s }}>نطاق تجريبي: حي واحد — حي العليا، الرياض</div>
       </AbsoluteFill>
       <SimTag />
     </AbsoluteFill>
@@ -142,7 +144,7 @@ const SceneProblem: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => {
   const target = d.conflict.location;
   const cam = camAt(
     [
-      { at: 0, cam: kmCam(RIYADH, zoomFor(H, 9.5), 42, -20) },
+      { at: 0, cam: kmCam(RIYADH, zoomFor(H, 5.5), 42, -25) },
       { at: 0.55, cam: kmCam(target, zoomFor(H, 2.6), 58, -30) },
       { at: 1, cam: kmCam(target, zoomFor(H, 2.1), 62, -42) },
     ],
@@ -416,7 +418,7 @@ const SceneCitizen: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => {
   const d = getVideoData();
   const j = d.journey;
   const mid = j.now?.coords[Math.floor((j.now?.coords.length ?? 1) / 2)] ?? d.conflict.location;
-  const cam = camAt([{ at: 0, cam: kmCam(mid, zoomFor(H, 6.5), 35, -25) }, { at: 1, cam: kmCam(mid, zoomFor(H, 5.2), 45, -35) }], f / dur, p.cameraStyle);
+  const cam = camAt([{ at: 0, cam: kmCam(mid, zoomFor(H, 5), 35, -25) }, { at: 1, cam: kmCam(mid, zoomFor(H, 4.2), 45, -35) }], f / dur, p.cameraStyle);
   const draw = interpolate(f, [10, dur * 0.6], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
   const partial = (c: LngLat[]) => c.slice(0, Math.max(2, Math.ceil(c.length * draw)));
   const routes = [
@@ -468,7 +470,7 @@ const SceneClosing: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => {
   const { width: W, height: H, fps } = useVideoConfig();
   const s = useScale();
   const d = getVideoData();
-  const cam = camAt([{ at: 0, cam: kmCam(RIYADH, zoomFor(H, 7), 50, -40) }, { at: 1, cam: kmCam(RIYADH, zoomFor(H, 11), 38, -5) }], f / dur, p.cameraStyle);
+  const cam = camAt([{ at: 0, cam: kmCam(RIYADH, zoomFor(H, 4.5), 50, -40) }, { at: 1, cam: kmCam(RIYADH, zoomFor(H, 6.5), 38, -15) }], f / dur, p.cameraStyle);
   const t = spring({ frame: f - 5, fps, config: { damping: 20 } });
   return (
     <AbsoluteFill>

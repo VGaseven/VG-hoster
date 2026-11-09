@@ -18,6 +18,7 @@ export function MapToolbar() {
   const selected = useStore((s) => s.projects.find((p) => p.id === s.selectedProjectId));
   const [layersOpen, setLayersOpen] = useState(false);
   const rightOpen = useStore((s) => s.panels.right);
+  const kit = useStore((s) => s.kitStatus);
   const Btn = ({ onClick, label, children, active, testid }: { onClick: () => void; label: string; children: React.ReactNode; active?: boolean; testid?: string }) => (
     <button onClick={onClick} title={label} aria-label={label} data-testid={testid} className={cn('grid h-9 w-9 place-items-center rounded-lg transition hover:bg-white/8 active:scale-95', active ? 'bg-cyan-400/15 text-cyan-200' : 'text-slate-300')}>
       {children}
@@ -93,6 +94,7 @@ export function MapToolbar() {
           <Toggle label="التعارضات" checked={overlays.conflicts} onChange={(v) => setOverlay('conflicts', v)} />
           <Toggle label="المركبات المحاكاة" checked={overlays.vehicles} onChange={(v) => setOverlay('vehicles', v)} />
           <Toggle label="المباني ثلاثية الأبعاد" checked={overlays.buildings} onChange={(v) => setOverlay('buildings', v)} />
+          <Toggle label="نماذج المباني المرخّصة (اختياري)" checked={overlays.kitbash} disabled={kit.state !== 'ready'} hint="ضع ملفات GLB في public/models/kitbash ثم npm run models:index" onChange={(v) => setOverlay('kitbash', v)} />
           <Toggle label="أسماء الأحياء" checked={overlays.neighborhoods} onChange={(v) => setOverlay('neighborhoods', v)} />
           <Toggle label="التضاريس" checked={overlays.terrain} disabled={!terrainAvailable()} hint="يتطلب VITE_TERRAIN_TILES" onChange={(v) => setOverlay('terrain', v)} />
         </div>

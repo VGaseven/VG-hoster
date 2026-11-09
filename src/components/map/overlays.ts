@@ -7,6 +7,8 @@ export interface Overlays {
   vehicles: boolean;
   conflicts: boolean;
   terrain: boolean;
+  /** optional licensed building models (public/models/kitbash) */
+  kitbash: boolean;
 }
 
 export const DEFAULT_OVERLAYS: Overlays = {
@@ -18,4 +20,5 @@ export const DEFAULT_OVERLAYS: Overlays = {
   vehicles: true,
   conflicts: true,
   terrain: false,
+  kitbash: true,
 };

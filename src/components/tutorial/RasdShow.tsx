@@ -46,15 +46,15 @@ export interface Scene {
 
 export const SCENES: Scene[] = [
   {
-    title: 'حي العليا في الرياض — ثلاثي الأبعاد',
-    body: 'نطاق تجريبي صغير: حي واحد ومجموعة مشاريع افتراضية متقاربة على طريق الملك فهد وشارع العليا.',
+    title: 'حي العليا — نطاق المحاكاة ثلاثي الأبعاد',
+    body: 'نطاق تجريبي صغير: حي واحد فقط (حي العليا) ومجموعة مشاريع افتراضية متقاربة على طريق الملك فهد وشارع العليا.',
     ms: 7000,
     run: (nav, animated) => {
       S().resetScenario();
       S().setViewMode('after');
       nav('/map');
       S().setSimDate('2026-12-08', 8);
-      S().cameraCmd({ type: 'fly', center: STUDY_AREA_VIEW.center, zoom: 14, pitch: 60, bearing: -30, duration: animated ? 2600 : 0 });
+      S().cameraCmd({ type: 'fly', center: STUDY_AREA_VIEW.center, zoom: 13.8, pitch: 58, bearing: -25, duration: animated ? 2600 : 0 });
     },
   },
   {

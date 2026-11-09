@@ -11,8 +11,10 @@ team's Naqlthon 5 presentation:
 > **إدخال المشاريع ← تحليل التعارض ← مقارنة البدائل ← مراجعة القرار**
 > Project data → Conflict analysis → Alternative comparison → Decision review
 
-* **Scope**: one real Riyadh neighbourhood — **حي العليا (Al Olaya)**, King Fahd Rd / Olaya St
-  corridor — with clearly labelled *hypothetical* projects.
+* **Scope: one district only — حي العليا (Al Olaya), Riyadh.** The simulated network is the
+  district's own main roads (King Fahd Rd and Olaya St, crossed by Makkah Rd, Tahlia and Al Urubah
+  Rd) plus short boundary entries; buildings, camera, tour, citizen places and the video stay inside
+  the district (approximate outline shown on the map). All projects are clearly *hypothetical*.
 * **Three official alternatives**: تقديم الموعد حسب المرونة · تأخير الموعد حسب الأولوية ·
   نافذة مشتركة إذا أمكن فنيًا. Earlier/delay search the flexibility window for the closest slot
   that introduces no new conflicts; a shared window is **never auto-recommended** and requires
@@ -53,6 +55,8 @@ npm run dev            # web app (http://localhost:5173) + local render worker (
 | `npm run video:preview` | Remotion Studio for the video composition |
 | `npm run export-sim` | Render the cinematic MP4 → `output/rasd-simulation.mp4` |
 | `npm run render-server` | Local render worker only |
+| `npm run data:export` | Re-write the sample dataset in `public/demo-data/` |
+| `npm run models:sample` / `npm run models:index` | Optional building kit: write a self-made sample kit / index your own GLB files (see below) |
 | `npm run data:fetch-osm` | (needs Overpass access) replace schematic road geometry with exact OSM geometry |
 
 `export-sim` options: `-- --preset 1080p|4k|vertical|square --duration 45..60 --camera cinematic|orbit|topdown --no-captions --no-metrics --out <file>`.
@@ -86,6 +90,21 @@ Keyboard: `Space` play/pause · `R` reset camera · `2`/`3` 2D/3D · `[`/`]` spe
 | Traffic | Local static user-equilibrium model (BPR + MSA) on the study network with synthetic gravity demand calibrated to a congested peak; hourly demand profile; deterministic |
 | Routing | Local network router (Dijkstra on congested times). OSRM/Valhalla optional via env, not required |
 | Economics | Configurable illustrative model (formula shown in UI) |
+
+## Optional licensed building models (e.g. KitBash3D)
+
+Licensed kits are **never committed or redistributed** — `public/models/kitbash/` is gitignored.
+
+1. Export each building of your licensed kit to **GLB** (e.g. Blender → File → Export → glTF 2.0, *binary*).
+2. Copy the `.glb` files into `public/models/kitbash/`.
+3. Run `npm run models:index` (computes each model's bounding box and unit scale → `manifest.json`;
+   options `--unit 0.01` for centimetre exports, `--radius`, `--max`, `--name`).
+4. Reload: the offline digital twin and the video replace the synthetic blocks inside حي العليا with
+   your models (instanced Three.js, aligned to the street grid, matched to each footprint/height).
+   Settings shows the kit status; the overlay can be toggled. Without a manifest nothing changes.
+
+`npm run models:sample` writes a tiny self-made placeholder kit (not KitBash) to try the pipeline.
+Online vector basemaps keep real OSM buildings; the kit is applied on the offline twin.
 
 ## Optional providers (`.env`)
 

@@ -109,3 +109,8 @@ playwright-report/
 .remotion/
 *.tsbuildinfo
 .env
+
+# Licensed 3D assets (e.g. KitBash3D) — never commit
+public/models/kitbash/*
+!public/models/kitbash/README.md
+!public/models/kitbash/manifest.example.json

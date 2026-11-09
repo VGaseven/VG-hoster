@@ -32,7 +32,7 @@ export function bandOfHour(hour: number): number {
   return best;
 }
 
-const GATE_WEIGHT: Record<string, number> = { KFR: 10, MAK: 7, KAR: 7, OLY: 4, TAK: 4, THL: 3, URB: 3 };
+const GATE_WEIGHT: Record<string, number> = { KFR: 10, MAK: 7, OLY: 4, THL: 3, URB: 3 };
 const ZONE_WEIGHT: Record<string, number> = { 'Z-KINGDOM': 5, 'Z-FAISALIAH': 4 };
 
 export const CENTROIDS = [...GATES, ...ZONES];

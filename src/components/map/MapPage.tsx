@@ -44,7 +44,7 @@ export function MapPage() {
     <SidePanel width={330} testid="map-panel">
       <div className="space-y-4 overflow-y-auto p-4 scroll-thin">
         <div>
-          <h2 className="text-[15px] font-semibold">التوأم الرقمي — ممر العليا</h2>
+          <h2 className="text-[15px] font-semibold">التوأم الرقمي — حي العليا (نطاق المحاكاة)</h2>
           <p className="mt-1 text-[11.5px] leading-relaxed text-slate-400">حالة الشبكة في اللحظة المحاكاة الحالية. حرّك الخط الزمني لرؤية تغيّر الإغلاقات والحركة.</p>
           <div className="mt-2">
             <SimBadge />

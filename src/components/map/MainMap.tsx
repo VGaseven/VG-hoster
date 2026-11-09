@@ -49,6 +49,7 @@ export function MainMap() {
         pushAll();
       },
       onFallback: (r) => useStore.getState().setMapFallback(r),
+      onKit: (k) => useStore.getState().setKitStatus(k),
       onProjectClick: (id) => {
         useStore.getState().selectProject(id);
       },
@@ -75,7 +76,7 @@ export function MainMap() {
     });
     mapRef.current = m;
     // test/debug hooks (read-only)
-    Object.assign(window as object, { __rasdMap: m, __rasdSegments: Object.fromEntries(SEGMENT_BY_ID) });
+    Object.assign(window as object, { __rasdMap: m, __rasdStore: useStore, __rasdSegments: Object.fromEntries(SEGMENT_BY_ID) });
     const ro = new ResizeObserver(() => m.resize());
     ro.observe(ref.current);
     return () => {

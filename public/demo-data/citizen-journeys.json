@@ -1,30 +1,6 @@
 {
-  "note": "SYNTHETIC demonstration data for the RASD prototype (Naqlthon 5). Not real government roadworks. Road names real; geometry schematic/approximate.",
+  "note": "HYPOTHETICAL demonstration data for RASD (Naqlthon 5). Scope: one district — حي العليا, Riyadh. Not real government roadworks. Road names real; geometry schematic/approximate.",
   "places": [
-    {
-      "id": "pl-rahmaniyah",
-      "nodeId": "Z-RAHMANIYAH",
-      "nameAr": "حي الرحمانية",
-      "nameEn": "Ar Rahmaniyah"
-    },
-    {
-      "id": "pl-wurud",
-      "nodeId": "Z-WURUD",
-      "nameAr": "حي الورود",
-      "nameEn": "Al Wurud"
-    },
-    {
-      "id": "pl-olaya",
-      "nodeId": "Z-OLAYA",
-      "nameAr": "حي العليا",
-      "nameEn": "Al Olaya"
-    },
-    {
-      "id": "pl-sulay",
-      "nodeId": "Z-SULAYMANIYAH",
-      "nameAr": "حي السليمانية",
-      "nameEn": "As Sulaymaniyah"
-    },
     {
       "id": "pl-kingdom",
       "nodeId": "Z-KINGDOM",
@@ -38,43 +14,61 @@
       "nameEn": "Al Faisaliah Tower"
     },
     {
+      "id": "pl-olaya-mid",
+      "nodeId": "Z-OLAYA-MID",
+      "nameAr": "وسط العليا (التحلية)",
+      "nameEn": "Central Olaya (Tahlia)"
+    },
+    {
+      "id": "pl-olaya-s",
+      "nodeId": "Z-OLAYA",
+      "nameAr": "جنوب العليا",
+      "nameEn": "South Olaya"
+    },
+    {
       "id": "pl-kfr-n",
       "nodeId": "G-KFR-N",
-      "nameAr": "طريق الملك فهد — شمالاً",
-      "nameEn": "King Fahd Rd (north)"
+      "nameAr": "طريق الملك فهد — المدخل الشمالي",
+      "nameEn": "King Fahd Rd (north entry)"
     },
     {
       "id": "pl-kfr-s",
       "nodeId": "G-KFR-S",
-      "nameAr": "طريق الملك فهد — جنوباً",
-      "nameEn": "King Fahd Rd (south)"
+      "nameAr": "طريق الملك فهد — المدخل الجنوبي",
+      "nameEn": "King Fahd Rd (south entry)"
     },
     {
-      "id": "pl-kar-w",
-      "nodeId": "G-KAR-W",
-      "nameAr": "طريق الملك عبدالله — غرباً",
-      "nameEn": "King Abdullah Rd (west)"
+      "id": "pl-oly-n",
+      "nodeId": "G-OLY-N",
+      "nameAr": "شارع العليا — المدخل الشمالي",
+      "nameEn": "Olaya St (north entry)"
     },
     {
       "id": "pl-mak-e",
       "nodeId": "G-MAK-E",
-      "nameAr": "طريق مكة المكرمة — شرقاً",
-      "nameEn": "Makkah Rd (east)"
+      "nameAr": "طريق مكة المكرمة — المدخل الشرقي",
+      "nameEn": "Makkah Rd (east entry)"
+    },
+    {
+      "id": "pl-mak-w",
+      "nodeId": "G-MAK-W",
+      "nameAr": "طريق مكة المكرمة — المدخل الغربي",
+      "nameEn": "Makkah Rd (west entry)"
     }
   ],
   "journeys": [
     {
       "id": "J1",
-      "titleAr": "من الرحمانية إلى برج الفيصلية — صباح الدوام",
-      "originPlaceId": "pl-rahmaniyah",
+      "titleAr": "من مدخل طريق الملك فهد الشمالي إلى برج الفيصلية — صباح الدوام",
+      "originPlaceId": "pl-kfr-n",
       "destinationPlaceId": "pl-faisaliah",
       "date": "2026-12-16",
       "hour": 8
     },
     {
       "id": "J2",
-      "titleAr": "من حي الورود إلى طريق مكة — عودة المساء",
-      "originPlaceId": "pl-wurud",
+      "titleAr": "من برج المملكة إلى طريق مكة (شرقاً) — عودة المساء",
+      "originPlaceId": "pl-kingdom",
       "destinationPlaceId": "pl-mak-e",
       "date": "2027-01-14",
       "hour": 17

@@ -24,7 +24,7 @@ export const TUTORIAL_STEPS: Step[] = [
   { title: 'آلية الحل: بيانات ← تحليل ← بدائل ← مراجعة', body: 'المراحل الأربع مترابطة: إدخال المشاريع، تحليل التعارض، مقارنة البدائل، ثم مراجعة القرار من الجهة المختصة.', route: '/', target: '[data-tour="workflow"]' },
   { title: 'حي العليا ثلاثي الأبعاد', body: 'النطاق التجريبي: حي واحد ومجموعة مشاريع افتراضية متقاربة. استخدم أدوات الكاميرا (2D/3D، تدوير، إمالة) أو الجولة السينمائية.', route: '/map', target: '[data-tour="map-controls"]', demoLabel: 'تشغيل الجولة', demo: () => S().cameraCmd({ type: 'tour' }) },
   { title: 'إدخال المشاريع', body: 'تُدخل الجهة المنفذة الموقع والمدة ونطاق الإغلاق وقيود التنفيذ (أبكر بدء، آخر إنجاز، الأولوية، المسارات المتأثرة).', route: '/register', target: '[data-tour="register-panel"]' },
-  { title: 'حدّد نطاق الإغلاق على الخريطة', body: 'انقر على مقطع طريق لتحديد بداية الإغلاق ثم انقر مرة أخرى لنهايته — وراجع الإغلاق على الخريطة قبل الإرسال.', route: '/register', target: '[data-tour="pick-segment"]', demoLabel: 'تحديد مقطع تجريبي', demo: () => S().setDraft({ segmentId: 'TAK-THL-URB', from: 0.2, to: 0.7, pickStage: 'idle' }) },
+  { title: 'حدّد نطاق الإغلاق على الخريطة', body: 'انقر على مقطع طريق لتحديد بداية الإغلاق ثم انقر مرة أخرى لنهايته — وراجع الإغلاق على الخريطة قبل الإرسال.', route: '/register', target: '[data-tour="pick-segment"]', demoLabel: 'تحديد مقطع تجريبي', demo: () => S().setDraft({ segmentId: 'OLY-MAK-THL', from: 0.2, to: 0.7, pickStage: 'idle' }) },
   { title: 'تحليل التعارض', body: 'قراءة المشاريع معاً بدل التعامل مع كل إغلاق منفرداً: مكانياً (Turf) وزمنياً (التواريخ وساعات العمل) وشبكياً (نموذج الحركة).', route: '/conflicts', target: '[data-tour="conflicts-panel"]', prepare: () => S().selectConflict(null) },
   {
     title: 'افهم أدلة التعارض',
