@@ -14,10 +14,12 @@ import { OperatorsPage } from '@/components/citizen/OperatorsPage';
 const AnalyticsPage = lazy(() => import('@/components/analytics/AnalyticsPage'));
 const StudioPage = lazy(() => import('@/components/video/StudioPage'));
 const TwinPage = lazy(() => import('@/twin/TwinPage'));
+const TwinCapture = lazy(() => import('@/twin/TwinCapture'));
 
 const Loading = () => <div className="grid h-full place-items-center text-sm text-slate-400">جارٍ التحميل…</div>;
 
 const router = createBrowserRouter([
+  { path: '/twin-capture', element: <Suspense fallback={null}><TwinCapture /></Suspense> },
   {
     path: '/',
     element: <Layout />,

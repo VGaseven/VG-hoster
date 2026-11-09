@@ -13,15 +13,15 @@ import { mulberry32 } from '@/utils/random';
 
 /** Neutral palette for the stand-ins. Replaced by colours sampled from the kit once it is supplied. */
 export const PALETTE = {
-  sky: 0x0b1530,
-  fog: 0x111d3c,
-  ground: 0x1b2333,
-  asphalt: 0x2b2f38,
+  sky: 0x9cc0e4,
+  fog: 0xc4d4e6,
+  ground: 0x6f6a5f,
+  asphalt: 0x3b3e45,
   marking: 0xe9edf2,
   yellow: 0xf2c94c,
   sidewalk: 0x6b6f78,
   curb: 0x9aa0a8,
-  building: [0x55606f, 0x6a7380, 0x4b5563, 0x7b8493, 0x5c6573],
+  building: [0xc9c3b6, 0xb7bcc4, 0xa9a397, 0xd8d2c4, 0x9ea6b2],
   glass: 0x7fa7d8,
   bridge: 0x8a8f99,
   closure: 0xff5a36,
@@ -99,7 +99,7 @@ export class TwinScene {
     this.controls.maxDistance = 2200;
     this.controls.addEventListener('start', () => (this.camTween = null));
     this.scene.background = new THREE.Color(PALETTE.sky);
-    this.scene.fog = new THREE.Fog(PALETTE.fog, 900, 2600);
+    this.scene.fog = new THREE.Fog(PALETTE.fog, 1100, 3200);
     this.buildLights();
     this.buildGround();
     this.buildRoads();
@@ -115,8 +115,8 @@ export class TwinScene {
 
   // ───────────────────────── static environment ─────────────────────────
   private buildLights() {
-    this.scene.add(new THREE.HemisphereLight(0xcfe0ff, 0x2a2238, 1.1));
-    const sun = new THREE.DirectionalLight(0xfff1dc, 2.2);
+    this.scene.add(new THREE.HemisphereLight(0xdfeaff, 0x6b5f4f, 1.5));
+    const sun = new THREE.DirectionalLight(0xfff1dc, 2.8);
     sun.position.set(-500, 700, 300);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
@@ -139,7 +139,7 @@ export class TwinScene {
     for (const b of TWIN_BLOCKS) {
       const m = new THREE.Mesh(
         new THREE.BoxGeometry(b.x1 - b.x0 - 30, 0.3, b.z1 - b.z0 - 30),
-        new THREE.MeshStandardMaterial({ color: 0x2c3442, roughness: 0.95 }),
+        new THREE.MeshStandardMaterial({ color: 0x8c8678, roughness: 0.95 }),
       );
       m.position.set((b.x0 + b.x1) / 2, 0.15, (b.z0 + b.z1) / 2);
       m.receiveShadow = true;
@@ -148,12 +148,13 @@ export class TwinScene {
   }
 
   private buildRoads() {
-    const asphalt = new THREE.MeshStandardMaterial({ color: PALETTE.asphalt, roughness: 0.92 });
-    const sidewalk = new THREE.MeshStandardMaterial({ color: PALETTE.sidewalk, roughness: 0.9 });
+    const asphalt = new THREE.MeshStandardMaterial({ color: PALETTE.asphalt, roughness: 0.92, map: noiseTexture(256, 40, 18, 8) });
+    const sidewalk = new THREE.MeshStandardMaterial({ color: PALETTE.sidewalk, roughness: 0.9, map: pavingTexture() });
     const marking = new THREE.MeshBasicMaterial({ color: PALETTE.marking });
     const yellow = new THREE.MeshBasicMaterial({ color: PALETTE.yellow });
     const dashes: THREE.Matrix4[] = [];
     const solid: THREE.Matrix4[] = [];
+    const yellowLines: THREE.Matrix4[] = [];
     for (const r of TWIN_ROADS) {
       if (r.kind === 'bridge') continue;
       const { a, len, dx, dz } = ROAD_DIR(r, r.from);
@@ -188,6 +189,7 @@ export class TwinScene {
         for (let k = 1; k < lanes; k++) along(0, side * (median + k * LANE_W), dashes, 3, 6);
         along(0, side * (median + lanes * LANE_W - 0.3), solid, len, 0);
       }
+      if (median) for (const side of [-1, 1]) along(0, side * (median + 0.3), yellowLines, len, 0);
       if (median) {
         const m = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.6, len - w), new THREE.MeshStandardMaterial({ color: 0x9aa0a8 }));
         m.position.set(cx, 0.3, cz);
@@ -209,7 +211,7 @@ export class TwinScene {
     };
     inst(dashes, marking);
     inst(solid, marking);
-    void yellow;
+    inst(yellowLines, yellow);
     // intersections + zebra crossings
     for (const n of TWIN_NODES.filter((x) => !x.gate && !x.id.startsWith('K'))) {
       const roads = TWIN_ROADS.filter((r) => r.from === n.id || r.to === n.id);
@@ -258,6 +260,52 @@ export class TwinScene {
       this.scene.add(im);
     };
     add(poles, new THREE.MeshStandardMaterial({ color: 0x8b93a1, metalness: 0.6, roughness: 0.4 }));
+    // palm trees: arterial median + sidewalks (Riyadh streetscape)
+    const trunks: THREE.Matrix4[] = [];
+    const crowns: THREE.Matrix4[] = [];
+    const palm = (x: number, z: number, h: number) => {
+      trunks.push(new THREE.Matrix4().compose(new THREE.Vector3(x, h / 2, z), new THREE.Quaternion(), new THREE.Vector3(0.45, h, 0.45)));
+      for (let k = 0; k < 7; k++) {
+        const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(1.05, (k / 7) * Math.PI * 2, 0, 'YXZ'));
+        crowns.push(new THREE.Matrix4().compose(new THREE.Vector3(x, h, z), q, new THREE.Vector3(0.9, 4.2, 0.25)));
+      }
+    };
+    for (const r of TWIN_ROADS) {
+      if (r.kind === 'bridge') continue;
+      const { a, len, dx, dz } = ROAD_DIR(r, r.from);
+      const step = r.kind === 'arterial' ? 26 : 38;
+      for (let s2 = 30; s2 < len - 20; s2 += step) {
+        const h = 7 + ((s2 * 13) % 5);
+        if (r.kind === 'arterial') palm(a[0] + dx * s2, a[1] + dz * s2, h);
+        const off = roadWidth(r) / 2 + SIDEWALK_W - 1;
+        if (r.kind !== 'local') for (const side of [-1, 1]) palm(a[0] + dx * (s2 + 13) - dz * off * side, a[1] + dz * (s2 + 13) + dx * off * side, h - 1);
+      }
+    }
+    const trunkMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.5, 0.75, 1, 7), new THREE.MeshStandardMaterial({ color: 0x7a5a3a, roughness: 1 }), trunks.length);
+    trunks.forEach((m, i) => trunkMesh.setMatrixAt(i, m));
+    trunkMesh.castShadow = true;
+    const crownGeo = new THREE.ConeGeometry(1, 1, 4);
+    crownGeo.translate(0, 0.5, 0);
+    const crownMesh = new THREE.InstancedMesh(crownGeo, new THREE.MeshStandardMaterial({ color: 0x3f7a3a, roughness: 0.8 }), crowns.length);
+    crowns.forEach((m, i) => crownMesh.setMatrixAt(i, m));
+    crownMesh.castShadow = true;
+    this.scene.add(trunkMesh, crownMesh);
+    // traffic lights at the arterial intersections
+    for (const id of ['A1', 'A2', 'A3', 'B1', 'B2', 'B3']) {
+      const n = NODE_BY.get(id)!;
+      for (const [ox, oz] of [
+        [14, 14],
+        [-14, -14],
+      ]) {
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.2, 6, 8), new THREE.MeshStandardMaterial({ color: 0x3a3f47 }));
+        pole.position.set(n.p[0] + ox, 3, n.p[1] + oz);
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 2, 0.6), new THREE.MeshStandardMaterial({ color: 0x15181d }));
+        head.position.set(n.p[0] + ox, 6.2, n.p[1] + oz);
+        const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), new THREE.MeshBasicMaterial({ color: ox > 0 ? 0x22c55e : 0xef4444 }));
+        lamp.position.set(n.p[0] + ox, ox > 0 ? 5.6 : 6.8, n.p[1] + oz + 0.32);
+        this.scene.add(pole, head, lamp);
+      }
+    }
     add(lamps, new THREE.MeshStandardMaterial({ color: 0xfff3c4, emissive: 0xffd27a, emissiveIntensity: 0.9 }));
   }
 
@@ -394,9 +442,10 @@ export class TwinScene {
     }
     // warning sign
     const tex = signTexture('أعمال حفر — رصد', e.titleAr, '#b45309');
-    const board = new THREE.Mesh(new THREE.PlaneGeometry(10, 3.2), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }));
+    // face traffic approaching from the road's start (FrontSide only → never mirrored)
+    const board = new THREE.Mesh(new THREE.PlaneGeometry(10, 3.2), new THREE.MeshBasicMaterial({ map: tex }));
     board.position.set(a[0] + dx * (s0 - 30) + 14, 4.5, a[1] + dz * (s0 - 30));
-    board.rotation.y = ang;
+    board.rotation.y = ang + Math.PI;
     g.add(board);
     // pulsing beacon
     const beacon = new THREE.Mesh(new THREE.SphereGeometry(1.4, 16, 12), new THREE.MeshBasicMaterial({ color: PALETTE.hazard, transparent: true, opacity: 0.8 }));
@@ -577,7 +626,7 @@ export class TwinScene {
 
   // ───────────────────────── loop ─────────────────────────
   private loop = () => {
-    if (this.disposed) return;
+    if (this.disposed || this.disposedLoop) return;
     this.raf = requestAnimationFrame(this.loop);
     const now = performance.now();
     const dt = Math.min(0.05, (now - this.last) / 1000);
@@ -647,6 +696,29 @@ export class TwinScene {
     this.carMesh.instanceMatrix.needsUpdate = true;
   }
 
+  /** Deterministic frame for video capture: advance vehicles by dt and render once. */
+  renderFrame(dt: number, cam?: { pos: THREE.Vector3; target: THREE.Vector3 }) {
+    if (this.state) this.stepVehicles(dt);
+    if (cam) {
+      this.camTween = null;
+      this.camera.position.copy(cam.pos);
+      this.controls.target.copy(cam.target);
+      this.camera.lookAt(cam.target);
+    }
+    for (const g of this.zones.values()) {
+      const b = g.getObjectByName('beacon') as THREE.Mesh | undefined;
+      if (b) b.scale.setScalar(1.15);
+    }
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Stop the interactive loop (capture mode drives frames explicitly). */
+  stopLoop() {
+    cancelAnimationFrame(this.raf);
+    this.disposedLoop = true;
+  }
+  private disposedLoop = false;
+
   resize() {
     const w = this.container.clientWidth;
     const h = this.container.clientHeight;
@@ -685,6 +757,48 @@ function excavator(x: number, z: number, ang: number) {
   g.position.set(x, 0.2, z);
   g.rotation.y = ang;
   return g;
+}
+
+function noiseTexture(size: number, base: number, amp: number, repeat: number) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d')!;
+  const img = ctx.createImageData(size, size);
+  const r = mulberry32(3);
+  for (let i = 0; i < size * size; i++) {
+    const v = 200 + (r() - 0.5) * amp * 2 + (r() < 0.004 ? -60 : 0);
+    img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = Math.max(base, Math.min(255, v));
+    img.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(repeat, repeat * 20);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function pavingTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#d9d6cf';
+  ctx.fillRect(0, 0, 64, 64);
+  ctx.strokeStyle = '#a9a59c';
+  ctx.lineWidth = 2;
+  for (let k = 0; k <= 64; k += 16) {
+    ctx.beginPath();
+    ctx.moveTo(k, 0);
+    ctx.lineTo(k, 64);
+    ctx.moveTo(0, k);
+    ctx.lineTo(64, k);
+    ctx.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(1, 60);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
 }
 
 function windowTexture() {
