@@ -1,0 +1,305 @@
+{
+ "type": "FeatureCollection",
+ "note": "SYNTHETIC demonstration data for the RASD prototype (Naqlthon 5). Not real government roadworks. Road names real; geometry schematic/approximate.",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "projectId": "RASD-P01",
+    "title": "إعادة تأهيل خط مياه رئيسي — طريق الملك فهد",
+    "org": "water",
+    "start": "2026-12-06",
+    "end": "2026-12-24"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      46.67825492023572,
+      24.701391025613162
+     ],
+     [
+      46.67477945783072,
+      24.708123533621958
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "projectId": "RASD-P02",
+    "title": "تمديد كابلات جهد متوسط — طريق الملك فهد",
+    "org": "electricity",
+    "start": "2026-12-15",
+    "end": "2027-01-08"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      46.6765172360022,
+      24.70475728962312
+     ],
+     [
+      46.673041585702215,
+      24.711489757605495
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "projectId": "RASD-P03",
+    "title": "مد ألياف بصرية — طريق الملك فهد شمال العروبة",
+    "org": "telecom",
+    "start": "2027-01-05",
+    "end": "2027-01-25"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      46.668713875616355,
+      24.719874922571265
+     ],
+     [
+      46.662079238678054,
+      24.732727893412445
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "projectId": "RASD-P04",
+    "title": "تطوير الأرصفة والإنارة — شارع العليا (شمال)",
+    "org": "municipality",
+    "start": "2027-01-10",
+    "end": "2027-02-01"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      46.676453,
+      24.713776
+     ],
+     [
+      46.663183,
+      24.739482
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "projectId": "RASD-P05",
+    "title": "توصيلات مياه للمباني — طريق العروبة",
+    "org": "water",
+    "start": "2027-01-03",
+    "end": "2027-01-12"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      46.67306989561678,
+      24.712324304214675
+     ],
+     [
+      46.67607709561674,
+      24.71361470421478
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "projectId": "RASD-P06",
+    "title": "نقل كابينة اتصالات — طريق العروبة",
+    "org": "telecom",
+    "start": "2027-01-20",
+    "end": "2027-01-28"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      46.67382168977248,
+      24.712646909834305
+     ],
+     [
+      46.67532528977242,
+      24.71329210983443
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "projectId": "RASD-P07",
+    "title": "تعزيز شبكة التوزيع الكهربائي — طريق العروبة",
+    "org": "electricity",
+    "start": "2027-02-05",
+    "end": "2027-02-14"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      46.67288194768663,
+      24.7122436522244
+     ],
+     [
+      46.67494938831136,
+      24.713130811239317
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "projectId": "RASD-P08",
+    "title": "إصلاح طارئ لمغذٍّ كهربائي — طريق مكة المكرمة",
+    "org": "electricity",
+    "start": "2026-12-08",
+    "end": "2026-12-20"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      46.678778380536876,
+      24.68137946489226
+     ],
+     [
+      46.683718401539565,
+      24.68349984469558
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "projectId": "RASD-P09",
+    "title": "إعادة سفلتة — طريق مكة المكرمة بين التخصصي والملك فهد",
+    "org": "roads",
+    "start": "2026-12-12",
+    "end": "2026-12-28"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      46.68063086872093,
+      24.682174626257307
+     ],
+     [
+      46.686806,
+      24.684825
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "projectId": "RASD-P10",
+    "title": "صيانة دورية ليلية — طريق مكة المكرمة شرق العليا",
+    "org": "roads",
+    "start": "2027-02-01",
+    "end": "2027-02-10"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      46.69172835805393,
+      24.686938340341605
+     ],
+     [
+      46.70103555805247,
+      24.69093274034494
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "projectId": "RASD-P11",
+    "title": "صيانة غرف تفتيش — شارع التخصصي (جنوب)",
+    "org": "water",
+    "start": "2026-12-01",
+    "end": "2026-12-05"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      46.67302392750993,
+      24.68229862716867
+     ],
+     [
+      46.67087569925094,
+      24.686460542454697
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "projectId": "RASD-P12",
+    "title": "توسعة شبكة الجيل الخامس — طريق الملك عبدالله",
+    "org": "telecom",
+    "start": "2027-02-15",
+    "end": "2027-02-25"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      46.65201487366506,
+      24.734688521398077
+     ],
+     [
+      46.65448487366389,
+      24.73574872140074
+     ]
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "properties": {
+    "projectId": "RASD-P13",
+    "title": "إصلاح فواصل تمدد جسر — طريق الملك فهد جنوب طريق مكة",
+    "org": "roads",
+    "start": "2027-01-15",
+    "end": "2027-01-22"
+   },
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      46.69017644411459,
+      24.678297009402538
+     ],
+     [
+      46.688491266176236,
+      24.68156101410475
+     ]
+    ]
+   }
+  }
+ ]
+}

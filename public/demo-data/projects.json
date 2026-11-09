@@ -1,0 +1,571 @@
+{
+  "note": "SYNTHETIC demonstration data for the RASD prototype (Naqlthon 5). Not real government roadworks. Road names real; geometry schematic/approximate.",
+  "seed": 20261201,
+  "organizations": {
+    "municipality": {
+      "ar": "الجهة البلدية (محاكاة)",
+      "en": "Municipality (simulated)",
+      "color": "#a78bfa",
+      "short": "بلدية"
+    },
+    "water": {
+      "ar": "مرفق المياه (محاكاة)",
+      "en": "Water utility (simulated)",
+      "color": "#38bdf8",
+      "short": "مياه"
+    },
+    "electricity": {
+      "ar": "مرفق الكهرباء (محاكاة)",
+      "en": "Electricity utility (simulated)",
+      "color": "#facc15",
+      "short": "كهرباء"
+    },
+    "telecom": {
+      "ar": "مزود الاتصالات (محاكاة)",
+      "en": "Telecom provider (simulated)",
+      "color": "#f472b6",
+      "short": "اتصالات"
+    },
+    "roads": {
+      "ar": "مقاول صيانة الطرق (محاكاة)",
+      "en": "Road maintenance contractor (simulated)",
+      "color": "#fb923c",
+      "short": "طرق"
+    }
+  },
+  "scenarios": [
+    {
+      "id": "S1",
+      "titleAr": "مشروعان متعارضان على نفس المقطع",
+      "titleEn": "Two conflicting roadworks",
+      "projectIds": [
+        "RASD-P01",
+        "RASD-P02"
+      ],
+      "focusDate": "2026-12-16"
+    },
+    {
+      "id": "S2",
+      "titleAr": "إغلاق يحجب مسار التحويل لمشروع آخر",
+      "titleEn": "Closure blocking another detour",
+      "projectIds": [
+        "RASD-P03",
+        "RASD-P04"
+      ],
+      "focusDate": "2027-01-12"
+    },
+    {
+      "id": "S3",
+      "titleAr": "أعمال مرافق متكررة قابلة للتنسيق",
+      "titleEn": "Repeated utility works to coordinate",
+      "projectIds": [
+        "RASD-P05",
+        "RASD-P06",
+        "RASD-P07"
+      ],
+      "focusDate": "2027-01-08"
+    },
+    {
+      "id": "S4",
+      "titleAr": "مشروع حرج بمرونة جدولة محدودة",
+      "titleEn": "Critical project, no flexibility",
+      "projectIds": [
+        "RASD-P08",
+        "RASD-P09"
+      ],
+      "focusDate": "2026-12-14"
+    }
+  ],
+  "demoConflictProject": {
+    "id": "RASD-D01",
+    "title": "إعادة رصف شاملة — شارع العليا بين التحلية والعروبة",
+    "orgId": "roads",
+    "category": "road_maintenance",
+    "closures": [
+      {
+        "segmentId": "OLY-THL-URB",
+        "from": 0.1,
+        "to": 0.9
+      }
+    ],
+    "proposed": {
+      "start": "2026-12-12",
+      "end": "2026-12-30"
+    },
+    "workHours": {
+      "start": 0,
+      "end": 24
+    },
+    "priority": "low",
+    "earliestStart": "2026-12-01",
+    "latestEnd": "2027-02-28",
+    "closureType": "full",
+    "affectedLanes": 3,
+    "neighborhood": "برج المملكة",
+    "schedule": {
+      "start": "2026-12-12",
+      "end": "2026-12-30"
+    },
+    "estimatedCostSar": 4085000,
+    "status": "submitted",
+    "createdAt": "2026-11-09T10:00:00Z",
+    "synthetic": true
+  },
+  "projects": [
+    {
+      "id": "RASD-P01",
+      "title": "إعادة تأهيل خط مياه رئيسي — طريق الملك فهد",
+      "orgId": "water",
+      "category": "water",
+      "closures": [
+        {
+          "segmentId": "KFR-THL-URB",
+          "from": 0.2,
+          "to": 0.7
+        }
+      ],
+      "proposed": {
+        "start": "2026-12-06",
+        "end": "2026-12-24"
+      },
+      "workHours": {
+        "start": 0,
+        "end": 24
+      },
+      "priority": "high",
+      "earliestStart": "2026-12-01",
+      "latestEnd": "2027-01-31",
+      "closureType": "partial",
+      "affectedLanes": 2,
+      "neighborhood": "حي العليا",
+      "schedule": {
+        "start": "2026-12-06",
+        "end": "2026-12-24"
+      },
+      "estimatedCostSar": 9696000,
+      "status": "submitted",
+      "createdAt": "2026-11-01T09:00:00Z",
+      "synthetic": true
+    },
+    {
+      "id": "RASD-P02",
+      "title": "تمديد كابلات جهد متوسط — طريق الملك فهد",
+      "orgId": "electricity",
+      "category": "electricity",
+      "closures": [
+        {
+          "segmentId": "KFR-THL-URB",
+          "from": 0.45,
+          "to": 0.95
+        }
+      ],
+      "proposed": {
+        "start": "2026-12-15",
+        "end": "2027-01-08"
+      },
+      "workHours": {
+        "start": 0,
+        "end": 24
+      },
+      "priority": "medium",
+      "earliestStart": "2026-12-10",
+      "latestEnd": "2027-02-20",
+      "closureType": "partial",
+      "affectedLanes": 2,
+      "neighborhood": "حي العليا",
+      "schedule": {
+        "start": "2026-12-15",
+        "end": "2027-01-08"
+      },
+      "estimatedCostSar": 5938000,
+      "status": "submitted",
+      "createdAt": "2026-11-01T09:00:00Z",
+      "synthetic": true
+    },
+    {
+      "id": "RASD-P03",
+      "title": "مد ألياف بصرية — طريق الملك فهد شمال العروبة",
+      "orgId": "telecom",
+      "category": "telecom",
+      "closures": [
+        {
+          "segmentId": "KFR-URB-KAR",
+          "from": 0.3,
+          "to": 0.8
+        }
+      ],
+      "proposed": {
+        "start": "2027-01-05",
+        "end": "2027-01-25"
+      },
+      "workHours": {
+        "start": 0,
+        "end": 24
+      },
+      "priority": "medium",
+      "earliestStart": "2026-12-20",
+      "latestEnd": "2027-02-28",
+      "closureType": "partial",
+      "affectedLanes": 3,
+      "neighborhood": "حي الورود",
+      "schedule": {
+        "start": "2027-01-05",
+        "end": "2027-01-25"
+      },
+      "estimatedCostSar": 3322000,
+      "status": "submitted",
+      "createdAt": "2026-11-01T09:00:00Z",
+      "synthetic": true
+    },
+    {
+      "id": "RASD-P04",
+      "title": "تطوير الأرصفة والإنارة — شارع العليا (شمال)",
+      "orgId": "municipality",
+      "category": "municipal",
+      "closures": [
+        {
+          "segmentId": "OLY-URB-KAR",
+          "from": 0,
+          "to": 1
+        }
+      ],
+      "proposed": {
+        "start": "2027-01-10",
+        "end": "2027-02-01"
+      },
+      "workHours": {
+        "start": 7,
+        "end": 19
+      },
+      "priority": "low",
+      "earliestStart": "2026-12-15",
+      "latestEnd": "2027-03-01",
+      "closureType": "full",
+      "affectedLanes": 3,
+      "neighborhood": "حي الورود",
+      "schedule": {
+        "start": "2027-01-10",
+        "end": "2027-02-01"
+      },
+      "estimatedCostSar": 9772000,
+      "status": "submitted",
+      "createdAt": "2026-11-01T09:00:00Z",
+      "synthetic": true
+    },
+    {
+      "id": "RASD-P05",
+      "title": "توصيلات مياه للمباني — طريق العروبة",
+      "orgId": "water",
+      "category": "water",
+      "closures": [
+        {
+          "segmentId": "URB-KFR-OLY",
+          "from": 0.1,
+          "to": 0.9
+        }
+      ],
+      "proposed": {
+        "start": "2027-01-03",
+        "end": "2027-01-12"
+      },
+      "workHours": {
+        "start": 0,
+        "end": 24
+      },
+      "priority": "medium",
+      "earliestStart": "2026-12-20",
+      "latestEnd": "2027-02-28",
+      "closureType": "partial",
+      "affectedLanes": 2,
+      "neighborhood": "برج المملكة",
+      "schedule": {
+        "start": "2027-01-03",
+        "end": "2027-01-12"
+      },
+      "estimatedCostSar": 2238000,
+      "status": "submitted",
+      "createdAt": "2026-11-01T09:00:00Z",
+      "synthetic": true
+    },
+    {
+      "id": "RASD-P06",
+      "title": "نقل كابينة اتصالات — طريق العروبة",
+      "orgId": "telecom",
+      "category": "telecom",
+      "closures": [
+        {
+          "segmentId": "URB-KFR-OLY",
+          "from": 0.3,
+          "to": 0.7
+        }
+      ],
+      "proposed": {
+        "start": "2027-01-20",
+        "end": "2027-01-28"
+      },
+      "workHours": {
+        "start": 8,
+        "end": 20
+      },
+      "priority": "medium",
+      "earliestStart": "2027-01-01",
+      "latestEnd": "2027-02-28",
+      "closureType": "partial",
+      "affectedLanes": 1,
+      "neighborhood": "برج المملكة",
+      "schedule": {
+        "start": "2027-01-20",
+        "end": "2027-01-28"
+      },
+      "estimatedCostSar": 918000,
+      "status": "submitted",
+      "createdAt": "2026-11-01T09:00:00Z",
+      "synthetic": true
+    },
+    {
+      "id": "RASD-P07",
+      "title": "تعزيز شبكة التوزيع الكهربائي — طريق العروبة",
+      "orgId": "electricity",
+      "category": "electricity",
+      "closures": [
+        {
+          "segmentId": "URB-KFR-OLY",
+          "from": 0.05,
+          "to": 0.6
+        }
+      ],
+      "proposed": {
+        "start": "2027-02-05",
+        "end": "2027-02-14"
+      },
+      "workHours": {
+        "start": 0,
+        "end": 24
+      },
+      "priority": "high",
+      "earliestStart": "2027-01-05",
+      "latestEnd": "2027-02-28",
+      "closureType": "partial",
+      "affectedLanes": 2,
+      "neighborhood": "برج المملكة",
+      "schedule": {
+        "start": "2027-02-05",
+        "end": "2027-02-14"
+      },
+      "estimatedCostSar": 3889000,
+      "status": "submitted",
+      "createdAt": "2026-11-01T09:00:00Z",
+      "synthetic": true
+    },
+    {
+      "id": "RASD-P08",
+      "title": "إصلاح طارئ لمغذٍّ كهربائي — طريق مكة المكرمة",
+      "orgId": "electricity",
+      "category": "electricity",
+      "closures": [
+        {
+          "segmentId": "MAK-TAK-KFR",
+          "from": 0.35,
+          "to": 0.75
+        }
+      ],
+      "proposed": {
+        "start": "2026-12-08",
+        "end": "2026-12-20"
+      },
+      "workHours": {
+        "start": 0,
+        "end": 24
+      },
+      "priority": "critical",
+      "earliestStart": "2026-12-08",
+      "latestEnd": "2026-12-20",
+      "closureType": "partial",
+      "affectedLanes": 2,
+      "neighborhood": "حي أم الحمام الشرقي",
+      "schedule": {
+        "start": "2026-12-08",
+        "end": "2026-12-20"
+      },
+      "estimatedCostSar": 1674000,
+      "status": "submitted",
+      "createdAt": "2026-11-01T09:00:00Z",
+      "synthetic": true
+    },
+    {
+      "id": "RASD-P09",
+      "title": "إعادة سفلتة — طريق مكة المكرمة بين التخصصي والملك فهد",
+      "orgId": "roads",
+      "category": "road_maintenance",
+      "closures": [
+        {
+          "segmentId": "MAK-TAK-KFR",
+          "from": 0.5,
+          "to": 1
+        }
+      ],
+      "proposed": {
+        "start": "2026-12-12",
+        "end": "2026-12-28"
+      },
+      "workHours": {
+        "start": 0,
+        "end": 24
+      },
+      "priority": "low",
+      "earliestStart": "2026-12-10",
+      "latestEnd": "2027-02-15",
+      "closureType": "partial",
+      "affectedLanes": 2,
+      "neighborhood": "حي أم الحمام الشرقي",
+      "schedule": {
+        "start": "2026-12-12",
+        "end": "2026-12-28"
+      },
+      "estimatedCostSar": 2009000,
+      "status": "submitted",
+      "createdAt": "2026-11-01T09:00:00Z",
+      "synthetic": true
+    },
+    {
+      "id": "RASD-P10",
+      "title": "صيانة دورية ليلية — طريق مكة المكرمة شرق العليا",
+      "orgId": "roads",
+      "category": "road_maintenance",
+      "closures": [
+        {
+          "segmentId": "MAK-OLY-E",
+          "from": 0.1,
+          "to": 0.9
+        }
+      ],
+      "proposed": {
+        "start": "2027-02-01",
+        "end": "2027-02-10"
+      },
+      "workHours": {
+        "start": 0,
+        "end": 6
+      },
+      "priority": "low",
+      "earliestStart": "2027-01-15",
+      "latestEnd": "2027-02-28",
+      "closureType": "partial",
+      "affectedLanes": 1,
+      "neighborhood": "حي السليمانية",
+      "schedule": {
+        "start": "2027-02-01",
+        "end": "2027-02-10"
+      },
+      "estimatedCostSar": 653000,
+      "status": "approved",
+      "createdAt": "2026-11-01T09:00:00Z",
+      "synthetic": true
+    },
+    {
+      "id": "RASD-P11",
+      "title": "صيانة غرف تفتيش — شارع التخصصي (جنوب)",
+      "orgId": "water",
+      "category": "water",
+      "closures": [
+        {
+          "segmentId": "TAK-MAK-THL",
+          "from": 0.2,
+          "to": 0.5
+        }
+      ],
+      "proposed": {
+        "start": "2026-12-01",
+        "end": "2026-12-05"
+      },
+      "workHours": {
+        "start": 9,
+        "end": 15
+      },
+      "priority": "medium",
+      "earliestStart": "2026-12-01",
+      "latestEnd": "2026-12-31",
+      "closureType": "partial",
+      "affectedLanes": 1,
+      "neighborhood": "حي أم الحمام الشرقي",
+      "schedule": {
+        "start": "2026-12-01",
+        "end": "2026-12-05"
+      },
+      "estimatedCostSar": 673000,
+      "status": "scheduled",
+      "createdAt": "2026-11-01T09:00:00Z",
+      "synthetic": true
+    },
+    {
+      "id": "RASD-P12",
+      "title": "توسعة شبكة الجيل الخامس — طريق الملك عبدالله",
+      "orgId": "telecom",
+      "category": "telecom",
+      "closures": [
+        {
+          "segmentId": "KAR-TAK-KFR",
+          "from": 0.4,
+          "to": 0.6
+        }
+      ],
+      "proposed": {
+        "start": "2027-02-15",
+        "end": "2027-02-25"
+      },
+      "workHours": {
+        "start": 0,
+        "end": 6
+      },
+      "priority": "low",
+      "earliestStart": "2027-01-15",
+      "latestEnd": "2027-03-01",
+      "closureType": "partial",
+      "affectedLanes": 1,
+      "neighborhood": "حي الرحمانية",
+      "schedule": {
+        "start": "2027-02-15",
+        "end": "2027-02-25"
+      },
+      "estimatedCostSar": 1486000,
+      "status": "approved",
+      "createdAt": "2026-11-01T09:00:00Z",
+      "synthetic": true
+    },
+    {
+      "id": "RASD-P13",
+      "title": "إصلاح فواصل تمدد جسر — طريق الملك فهد جنوب طريق مكة",
+      "orgId": "roads",
+      "category": "road_maintenance",
+      "closures": [
+        {
+          "segmentId": "KFR-S-MAK",
+          "from": 0.2,
+          "to": 0.6
+        }
+      ],
+      "proposed": {
+        "start": "2027-01-15",
+        "end": "2027-01-22"
+      },
+      "workHours": {
+        "start": 0,
+        "end": 6
+      },
+      "priority": "high",
+      "earliestStart": "2027-01-10",
+      "latestEnd": "2027-02-10",
+      "closureType": "partial",
+      "affectedLanes": 2,
+      "neighborhood": "حي المعذر الشمالي",
+      "schedule": {
+        "start": "2027-01-15",
+        "end": "2027-01-22"
+      },
+      "estimatedCostSar": 2133000,
+      "status": "scheduled",
+      "createdAt": "2026-11-01T09:00:00Z",
+      "synthetic": true
+    }
+  ]
+}

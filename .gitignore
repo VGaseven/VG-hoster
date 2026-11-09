@@ -99,3 +99,13 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# RASD / Node
+node_modules/
+output/*
+!output/.gitkeep
+test-results/
+playwright-report/
+.remotion/
+*.tsbuildinfo
+.env
