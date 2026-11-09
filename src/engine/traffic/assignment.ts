@@ -12,7 +12,11 @@ export const BPR_ALPHA = 0.15;
 export const BPR_BETA = 4;
 export const MAX_TIME_FACTOR = 8;
 export const MSA_ITERATIONS = 20;
-/** Penalty for trips with no path inside the study network (forced external detour). */
+/**
+ * Trips with no path inside the study network (e.g. a closed gate stub) are charged a FULL
+ * external trip (time and distance) in the same balance as served trips — so removing them from
+ * the network can never look like a saving.
+ */
 export const UNSERVED_PENALTY_H = 0.5;
 export const UNSERVED_DETOUR_KM = 12;
 
@@ -269,12 +273,21 @@ export function zoneAccessibility(r: AssignResult, zoneId: string): number {
 }
 
 /** Vehicle-hours of delay vs the no-closure baseline at the same demand band (one hour). */
+/** Total vehicle-hours including unserved trips' external detour. */
+export function totalVehHours(r: AssignResult): number {
+  return r.sysVehHours + r.unservedTrips * UNSERVED_PENALTY_H;
+}
+
+/**
+ * Vehicle-hours of delay vs the same-band baseline. Clamped at 0: tiny negative values (≤0.5 %)
+ * can occur from the MSA equilibrium approximation and are not reported as benefits.
+ */
 export function hourlyDelay(r: AssignResult): number {
   const base = BASELINE(r.band);
-  return Math.max(0, r.sysVehHours - base.sysVehHours) + r.unservedTrips * UNSERVED_PENALTY_H;
+  return Math.max(0, totalVehHours(r) - base.sysVehHours);
 }
 
 export function hourlyDetourKm(r: AssignResult): number {
   const base = BASELINE(r.band);
-  return Math.max(0, r.sysVehKm - base.sysVehKm) + r.unservedTrips * UNSERVED_DETOUR_KM;
+  return Math.max(0, r.sysVehKm + r.unservedTrips * UNSERVED_DETOUR_KM - base.sysVehKm);
 }
