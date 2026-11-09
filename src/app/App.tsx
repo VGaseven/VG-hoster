@@ -13,6 +13,7 @@ import { OperatorsPage } from '@/components/citizen/OperatorsPage';
 
 const AnalyticsPage = lazy(() => import('@/components/analytics/AnalyticsPage'));
 const StudioPage = lazy(() => import('@/components/video/StudioPage'));
+const TwinPage = lazy(() => import('@/twin/TwinPage'));
 
 const Loading = () => <div className="grid h-full place-items-center text-sm text-slate-400">جارٍ التحميل…</div>;
 
@@ -32,6 +33,7 @@ const router = createBrowserRouter([
       { path: 'studio', element: <Suspense fallback={<Loading />}><StudioPage /></Suspense> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'operators', element: <OperatorsPage /> },
+      { path: 'twin', element: <Suspense fallback={<Loading />}><TwinPage /></Suspense> },
       { path: '*', element: <OverviewPage /> },
     ],
   },

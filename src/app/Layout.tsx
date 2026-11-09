@@ -15,7 +15,7 @@ import { useKeyboard } from '@/hooks/useKeyboard';
 import { useStore } from '@/store/store';
 import { useEffect } from 'react';
 
-const FULL_PAGES = ['/compare', '/citizen', '/analytics', '/studio', '/settings', '/operators'];
+const FULL_PAGES = ['/compare', '/citizen', '/analytics', '/studio', '/settings', '/operators', '/twin'];
 
 export function Layout() {
   const { pathname } = useLocation();

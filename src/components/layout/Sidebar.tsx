@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router';
 import { motion } from 'motion/react';
-import { Bus, BarChart3, Clapperboard, Compass, FilePlus2, GitCompareArrows, GraduationCap, LayoutDashboard, Map as MapIcon, PanelRightClose, PanelRightOpen, Settings, ShieldAlert, Sparkles, UserRound, Wand2 } from 'lucide-react';
+import { Box, Bus, BarChart3, Clapperboard, Compass, FilePlus2, GitCompareArrows, GraduationCap, LayoutDashboard, Map as MapIcon, PanelRightClose, PanelRightOpen, Settings, ShieldAlert, Sparkles, UserRound, Wand2 } from 'lucide-react';
 import { useStore } from '@/store/store';
 import { useT } from '@/i18n/i18n';
 import { cn } from '@/utils/format';
@@ -10,6 +10,7 @@ import { startShow } from '@/components/tutorial/RasdShow';
 export const NAV = [
   { to: '/', label: 'نظرة عامة', icon: LayoutDashboard, tour: 'nav-overview' },
   { to: '/map', label: 'خريطة المدينة ثلاثية الأبعاد', icon: MapIcon, tour: 'nav-map' },
+  { to: '/twin', label: 'النموذج ثلاثي الأبعاد (٥ مربعات)', icon: Box, tour: 'nav-twin' },
   { to: '/register', label: 'إدخال المشاريع', icon: FilePlus2, tour: 'nav-register' },
   { to: '/conflicts', label: 'تحليل التعارض', icon: ShieldAlert, tour: 'nav-conflicts', badge: true },
   { to: '/optimize', label: 'مقارنة البدائل', icon: Wand2, tour: 'nav-optimize' },
