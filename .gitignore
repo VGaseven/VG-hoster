@@ -114,3 +114,8 @@ playwright-report/
 public/models/kitbash/*
 !public/models/kitbash/README.md
 !public/models/kitbash/manifest.example.json
+
+# local KitBash3D source files + Blender venv (licensed / large) — never commit
+kitbash/
+.venv-blender/
+public/twin/kit-palette.json

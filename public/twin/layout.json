@@ -1,0 +1,398 @@
+{
+  "note": "Riyadh-Inspired Prototype — not a geographically exact reconstruction. Units: metres; x = east, z = south (Three.js). Blender uses x = east, y = north (−z), z = up.",
+  "laneWidth": 3.5,
+  "sidewalkWidth": 4,
+  "bridgeY": 9,
+  "nodes": [
+    {
+      "id": "A-S",
+      "p": [
+        0,
+        560
+      ],
+      "gate": true
+    },
+    {
+      "id": "A1",
+      "p": [
+        0,
+        300
+      ],
+      "gate": false
+    },
+    {
+      "id": "A2",
+      "p": [
+        0,
+        40
+      ],
+      "gate": false
+    },
+    {
+      "id": "A3",
+      "p": [
+        0,
+        -220
+      ],
+      "gate": false
+    },
+    {
+      "id": "A-N",
+      "p": [
+        0,
+        -480
+      ],
+      "gate": true
+    },
+    {
+      "id": "B-S",
+      "p": [
+        210,
+        560
+      ],
+      "gate": true
+    },
+    {
+      "id": "B1",
+      "p": [
+        210,
+        300
+      ],
+      "gate": false
+    },
+    {
+      "id": "B2",
+      "p": [
+        210,
+        40
+      ],
+      "gate": false
+    },
+    {
+      "id": "B3",
+      "p": [
+        210,
+        -220
+      ],
+      "gate": false
+    },
+    {
+      "id": "B-N",
+      "p": [
+        210,
+        -480
+      ],
+      "gate": true
+    },
+    {
+      "id": "W1",
+      "p": [
+        -190,
+        300
+      ],
+      "gate": false
+    },
+    {
+      "id": "W2",
+      "p": [
+        -190,
+        40
+      ],
+      "gate": false
+    },
+    {
+      "id": "W3",
+      "p": [
+        -190,
+        -220
+      ],
+      "gate": false
+    },
+    {
+      "id": "E2",
+      "p": [
+        380,
+        40
+      ],
+      "gate": true
+    },
+    {
+      "id": "W-W",
+      "p": [
+        -330,
+        40
+      ],
+      "gate": true
+    },
+    {
+      "id": "K-W",
+      "p": [
+        -420,
+        440
+      ],
+      "gate": true
+    },
+    {
+      "id": "K-E",
+      "p": [
+        420,
+        440
+      ],
+      "gate": true
+    }
+  ],
+  "roads": [
+    {
+      "id": "A-0",
+      "nameAr": "طريق الأمير تركي بن عبدالعزيز الأول",
+      "nameEn": "Prince Turki bin Abdulaziz Al Awwal Rd",
+      "kind": "arterial",
+      "lanes": 3,
+      "speedKmh": 70,
+      "from": "A-S",
+      "to": "A1",
+      "width": 23
+    },
+    {
+      "id": "A-1",
+      "nameAr": "طريق الأمير تركي بن عبدالعزيز الأول",
+      "nameEn": "Prince Turki bin Abdulaziz Al Awwal Rd",
+      "kind": "arterial",
+      "lanes": 3,
+      "speedKmh": 70,
+      "from": "A1",
+      "to": "A2",
+      "width": 23
+    },
+    {
+      "id": "A-2",
+      "nameAr": "طريق الأمير تركي بن عبدالعزيز الأول",
+      "nameEn": "Prince Turki bin Abdulaziz Al Awwal Rd",
+      "kind": "arterial",
+      "lanes": 3,
+      "speedKmh": 70,
+      "from": "A2",
+      "to": "A3",
+      "width": 23
+    },
+    {
+      "id": "A-3",
+      "nameAr": "طريق الأمير تركي بن عبدالعزيز الأول",
+      "nameEn": "Prince Turki bin Abdulaziz Al Awwal Rd",
+      "kind": "arterial",
+      "lanes": 3,
+      "speedKmh": 70,
+      "from": "A3",
+      "to": "A-N",
+      "width": 23
+    },
+    {
+      "id": "B-0",
+      "nameAr": "شارع النخيل",
+      "nameEn": "Al Nakheel St",
+      "kind": "secondary",
+      "lanes": 2,
+      "speedKmh": 50,
+      "from": "B-S",
+      "to": "B1",
+      "width": 14
+    },
+    {
+      "id": "B-1",
+      "nameAr": "شارع النخيل",
+      "nameEn": "Al Nakheel St",
+      "kind": "secondary",
+      "lanes": 2,
+      "speedKmh": 50,
+      "from": "B1",
+      "to": "B2",
+      "width": 14
+    },
+    {
+      "id": "B-2",
+      "nameAr": "شارع النخيل",
+      "nameEn": "Al Nakheel St",
+      "kind": "secondary",
+      "lanes": 2,
+      "speedKmh": 50,
+      "from": "B2",
+      "to": "B3",
+      "width": 14
+    },
+    {
+      "id": "B-3",
+      "nameAr": "شارع النخيل",
+      "nameEn": "Al Nakheel St",
+      "kind": "secondary",
+      "lanes": 2,
+      "speedKmh": 50,
+      "from": "B3",
+      "to": "B-N",
+      "width": 14
+    },
+    {
+      "id": "W-1",
+      "nameAr": "شارع الوادي",
+      "nameEn": "Al Wadi St",
+      "kind": "local",
+      "lanes": 1,
+      "speedKmh": 40,
+      "from": "W1",
+      "to": "W2",
+      "width": 7
+    },
+    {
+      "id": "W-2",
+      "nameAr": "شارع الوادي",
+      "nameEn": "Al Wadi St",
+      "kind": "local",
+      "lanes": 1,
+      "speedKmh": 40,
+      "from": "W2",
+      "to": "W3",
+      "width": 7
+    },
+    {
+      "id": "C1-W",
+      "nameAr": "شارع الريحان",
+      "nameEn": "Al Rayhan St",
+      "kind": "local",
+      "lanes": 1,
+      "speedKmh": 40,
+      "from": "W1",
+      "to": "A1",
+      "width": 7
+    },
+    {
+      "id": "C1-E",
+      "nameAr": "شارع الريحان",
+      "nameEn": "Al Rayhan St",
+      "kind": "local",
+      "lanes": 1,
+      "speedKmh": 40,
+      "from": "A1",
+      "to": "B1",
+      "width": 7
+    },
+    {
+      "id": "C2-X",
+      "nameAr": "شارع العُلا",
+      "nameEn": "Al Ula St",
+      "kind": "secondary",
+      "lanes": 2,
+      "speedKmh": 50,
+      "from": "W-W",
+      "to": "W2",
+      "width": 14
+    },
+    {
+      "id": "C2-W",
+      "nameAr": "شارع العُلا",
+      "nameEn": "Al Ula St",
+      "kind": "secondary",
+      "lanes": 2,
+      "speedKmh": 50,
+      "from": "W2",
+      "to": "A2",
+      "width": 14
+    },
+    {
+      "id": "C2-E",
+      "nameAr": "شارع العُلا",
+      "nameEn": "Al Ula St",
+      "kind": "secondary",
+      "lanes": 2,
+      "speedKmh": 50,
+      "from": "A2",
+      "to": "B2",
+      "width": 14
+    },
+    {
+      "id": "C2-Y",
+      "nameAr": "شارع العُلا",
+      "nameEn": "Al Ula St",
+      "kind": "secondary",
+      "lanes": 2,
+      "speedKmh": 50,
+      "from": "B2",
+      "to": "E2",
+      "width": 14
+    },
+    {
+      "id": "C3-W",
+      "nameAr": "شارع الياسمين",
+      "nameEn": "Al Yasmin St",
+      "kind": "local",
+      "lanes": 1,
+      "speedKmh": 40,
+      "from": "W3",
+      "to": "A3",
+      "width": 7
+    },
+    {
+      "id": "C3-E",
+      "nameAr": "شارع الياسمين",
+      "nameEn": "Al Yasmin St",
+      "kind": "local",
+      "lanes": 1,
+      "speedKmh": 40,
+      "from": "A3",
+      "to": "B3",
+      "width": 7
+    },
+    {
+      "id": "K-1",
+      "nameAr": "طريق الملك عبدالله (جسر)",
+      "nameEn": "King Abdullah Rd (overpass)",
+      "kind": "bridge",
+      "lanes": 3,
+      "speedKmh": 80,
+      "from": "K-W",
+      "to": "K-E",
+      "y": 9,
+      "width": 23
+    }
+  ],
+  "blocks": [
+    {
+      "id": "BLK-1",
+      "nameAr": "المربع ١",
+      "x0": 0,
+      "x1": 210,
+      "z0": 40,
+      "z1": 300
+    },
+    {
+      "id": "BLK-2",
+      "nameAr": "المربع ٢",
+      "x0": 0,
+      "x1": 210,
+      "z0": -220,
+      "z1": 40
+    },
+    {
+      "id": "BLK-3",
+      "nameAr": "المربع ٣",
+      "x0": -190,
+      "x1": 0,
+      "z0": 40,
+      "z1": 300
+    },
+    {
+      "id": "BLK-4",
+      "nameAr": "المربع ٤",
+      "x0": -190,
+      "x1": 0,
+      "z0": -220,
+      "z1": 40
+    },
+    {
+      "id": "BLK-5",
+      "nameAr": "المربع ٥",
+      "x0": 0,
+      "x1": 210,
+      "z0": 300,
+      "z1": 440
+    }
+  ]
+}

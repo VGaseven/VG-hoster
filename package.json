@@ -19,7 +19,9 @@
     "data:fetch-osm": "tsx scripts/fetch-osm.ts",
     "models:index": "tsx scripts/index-models.ts",
     "models:sample": "tsx scripts/make-sample-kit.ts",
-    "data:export": "tsx scripts/export-demo-data.ts"
+    "data:export": "tsx scripts/export-demo-data.ts",
+    "twin:layout": "tsx scripts/export-twin-layout.ts",
+    "twin:blender": "npm run twin:layout && python scripts/blender/assemble_rasd_scene.py --kit kitbash"
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans-arabic": "^5.2.6",

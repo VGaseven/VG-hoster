@@ -91,6 +91,39 @@ Keyboard: `Space` play/pause · `R` reset camera · `2`/`3` 2D/3D · `[`/`]` spe
 | Routing | Local network router (Dijkstra on congested times). OSRM/Valhalla optional via env, not required |
 | Economics | Configurable illustrative model (formula shown in UI) |
 
+## 3D prototype — 5 blocks (route `/twin`)
+
+A compact **Riyadh-Inspired Prototype** (stylised after حي النخيل — not a geographically exact
+reconstruction): Prince Turki bin Abdulaziz Al Awwal Rd (arterial), Al Nakheel St (diversion
+route), Al Wadi St and three cross streets, and a King Abdullah Rd overpass. Three.js runtime with
+lane markings, sidewalks, crosswalks, streetlights, Arabic/English signs, construction zones
+(barriers, cones, pit, excavator) and instanced vehicles that slow, merge and reroute.
+
+Scenario: normal → Excavation A (main road) → Excavation B (the diversion route) → «كشف التعارض»
+→ «تطبيق توصية رصد» (reschedule B after A) → before/after. Plus simulation/camera controls, layer
+toggles, historical replay and a ~75 s guided demo. All numbers come from a deterministic local
+model and are labelled **DEMO DATA / SIMULATED**. Data access goes through `src/twin/adapter.ts`
+(`LocalDemoSource`; `CodexApiSource` activates when `VITE_CODEX_API_URL` is set — its endpoint
+paths are placeholders until Codex publishes `docs/CLAUDE_INTEGRATION.md`).
+
+**Buildings and bridge are temporary stand-ins** until the licensed KitBash3D files are supplied.
+Blender pipeline (Blender 5.2 as a Python module):
+
+```bash
+python3 -m venv .venv-blender && .venv-blender/bin/pip install bpy   # once
+mkdir kitbash && cp -r <your KitBash3D export (.blend/.fbx/.obj/.glb + textures)> kitbash/
+npm run twin:layout
+.venv-blender/bin/python scripts/blender/assemble_rasd_scene.py --kit kitbash
+#  → output/blender/rasd-twin.blend  +  public/models/kitbash/twin-scene.glb (+ .report.json)
+#  → public/twin/kit-palette.json (colours sampled from the kit's materials)
+```
+
+The script builds roads from the shared layout, imports the kit, places the bridge (unscaled spans
+tiled along the overpass) and fills the 5 blocks with the kit's buildings (uniform scale only), then
+exports. `/twin` loads the GLB automatically, hides the stand-ins and applies the kit palette.
+Without kit files it saves a roads-only `.blend` and exports nothing (it never substitutes generic
+buildings for the kit). `kitbash/` and `public/models/kitbash/*` are gitignored.
+
 ## Optional licensed building models (e.g. KitBash3D)
 
 Licensed kits are **never committed or redistributed** — `public/models/kitbash/` is gitignored.

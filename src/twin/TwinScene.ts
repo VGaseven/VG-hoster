@@ -542,12 +542,36 @@ export class TwinScene {
         o.receiveShadow = true;
       });
       this.scene.add(gltf.scene);
+      await this.applyKitPalette();
       this.placeholder.visible = false;
       this.bridgeGroup.visible = false;
       this.kitLoaded = true;
       this.onKit?.('loaded');
     } catch {
       this.onKit?.('missing');
+    }
+  }
+
+  /** Re-colour the runtime environment with the palette Blender sampled from the kit materials. */
+  private async applyKitPalette() {
+    try {
+      const r = await fetch('/twin/kit-palette.json');
+      if (!r.ok || !(r.headers.get('content-type') ?? '').includes('json')) return;
+      const p = (await r.json()) as { colors: string[]; dark?: string; light?: string };
+      if (!p.colors?.length) return;
+      const dark = new THREE.Color(p.dark ?? p.colors[0]);
+      const mid = new THREE.Color(p.colors[Math.floor(p.colors.length / 2)]);
+      this.scene.background = dark.clone().multiplyScalar(0.55);
+      (this.scene.fog as THREE.Fog).color = dark.clone().multiplyScalar(0.7);
+      this.scene.traverse((o) => {
+        const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+        if (!m || !('color' in m)) return;
+        if (m.color.getHex() === PALETTE.ground) m.color.copy(dark).multiplyScalar(0.6);
+        if (m.color.getHex() === PALETTE.sidewalk) m.color.copy(mid).multiplyScalar(0.8);
+      });
+      this.onKit?.('loaded');
+    } catch {
+      /* palette optional */
     }
   }
 
