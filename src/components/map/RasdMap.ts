@@ -160,7 +160,7 @@ export class RasdMap {
         source: 'rasd-network-static',
         layout: { 'line-cap': 'round', 'line-join': 'round' },
         paint: {
-          'line-color': '#172033',
+          'line-color': '#111d42',
           'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 10, ['match', ['get', 'cls'], 'motorway', 4, 'connector', 0.5, 2], 16, ['match', ['get', 'cls'], 'motorway', 70, 'connector', 6, 40]],
         },
       });
@@ -169,7 +169,7 @@ export class RasdMap {
         type: 'fill-extrusion',
         source: 'rasd-buildings',
         paint: {
-          'fill-extrusion-color': ['interpolate', ['linear'], ['get', 'height'], 0, '#1b2638', 30, '#22324a', 90, '#2c4466', 200, '#3b6189'],
+          'fill-extrusion-color': ['interpolate', ['linear'], ['get', 'height'], 0, '#16234a', 30, '#1d2f5e', 90, '#2a3f7a', 200, '#4a4fa8'],
           'fill-extrusion-height': ['get', 'height'],
           'fill-extrusion-base': ['get', 'base'],
           'fill-extrusion-opacity': 0.92,

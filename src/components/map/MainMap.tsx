@@ -135,7 +135,7 @@ export function MainMap() {
 
   // pause animation while covered by a full-page view
   useEffect(() => {
-    mapRef.current?.setPaused(['/compare', '/citizen', '/analytics', '/studio', '/settings'].some((p) => location.pathname.startsWith(p)));
+    mapRef.current?.setPaused(['/compare', '/citizen', '/analytics', '/studio', '/settings', '/operators'].some((p) => location.pathname.startsWith(p)));
   }, [location.pathname]);
 
   // keep the focus point centred in the visible gap between floating panels

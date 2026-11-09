@@ -67,3 +67,17 @@ describe('economics', () => {
     expect(economicCost(1000, 2000, { ...DEFAULT_ECONOMICS, includeOperatingCost: false }).operatingCost).toBe(0);
   });
 });
+
+import { closureOutcomes } from '@/engine/traffic/simulate';
+describe('official RASD outcome metrics', () => {
+  it('counts closure episodes, repeated closures, km-days and published share', () => {
+    const urubah = ['RASD-P05', 'RASD-P06', 'RASD-P07'].map(P);
+    const o = closureOutcomes(urubah);
+    expect(o.closureEpisodes).toBe(3);
+    expect(o.repeatedClosures).toBe(2);
+    expect(o.closureKmDays).toBeGreaterThan(0);
+    expect(o.visibleClosureShare).toBe(0); // nothing approved yet → nothing published to road users
+    const published = closureOutcomes(urubah.map((p) => ({ ...p, status: 'approved' as const })));
+    expect(published.visibleClosureShare).toBeCloseTo(100, 6);
+  });
+});

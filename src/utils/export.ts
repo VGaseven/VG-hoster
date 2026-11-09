@@ -6,7 +6,7 @@ export function metricsCsv(before: ScenarioMetrics, after: ScenarioMetrics, proj
   const esc = (v: unknown) => `"${String(v).replace(/"/g, '""')}"`;
   const lines: string[] = [];
   lines.push('section,metric,before,after');
-  const keys: (keyof ScenarioMetrics)[] = ['conflicts', 'highConflicts', 'closureSegmentDays', 'closureDays', 'vehicleHoursDelay', 'detourVehicleKm', 'accessibilityScore', 'worstAccessibility', 'maxVc', 'economicCostSar'];
+  const keys: (keyof ScenarioMetrics)[] = ['closureEpisodes', 'repeatedClosures', 'closureKmDays', 'visibleClosureShare', 'conflicts', 'highConflicts', 'closureSegmentDays', 'closureDays', 'vehicleHoursDelay', 'detourVehicleKm', 'accessibilityScore', 'worstAccessibility', 'maxVc', 'economicCostSar'];
   for (const k of keys) lines.push(['summary', k, (before[k] as number).toFixed(3), (after[k] as number).toFixed(3)].map(esc).join(','));
   lines.push('');
   lines.push('section,date,before_vehicle_hours_delay,after_vehicle_hours_delay,before_detour_vkm,after_detour_vkm,before_accessibility,after_accessibility,before_closed_segments,after_closed_segments');

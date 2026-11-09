@@ -7,12 +7,13 @@
 
 @theme {
   --font-sans: 'IBM Plex Sans Arabic', 'Segoe UI', system-ui, sans-serif;
-  --color-ink-950: #050a14;
-  --color-ink-900: #0a1220;
-  --color-ink-850: #0e1828;
-  --color-ink-800: #121e31;
-  --color-ink-700: #1b2a42;
-  --color-ink-600: #263955;
+  --color-ink-950: #040a1d;
+  --color-ink-900: #071331;
+  --color-ink-850: #0a1838;
+  --color-ink-800: #0e1d42;
+  --color-ink-700: #172a55;
+  --color-ink-600: #22386a;
+  --color-violet-brand: #6c5dd3;
   --color-line: rgb(148 163 184 / 0.14);
   --color-brand: #22d3ee;
   --color-brand-2: #34d399;
@@ -20,8 +21,8 @@
 
 :root {
   color-scheme: dark;
-  --glass: rgb(10 18 32 / 0.72);
-  --glass-strong: rgb(10 18 32 / 0.9);
+  --glass: rgb(9 18 48 / 0.74);
+  --glass-strong: rgb(8 16 44 / 0.92);
 }
 
 html,
@@ -40,6 +41,22 @@ body,
   direction: ltr;
   unicode-bidi: isolate;
   font-variant-numeric: tabular-nums;
+}
+
+/* Official RASD identity: deep navy with soft violet light streaks */
+.rasd-bg {
+  background:
+    radial-gradient(ellipse 38% 9% at 28% 18%, rgb(124 77 255 / 0.28), transparent 70%),
+    radial-gradient(ellipse 30% 7% at 78% 72%, rgb(124 77 255 / 0.22), transparent 70%),
+    radial-gradient(ellipse 12% 30% at 96% 40%, rgb(124 77 255 / 0.25), transparent 70%),
+    radial-gradient(ellipse 70% 60% at 10% 100%, rgb(14 45 110 / 0.55), transparent 70%),
+    linear-gradient(160deg, #061433 0%, #040a1d 60%, #050d26 100%);
+}
+.rasd-bg-soft {
+  background:
+    radial-gradient(ellipse 60% 18% at 20% 0%, rgb(124 77 255 / 0.18), transparent 70%),
+    radial-gradient(ellipse 50% 20% at 90% 100%, rgb(124 77 255 / 0.14), transparent 70%),
+    #050c22;
 }
 
 .glass {

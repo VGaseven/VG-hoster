@@ -7,12 +7,12 @@ type Variant = 'primary' | 'ghost' | 'outline' | 'danger' | 'success' | 'subtle'
 
 export function Button({ variant = 'outline', size = 'md', className, children, ...rest }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: 'sm' | 'md' | 'lg' }) {
   const v: Record<Variant, string> = {
-    primary: 'bg-cyan-400 text-slate-950 hover:bg-cyan-300 shadow-[0_0_24px_-6px_rgba(34,211,238,0.7)]',
+    primary: 'bg-[#6c5dd3] text-white hover:bg-[#7c6ee0] shadow-[0_0_26px_-6px_rgba(124,93,255,0.75)]',
     success: 'bg-emerald-400 text-slate-950 hover:bg-emerald-300',
     danger: 'bg-red-500/90 text-white hover:bg-red-500',
     ghost: 'text-slate-300 hover:bg-white/5 hover:text-white',
     subtle: 'bg-white/5 text-slate-200 hover:bg-white/10',
-    outline: 'border border-white/12 text-slate-200 hover:border-cyan-400/50 hover:bg-cyan-400/5 hover:text-white',
+    outline: 'border border-white/12 text-slate-200 hover:border-violet-400/50 hover:bg-violet-400/5 hover:text-white',
   };
   const s = { sm: 'h-7 px-2.5 text-xs gap-1.5', md: 'h-9 px-3.5 text-sm gap-2', lg: 'h-11 px-5 text-sm gap-2' }[size];
   return (
@@ -126,7 +126,7 @@ export function Toggle({ checked, onChange, label, disabled, hint }: { checked: 
         aria-label={label}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors', checked ? 'bg-cyan-400' : 'bg-slate-600')}
+        className={cn('relative h-5 w-9 shrink-0 rounded-full transition-colors', checked ? 'bg-violet-500' : 'bg-slate-600')}
       >
         <span className={cn('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all', checked ? 'right-0.5' : 'right-[18px]')} />
       </button>

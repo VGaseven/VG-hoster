@@ -58,7 +58,7 @@ export function ComparePage() {
     <div className="flex h-full flex-col" data-testid="compare-page">
       <header className="flex flex-wrap items-center gap-3 border-b border-white/6 px-5 py-3">
         <h1 className="flex items-center gap-2 text-base font-semibold">
-          <GitCompareArrows size={18} className="text-cyan-300" /> قبل التنسيق / بعد التنسيق
+          <GitCompareArrows size={18} className="text-violet-300" /> مراجعة القرار: الخطة الأصلية مقابل المنسقة
         </h1>
         <SimBadge />
         <div className="flex rounded-lg bg-white/5 p-0.5 text-[12px]">
@@ -143,8 +143,14 @@ function MapPane({ title, tone, m, children }: { title: string; tone: 'amber' | 
 }
 
 function MetricsTable({ before, after }: { before: ScenarioMetrics; after: ScenarioMetrics }) {
-  const rows: [string, number, number, boolean, (n: number) => string][] = [
+  const primary: [string, number, number, boolean, (n: number) => string][] = [
+    ['مرات إغلاق المقاطع', before.closureEpisodes, after.closureEpisodes, true, (n) => fmtNum(n)],
+    ['إغلاقات متكررة لنفس المقطع', before.repeatedClosures, after.repeatedClosures, true, (n) => fmtNum(n)],
+    ['كم-يوم مغلق (المدة × النطاق)', before.closureKmDays, after.closureKmDays, true, (n) => fmtNum(n, 1)],
     ['التعارضات', before.conflicts, after.conflicts, true, (n) => fmtNum(n)],
+    ['إغلاقات معلنة مسبقاً للمستخدم %', before.visibleClosureShare, after.visibleClosureShare, false, (n) => fmtNum(n, 0)],
+  ];
+  const rows: [string, number, number, boolean, (n: number) => string][] = [
     ['تعارضات مرتفعة', before.highConflicts, after.highConflicts, true, (n) => fmtNum(n)],
     ['أيام إغلاق المقاطع', before.closureSegmentDays, after.closureSegmentDays, true, (n) => fmtNum(n)],
     ['أيام فيها إغلاق', before.closureDays, after.closureDays, true, (n) => fmtNum(n)],
@@ -156,7 +162,17 @@ function MetricsTable({ before, after }: { before: ScenarioMetrics; after: Scena
   ];
   return (
     <div data-testid="compare-metrics">
-      <div className="mb-2 text-[13px] font-semibold">المؤشرات المحسوبة من النموذج</div>
+      <div className="mb-1 text-[13px] font-semibold text-violet-200">النتائج الرئيسية</div>
+      <MetricRows rows={primary} />
+      <div className="mb-1 mt-4 text-[12px] font-semibold text-slate-400">مؤشرات مُنمذجة مساندة</div>
+      <MetricRows rows={rows.slice(1)} />
+    </div>
+  );
+}
+
+function MetricRows({ rows }: { rows: [string, number, number, boolean, (n: number) => string][] }) {
+  return (
+    <div>
       <table className="w-full text-[12px]">
         <thead>
           <tr className="text-slate-500">

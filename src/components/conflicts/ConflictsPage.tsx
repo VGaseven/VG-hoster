@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { AnimatePresence, motion } from 'motion/react';
-import { AlertTriangle, ChevronLeft, ChevronRight, Crosshair, FileSearch, Pause, Play, Radar, RefreshCcw, RotateCcw, ShieldAlert, Wand2, Zap } from 'lucide-react';
+import { motion } from 'motion/react';
+import { AlertTriangle, ChevronRight, Crosshair, FileSearch, Radar, ShieldAlert, Wand2, Zap } from 'lucide-react';
 import type { Conflict } from '@/types';
 import { SidePanel } from '@/app/Layout';
 import { useStore } from '@/store/store';
@@ -11,7 +11,7 @@ import { ORGANIZATIONS } from '@/data/organizations';
 import { Badge, Button, Dialog, Empty } from '@/components/ui/ui';
 import { fmtDate } from '@/utils/date';
 import { cn } from '@/utils/format';
-import { STAGES, rebuildUpTo, resetScenarioStages, stopCalendar } from './scenarioStages';
+import { startShow } from '@/components/tutorial/RasdShow';
 
 const sevTone = { high: 'red', medium: 'amber', low: 'slate' } as const;
 
@@ -21,10 +21,9 @@ export function ConflictsPage() {
   const selectedId = useStore((s) => s.selectedConflictId);
   const select = useStore((s) => s.selectConflict);
   const [params, setParams] = useSearchParams();
-  const [player, setPlayer] = useState(params.get('scenario') === '1');
   useEffect(() => {
     if (params.get('scenario') === '1') {
-      setPlayer(true);
+      startShow(2);
       params.delete('scenario');
       setParams(params, { replace: true });
     }
@@ -38,11 +37,11 @@ export function ConflictsPage() {
       <SidePanel width={392} testid="conflicts-panel" tour="conflicts-panel">
         <div className="border-b border-white/6 p-4">
           <h2 className="flex items-center gap-2 text-[15px] font-semibold">
-            <Radar size={17} className="text-red-300" /> محرك كشف التعارضات
+            <Radar size={17} className="text-red-300" /> تحليل التعارض
           </h2>
-          <p className="mt-1 text-[11.5px] text-slate-400">قواعد مكانية–زمنية + نموذج شبكة. كل تعارض مدعوم بأدلة ونوع دليل واضح.</p>
-          <Button variant="primary" size="sm" className="mt-3 w-full" onClick={() => setPlayer(true)} data-testid="open-scenario" data-tour="simulate-conflict">
-            <Zap size={14} /> محاكاة تعارض جديد
+          <p className="mt-1 text-[11.5px] text-slate-400">قراءة المشاريع معاً بدل التعامل مع كل إغلاق منفرداً — كل تعارض مدعوم بأدلة ونوع دليل واضح.</p>
+          <Button variant="primary" size="sm" className="mt-3 w-full" onClick={() => startShow(2)} data-testid="open-scenario" data-tour="simulate-conflict">
+            <Zap size={14} /> عرض سيناريو رصد (التعارض)
           </Button>
         </div>
         <div className="scroll-thin min-h-0 flex-1 overflow-y-auto p-3">
@@ -70,7 +69,6 @@ export function ConflictsPage() {
           )}
         </div>
       </SidePanel>
-      <AnimatePresence>{player && <ScenarioPlayer onClose={() => setPlayer(false)} />}</AnimatePresence>
     </>
   );
 }
@@ -171,7 +169,7 @@ export function ConflictDetails({ conflict: c, onBack }: { conflict: Conflict; o
           <Crosshair size={14} /> التحليق إلى التعارض
         </Button>
         <Button size="sm" variant="primary" className="col-span-2" onClick={() => navigate('/optimize')} data-testid="go-optimize">
-          <Wand2 size={14} /> مقارنة الحلول (٣ بدائل)
+          <Wand2 size={14} /> مقارنة البدائل الثلاثة
         </Button>
       </div>
       <Dialog open={open} onClose={() => setOpen(false)} title="تفاصيل التعارض — الأدلة والحساب" wide>
@@ -223,85 +221,3 @@ export function ConflictDetails({ conflict: c, onBack }: { conflict: Conflict; o
   );
 }
 
-function ScenarioPlayer({ onClose }: { onClose: () => void }) {
-  const navigate = useNavigate();
-  const [idx, setIdx] = useState(0);
-  const [playing, setPlaying] = useState(true);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const ran = useRef(-1);
-  const stage = STAGES[idx];
-  const projects = useStore((s) => s.projects);
-  const selectedConflictId = useStore((s) => s.selectedConflictId);
-  const c = useMemo(() => (selectedConflictId ? getConflictsSafe(projects).find((x) => x.id === selectedConflictId) : null), [projects, selectedConflictId]);
-
-  useEffect(() => {
-    if (ran.current !== idx) {
-      ran.current = idx;
-      void stage.run({ navigate, animated: true });
-    }
-    if (!playing || idx >= STAGES.length - 1) return;
-    timer.current = setTimeout(() => setIdx((i) => Math.min(STAGES.length - 1, i + 1)), stage.durationMs);
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, [idx, playing, stage, navigate]);
-
-  useEffect(() => () => stopCalendar(), []);
-
-  const goto = (i: number) => {
-    if (timer.current) clearTimeout(timer.current);
-    const target = Math.max(0, Math.min(STAGES.length - 1, i));
-    if (target < idx) rebuildUpTo(target, navigate);
-    else for (let j = idx + 1; j < target; j++) void STAGES[j].run({ navigate, animated: false });
-    ran.current = -1;
-    setIdx(target);
-  };
-  const interaction = c?.evidence.find((e) => e.unit === 'مركبة-ساعة');
-
-  return (
-    <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }} className="glass-strong pointer-events-auto absolute bottom-[160px] left-1/2 z-40 w-[560px] -translate-x-1/2 rounded-2xl p-4" data-testid="scenario-player">
-      <div className="flex items-center justify-between">
-        <div className="text-[11px] font-semibold tracking-wide text-cyan-300">محاكاة تعارض جديد · المرحلة {idx + 1} من {STAGES.length}</div>
-        <button className="text-[11px] text-slate-400 hover:text-white" onClick={() => { stopCalendar(); onClose(); }}>
-          إغلاق
-        </button>
-      </div>
-      <div className="mt-2 flex gap-1" role="tablist">
-        {STAGES.map((s, i) => (
-          <button key={s.id} onClick={() => goto(i)} title={s.titleAr} className={cn('h-1.5 flex-1 rounded-full transition', i < idx ? 'bg-cyan-400/70' : i === idx ? 'bg-cyan-300' : 'bg-white/10')} aria-label={`المرحلة ${i + 1}`} />
-        ))}
-      </div>
-      <AnimatePresence mode="wait">
-        <motion.div key={idx} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-3 min-h-[64px]">
-          <div className="text-[15px] font-semibold" data-testid="stage-title">{stage.titleAr}</div>
-          <div className="mt-1 text-[12.5px] leading-relaxed text-slate-400">{stage.bodyAr}</div>
-          {idx >= 9 && interaction && (
-            <div className="mt-2 rounded-lg border border-red-400/25 bg-red-500/10 p-2 text-[12px] text-red-100">{interaction.textAr}</div>
-          )}
-        </motion.div>
-      </AnimatePresence>
-      <div className="mt-3 flex items-center gap-1.5">
-        <Button size="sm" variant="subtle" onClick={() => goto(idx - 1)} aria-label="رجوع" data-testid="stage-back">
-          <ChevronRight size={14} /> رجوع
-        </Button>
-        <Button size="sm" variant={playing ? 'outline' : 'primary'} onClick={() => setPlaying(!playing)} data-testid="stage-pause">
-          {playing ? <Pause size={14} /> : <Play size={14} />} {playing ? 'إيقاف مؤقت' : 'متابعة'}
-        </Button>
-        <Button size="sm" variant="subtle" onClick={() => goto(idx + 1)} data-testid="stage-next">
-          تخطي <ChevronLeft size={14} />
-        </Button>
-        <Button size="sm" variant="ghost" onClick={() => { ran.current = -1; setIdx(idx); void stage.run({ navigate, animated: true }); }} title="إعادة تشغيل هذه المرحلة">
-          <RefreshCcw size={14} />
-        </Button>
-        <Button size="sm" variant="ghost" className="mr-auto" onClick={() => { resetScenarioStages(); ran.current = -1; setIdx(0); setPlaying(false); }} data-testid="stage-reset">
-          <RotateCcw size={14} /> إعادة ضبط
-        </Button>
-      </div>
-    </motion.div>
-  );
-}
-
-import { getConflicts } from '@/store/derived';
-function getConflictsSafe(p: Parameters<typeof getConflicts>[0]) {
-  return getConflicts(p);
-}

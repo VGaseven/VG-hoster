@@ -19,7 +19,7 @@ export function offlineStyle(theme: 'dark' | 'light' = 'dark'): StyleSpecificati
     version: 8,
     name: 'RASD offline twin',
     sources: {},
-    layers: [{ id: 'background', type: 'background', paint: { 'background-color': theme === 'dark' ? '#0b1220' : '#e8edf3' } }],
+    layers: [{ id: 'background', type: 'background', paint: { 'background-color': theme === 'dark' ? '#06102a' : '#e8edf3' } }],
   };
 }
 

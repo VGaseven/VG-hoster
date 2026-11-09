@@ -31,7 +31,8 @@ export const DEFAULT_VIDEO_PROPS: VideoProps = { preset: '1080p', durationSec: 5
 export const FPS = 30;
 
 /** Scene base durations (seconds) — scaled to the requested total. */
-const BASE = [5, 8, 8, 10, 10, 8, 5];
+/** PDF story: idea · project data · conflict · 3 alternatives · authority review · two plans · citizen · close */
+const BASE = [5, 7, 7, 9, 6, 9, 7, 4];
 export function sceneFrames(durationSec: number) {
   const total = BASE.reduce((a, b) => a + b, 0);
   const frames = BASE.map((s) => Math.round((s / total) * durationSec * FPS));
@@ -59,7 +60,7 @@ const Caption: React.FC<{ text: string; show: boolean }> = ({ text, show }) => {
   const o = interpolate(f, [0, 12], [0, 1], { extrapolateRight: 'clamp' });
   return (
     <div style={{ position: 'absolute', bottom: 60 * s, left: 0, right: 0, display: 'flex', justifyContent: 'center', opacity: o }}>
-      <div dir="rtl" style={{ fontFamily: FONT, fontSize: 34 * s, fontWeight: 500, color: '#f1f5f9', background: 'rgba(5,10,20,0.72)', border: '1px solid rgba(148,163,184,0.2)', borderRadius: 16 * s, padding: `${12 * s}px ${28 * s}px`, maxWidth: '82%', textAlign: 'center', lineHeight: 1.5 }}>
+      <div dir="rtl" style={{ fontFamily: FONT, fontSize: 34 * s, fontWeight: 500, color: '#f1f5f9', background: 'rgba(6,14,40,0.78)', border: '1px solid rgba(139,123,255,0.3)', borderRadius: 16 * s, padding: `${12 * s}px ${28 * s}px`, maxWidth: '82%', textAlign: 'center', lineHeight: 1.5 }}>
         {text}
       </div>
     </div>
@@ -79,7 +80,7 @@ const Brand: React.FC = () => {
   const s = useScale();
   return (
     <div dir="rtl" style={{ position: 'absolute', top: 24 * s, right: 32 * s, fontFamily: FONT, color: '#e2e8f0', fontSize: 26 * s, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 * s }}>
-      <span style={{ width: 14 * s, height: 14 * s, borderRadius: 99, background: 'linear-gradient(135deg,#22d3ee,#34d399)', boxShadow: '0 0 18px #22d3ee' }} />
+      <span style={{ width: 14 * s, height: 14 * s, borderRadius: 99, background: 'linear-gradient(135deg,#22d3ee,#8b7bff)', boxShadow: '0 0 18px #8b7bff' }} />
       رصد <span style={{ color: '#64748b', fontWeight: 500 }}>| RASD</span>
     </div>
   );
@@ -91,7 +92,7 @@ const Panel: React.FC<{ children: React.ReactNode; style?: React.CSSProperties; 
   const s = useScale();
   const p = spring({ frame: f - enterAt, fps, config: { damping: 18 } });
   return (
-    <div dir="rtl" style={{ position: 'absolute', fontFamily: FONT, color: '#e2e8f0', background: 'rgba(8,14,26,0.86)', border: '1px solid rgba(148,163,184,0.22)', borderRadius: 20 * s, padding: 22 * s, boxShadow: '0 20px 60px rgba(0,0,0,0.5)', opacity: p, transform: `translateY(${(1 - p) * 30 * s}px)`, ...style }}>
+    <div dir="rtl" style={{ position: 'absolute', fontFamily: FONT, color: '#e2e8f0', background: 'rgba(8,17,46,0.88)', border: '1px solid rgba(139,123,255,0.28)', borderRadius: 20 * s, padding: 22 * s, boxShadow: '0 20px 60px rgba(0,0,0,0.5)', opacity: p, transform: `translateY(${(1 - p) * 30 * s}px)`, ...style }}>
       {children}
     </div>
   );
@@ -114,16 +115,16 @@ const SceneIntro: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => {
   return (
     <AbsoluteFill>
       <CityScene width={W} height={H} camera={cam} vcBySeg={d.snapAfter.result.vcBySeg} vehicles={vehiclesAt(d.vehAfter, f, fps)} labels={zoneLabels} />
-      <AbsoluteFill style={{ background: 'radial-gradient(circle at 50% 45%, rgba(5,10,20,0.1), rgba(5,10,20,0.85))' }} />
+      <AbsoluteFill style={{ background: 'radial-gradient(ellipse 40% 9% at 28% 22%, rgba(124,77,255,0.35), transparent 70%), radial-gradient(ellipse 30% 7% at 76% 78%, rgba(124,77,255,0.3), transparent 70%), radial-gradient(circle at 50% 45%, rgba(4,10,29,0.25), rgba(4,10,29,0.9))' }} />
       <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', fontFamily: FONT, textAlign: 'center', opacity: t, transform: `scale(${0.94 + 0.06 * t})` }}>
-        <div dir="rtl" style={{ fontSize: 150 * s, fontWeight: 700, color: '#f8fafc', letterSpacing: -2, textShadow: '0 0 60px rgba(34,211,238,0.45)' }}>
-          رصد
+        <div dir="rtl" style={{ fontSize: 150 * s, fontWeight: 700, color: '#f8fafc', letterSpacing: -2, textShadow: '0 0 70px rgba(124,93,255,0.6)' }}>
+          رَصد
         </div>
-        <div dir="rtl" style={{ fontSize: 46 * s, fontWeight: 500, color: '#a5f3fc', marginTop: 8 * s }}>
-          رصد | ننسق قبل الإغلاق
+        <div dir="rtl" style={{ fontSize: 34 * s, fontWeight: 500, color: '#c4b5fd', marginTop: 8 * s }}>
+          المسار: التنقل الذكي المدعوم بالبيانات
         </div>
-        <div dir="rtl" style={{ fontSize: 24 * s, color: '#94a3b8', marginTop: 18 * s }}>
-          منصة تنسيق إغلاقات الطرق ومحاكاة أثرها · الرياض · نقل ثون ٥
+        <div dir="rtl" style={{ fontSize: 26 * s, color: '#cbd5e1', marginTop: 22 * s, maxWidth: '80%', lineHeight: 1.6 }}>
+          خدمة تجمع خطط الإغلاقات، تكشف تعارضها وتقارن بدائلها، وتُظهر الإغلاقات مسبقاً لمستخدمي الطريق.
         </div>
       </AbsoluteFill>
       <SimTag />
@@ -170,7 +171,7 @@ const SceneProblem: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => {
       )}
       <Brand />
       <SimTag />
-      <Caption show={p.captions} text={showB ? 'جهة ثانية تسجّل — بشكل مستقل — إغلاقاً كلياً لشارع العليا: المسار البديل نفسه.' : 'مرفق المياه يخطط لإغلاق جزئي على طريق الملك فهد في حي العليا.'} />
+      <Caption show={p.captions} text={showB ? 'إدخال المشاريع: جهة ثانية تسجّل — بشكل مستقل — إغلاقاً كلياً لشارع العليا، وهو المسار البديل نفسه.' : 'إدخال المشاريع: مرفق المياه يسجّل الموقع والمدة ونطاق الإغلاق على طريق الملك فهد (مشروع افتراضي).'} />
     </AbsoluteFill>
   );
 };
@@ -226,7 +227,7 @@ const SceneConflict: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => 
       )}
       <Brand />
       <SimTag />
-      <Caption show={p.captions} text="محرك رصد يكشف التعارض بالأدلة: تداخل زمني + المسار البديل مغلق + أثر مروري مُنمذج." />
+      <Caption show={p.captions} text="تحليل التعارض: قراءة المشاريع معاً بدل التعامل مع كل إغلاق منفرداً — بالأدلة." />
     </AbsoluteFill>
   );
 };
@@ -238,7 +239,7 @@ const SceneOptimize: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => 
   const d = getVideoData();
   const c = d.conflict;
   const cam = camAt([{ at: 0, cam: kmCam(c.location, zoomFor(H, 1.7), 66, -75) }, { at: 1, cam: kmCam(c.location, zoomFor(H, 3.2), 50, -60) }], f / dur, p.cameraStyle);
-  const applied = f > dur * 0.62;
+  const applied = false;
   const proj = applied ? d.after : d.before;
   const closures = proj
     .filter((x) => c.projectIds.includes(x.id))
@@ -252,13 +253,14 @@ const SceneOptimize: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => 
       <CityScene width={W} height={H} camera={cam} vcBySeg={(applied ? d.snapAfter : d.snapBefore).result.vcBySeg} closures={closures} vehicles={vehiclesAt(applied ? d.vehAfter : d.vehBefore, f, fps)} labels={zoneLabels} buildingOpacity={0.75} />
       <AbsoluteFill style={{ background: 'linear-gradient(0deg, rgba(5,10,20,0.85) 0%, rgba(5,10,20,0.2) 55%)' }} />
       <div dir="rtl" style={{ position: 'absolute', top: 90 * s, right: 40 * s, fontFamily: FONT, fontSize: 40 * s, fontWeight: 700, color: '#f8fafc' }}>
-        مركز تحسين الجدولة
+        مقارنة البدائل قبل الاعتماد
       </div>
       <div dir="rtl" style={{ position: 'absolute', left: 40 * s, right: 40 * s, bottom: (p.captions ? 150 : 50) * s, display: 'flex', flexDirection: vertical ? 'column' : 'row', gap: 18 * s, justifyContent: 'center' }}>
         {d.options.map((o, i) => {
-          const rec = o.recommended && f > dur * 0.4;
+          const rec = o.recommended && f > dur * 0.45;
+          const tech = o.requiresTechnicalConfirmation && o.feasible;
           return (
-            <Panel key={o.id} enterAt={8 + i * 8} style={{ position: 'relative', width: cardW, padding: 20 * s, border: rec ? '2px solid #34d399' : '1px solid rgba(148,163,184,0.22)', boxShadow: rec ? '0 0 50px rgba(52,211,153,0.35)' : undefined }}>
+            <Panel key={o.id} enterAt={8 + i * 8} style={{ position: 'relative', width: cardW, padding: 20 * s, border: rec ? '2px solid #8b7bff' : '1px solid rgba(139,123,255,0.22)', boxShadow: rec ? '0 0 50px rgba(124,93,255,0.45)' : undefined }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 26 * s, fontWeight: 700 }}>{o.titleAr}</span>
                 <span style={{ fontSize: 17 * s, padding: `${2 * s}px ${10 * s}px`, borderRadius: 8 * s, background: o.feasible ? 'rgba(52,211,153,0.15)' : 'rgba(244,63,94,0.15)', color: o.feasible ? '#6ee7b7' : '#fda4af' }}>{o.feasible ? 'ممكن' : 'غير ممكن'}</span>
@@ -268,8 +270,8 @@ const SceneOptimize: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => 
                   <div>
                     الدرجة: <b style={{ color: '#fff' }}>{fmtNum(o.score, 1)}</b>
                   </div>
-                  <div>التعارضات: {o.metrics.conflicts} · أيام الإغلاق: {o.metrics.closureSegmentDays}</div>
-                  <div>التأخير: {fmtNum(o.metrics.vehicleHoursDelay)} مركبة-ساعة</div>
+                  <div>التعارضات: {o.metrics.conflicts} · مرات الإغلاق: {o.metrics.closureEpisodes}</div>
+                  <div>كم-يوم مغلق: {fmtNum(o.metrics.closureKmDays, 1)}</div>
                   {o.changes[0] && (
                     <div style={{ color: '#a5f3fc' }}>
                       {o.changes[0].projectId}: {fmtShort(o.changes[0].to.start)} – {fmtShort(o.changes[0].to.end)}
@@ -279,7 +281,8 @@ const SceneOptimize: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => 
               ) : (
                 <div style={{ marginTop: 12 * s, fontSize: 17 * s, color: '#94a3b8', lineHeight: 1.6 }}>{(o.infeasibleReasonAr ?? '').slice(0, 120)}…</div>
               )}
-              {rec && <div style={{ position: 'absolute', top: -16 * s, right: 20 * s, background: '#34d399', color: '#052e16', fontWeight: 700, fontSize: 17 * s, borderRadius: 99, padding: `${3 * s}px ${12 * s}px` }}>الخيار الموصى به</div>}
+              {rec && <div style={{ position: 'absolute', top: -16 * s, right: 20 * s, background: '#6c5dd3', color: '#fff', fontWeight: 700, fontSize: 17 * s, borderRadius: 99, padding: `${3 * s}px ${12 * s}px` }}>الخيار الموصى به</div>}
+              {tech && <div style={{ position: 'absolute', top: -16 * s, right: 20 * s, background: '#0b1638', border: '1px solid #fbbf24', color: '#fde68a', fontSize: 15 * s, borderRadius: 99, padding: `${3 * s}px ${12 * s}px` }}>يتطلب تأكيداً فنياً</div>}
             </Panel>
           );
         })}
@@ -296,7 +299,7 @@ const SceneOptimize: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => 
       )}
       <Brand />
       <SimTag />
-      <Caption show={p.captions} text="ثلاثة بدائل محسوبة بمحاكاة كاملة؛ يُوصى بالبديل الأعلى في التقييم الموزون الشفاف ثم يُعتمد." />
+      <Caption show={p.captions} text="تقديم الموعد حسب المرونة · تأخير الموعد حسب الأولوية · نافذة مشتركة إذا أمكن فنياً — مرتّبة مع شرح المفاضلة." />
     </AbsoluteFill>
   );
 };
@@ -304,6 +307,49 @@ const SceneOptimize: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => 
 function dayOf(iso: string) {
   return Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse('2026-12-01T00:00:00Z')) / 864e5);
 }
+
+
+const SceneReview: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => {
+  const f = useCurrentFrame();
+  const { width: W, height: H, fps } = useVideoConfig();
+  const s = useScale();
+  const d = getVideoData();
+  const c = d.conflict;
+  const cam = camAt([{ at: 0, cam: kmCam(c.location, zoomFor(H, 3.2), 50, -60) }, { at: 1, cam: kmCam(c.location, zoomFor(H, 2.6), 58, -35) }], f / dur, p.cameraStyle);
+  const stamped = f > dur * 0.45;
+  const proj = stamped ? d.after : d.before;
+  const closures = proj
+    .filter((x) => c.projectIds.includes(x.id) && d.focusDay >= dayOf(x.schedule.start) && d.focusDay <= dayOf(x.schedule.end))
+    .flatMap((x) => x.closures.map((e) => ({ extent: e, color: stamped ? '#8b7bff' : '#ef4444' })));
+  const chosen = d.chosen;
+  const st = spring({ frame: f - Math.round(dur * 0.45), fps, config: { damping: 12 } });
+  return (
+    <AbsoluteFill>
+      <CityScene width={W} height={H} camera={cam} vcBySeg={(stamped ? d.snapAfter : d.snapBefore).result.vcBySeg} closures={closures} vehicles={vehiclesAt(stamped ? d.vehAfter : d.vehBefore, f, fps)} labels={zoneLabels} buildingOpacity={0.8} />
+      <Panel enterAt={4} style={{ top: 110 * s, right: 40 * s, width: Math.min(W - 80 * s, 640 * s) }}>
+        <div style={{ fontSize: 18 * s, color: '#c4b5fd', fontWeight: 600 }}>مراجعة الجهة المختصة</div>
+        <div style={{ fontSize: 30 * s, fontWeight: 700, marginTop: 4 * s }}>قبول أو رفض أو تعديل</div>
+        {chosen && (
+          <>
+            <div style={{ fontSize: 21 * s, marginTop: 12 * s, color: '#e2e8f0' }}>البديل المقترح: «{chosen.titleAr}»</div>
+            {chosen.changes.map((ch) => (
+              <div key={ch.projectId} style={{ fontSize: 19 * s, marginTop: 8 * s, color: '#cbd5e1' }}>
+                {ch.projectId}: <s style={{ color: '#64748b' }}>{fmtShort(ch.from.start)}–{fmtShort(ch.from.end)}</s> ← <b style={{ color: '#ddd6fe' }}>{fmtShort(ch.to.start)}–{fmtShort(ch.to.end)}</b>
+              </div>
+            ))}
+            <div style={{ fontSize: 17 * s, marginTop: 10 * s, color: '#94a3b8', lineHeight: 1.6 }}>{chosen.tradeoffsAr[0]}</div>
+          </>
+        )}
+        <div style={{ marginTop: 18 * s, display: 'inline-block', transform: `scale(${0.6 + 0.4 * st}) rotate(-4deg)`, opacity: st, border: '3px solid #a78bfa', color: '#ddd6fe', borderRadius: 12 * s, padding: `${6 * s}px ${18 * s}px`, fontSize: 26 * s, fontWeight: 700 }}>
+          ✓ اعتُمد — قرار موثّق بأسبابه
+        </div>
+      </Panel>
+      <Brand />
+      <SimTag />
+      <Caption show={p.captions} text="لمكاتب التنسيق: بدائل مرتّبة وقرار موثّق بأسبابه — ثم تصبح الإغلاقات المعتمدة معلنة لمستخدمي الطريق." />
+    </AbsoluteFill>
+  );
+};
 
 const SceneBeforeAfter: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => {
   const f = useCurrentFrame();
@@ -321,9 +367,9 @@ const SceneBeforeAfter: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) 
   const k = interpolate(f, [dur * 0.25, dur * 0.7], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) });
   const rows: [string, number, number, (n: number) => string, boolean][] = [
     ['التعارضات', d.mBefore.conflicts, d.mAfter.conflicts, (n) => fmtNum(n), true],
-    ['تأخير المركبات (مركبة-ساعة)', d.mBefore.vehicleHoursDelay, d.mAfter.vehicleHoursDelay, (n) => fmtNum(n), true],
-    ['أيام إغلاق المقاطع', d.mBefore.closureSegmentDays, d.mAfter.closureSegmentDays, (n) => fmtNum(n), true],
-    ['الأثر الاقتصادي التقديري', d.mBefore.economicCostSar, d.mAfter.economicCostSar, (n) => fmtSar(n), true],
+    ['مرات إغلاق المقاطع', d.mBefore.closureEpisodes, d.mAfter.closureEpisodes, (n) => fmtNum(n), true],
+    ['كم-يوم مغلق', d.mBefore.closureKmDays, d.mAfter.closureKmDays, (n) => fmtNum(n, 1), true],
+    ['إغلاقات معلنة مسبقاً', d.mBefore.visibleClosureShare, d.mAfter.visibleClosureShare, (n) => `${fmtNum(n)}%`, false],
   ];
   const label = (t: string, color: string, style: React.CSSProperties) => (
     <div dir="rtl" style={{ position: 'absolute', fontFamily: FONT, fontSize: 30 * s, fontWeight: 700, color, background: 'rgba(5,10,20,0.75)', borderRadius: 12 * s, padding: `${6 * s}px ${16 * s}px`, ...style }}>
@@ -334,11 +380,11 @@ const SceneBeforeAfter: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) 
     <AbsoluteFill>
       <div style={{ position: 'absolute', left: 0, top: 0, width: half.w, height: half.h, overflow: 'hidden' }}>
         <CityScene width={half.w} height={half.h} camera={cam} vcBySeg={d.snapBefore.result.vcBySeg} closures={before} vehicles={vehiclesAt(d.vehBefore, f, fps)} labels={[]} />
-        {label('قبل التنسيق', '#fcd34d', { top: 24 * s, right: 24 * s })}
+        {label('الخطة الأصلية', '#fcd34d', { top: 24 * s, right: 24 * s })}
       </div>
       <div style={{ position: 'absolute', left: vertical ? 0 : half.w, top: vertical ? half.h : 0, width: half.w, height: half.h, overflow: 'hidden', borderLeft: vertical ? undefined : '2px solid #22d3ee', borderTop: vertical ? '2px solid #22d3ee' : undefined }}>
         <CityScene width={half.w} height={half.h} camera={cam} vcBySeg={d.snapAfter.result.vcBySeg} closures={after} vehicles={vehiclesAt(d.vehAfter, f, fps)} labels={[]} />
-        {label('بعد التنسيق', '#6ee7b7', { top: 24 * s, right: 24 * s })}
+        {label('الخطة المنسقة المعتمدة', '#c4b5fd', { top: 24 * s, right: 24 * s })}
       </div>
       {p.metrics && (
         <Panel enterAt={Math.round(dur * 0.2)} style={{ left: '50%', transform: 'translateX(-50%)', bottom: (p.captions ? 150 : 40) * s, width: vertical ? W - 80 * s : 1100 * s, display: 'grid', gridTemplateColumns: vertical ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 18 * s }}>
@@ -346,6 +392,7 @@ const SceneBeforeAfter: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) 
             const cur = b + (a - b) * k;
             const pct = b ? ((a - b) / b) * 100 : 0;
             const good = lower ? a < b : a > b;
+            void fmtSar;
             return (
               <div key={name} style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 17 * s, color: '#94a3b8' }}>{name}</div>
@@ -357,7 +404,7 @@ const SceneBeforeAfter: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) 
         </Panel>
       )}
       <SimTag />
-      <Caption show={p.captions} text="نفس الطلب المروري ونفس الافتراضات — المؤشرات محسوبة من النموذج لكامل الأفق الزمني." />
+      <Caption show={p.captions} text="نقارن خطتين للمشاريع نفسها: تكرار الإغلاق ومدته ونطاقه، والتعارضات، ونسبة الإغلاقات المعلنة — محسوبة لا مفترضة." />
     </AbsoluteFill>
   );
 };
@@ -383,7 +430,7 @@ const SceneCitizen: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => {
       <CityScene width={W} height={H} camera={cam} vcBySeg={d.snapAfter.result.vcBySeg} closures={closures} routes={routes} vehicles={vehiclesAt(d.vehAfter, f, fps)} labels={zoneLabels} trafficColors={false} buildingOpacity={0.8} />
       <Panel enterAt={6} style={vertical ? { left: 40 * s, right: 40 * s, bottom: 200 * s } : { top: 110 * s, right: 60 * s, width: 520 * s, borderRadius: 36 * s, padding: 28 * s }}>
         <div style={{ fontSize: 18 * s, color: '#67e8f9', fontWeight: 600 }}>تجربة المواطن</div>
-        <div style={{ fontSize: 36 * s, fontWeight: 700, marginTop: 6 * s }}>خطط لمشوار بكرة من اليوم</div>
+        <div style={{ fontSize: 34 * s, fontWeight: 700, marginTop: 6 * s, lineHeight: 1.35 }}>خطّط لرحلة الغد قبل مفاجأة الإغلاق</div>
         <div style={{ fontSize: 20 * s, color: '#94a3b8', marginTop: 8 * s }}>{d.journeyTitle} · 16 ديسمبر 08:00</div>
         {j.affecting[0] && (
           <div style={{ marginTop: 16 * s, padding: 14 * s, borderRadius: 14 * s, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.4)', fontSize: 19 * s, lineHeight: 1.6 }}>
@@ -411,7 +458,7 @@ const SceneCitizen: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => {
       </Panel>
       <Brand />
       <SimTag />
-      <Caption show={p.captions} text="المواطن يرى الإغلاق المعتمد مسبقاً، ويقارن المسار البديل قبل أن يتحرك." />
+      <Caption show={p.captions} text="قبل: الوصول صباحاً إلى طريق مغلق. بعد: معرفة الإغلاق وبدائله من اليوم السابق." />
     </AbsoluteFill>
   );
 };
@@ -429,10 +476,13 @@ const SceneClosing: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => {
       <AbsoluteFill style={{ background: 'radial-gradient(circle at 50% 50%, rgba(5,10,20,0.2), rgba(5,10,20,0.9))' }} />
       <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', fontFamily: FONT, opacity: t }}>
         <div dir="rtl" style={{ fontSize: 64 * s, fontWeight: 700, color: '#f8fafc', textAlign: 'center', lineHeight: 1.4, padding: `0 ${60 * s}px` }}>
-          رصد — قرار أذكى، إغلاق أقل، مدينة أكثر انسيابية
+          رَصد — تنسيقٌ مبكر يحمي حركة المدينة
         </div>
-        <div dir="rtl" style={{ fontSize: 24 * s, color: '#94a3b8', marginTop: 20 * s }}>
-          نموذج أولي · بيانات تركيبية · نقل ثون ٥
+        <div dir="rtl" style={{ fontSize: 30 * s, color: '#c4b5fd', marginTop: 18 * s }}>
+          إغلاقات أقل تكراراً · أثر أخف على الحركة · استعداد أفضل لمستخدم الطريق
+        </div>
+        <div dir="rtl" style={{ fontSize: 22 * s, color: '#94a3b8', marginTop: 18 * s }}>
+          نموذج أولي · مشاريع افتراضية وبيانات محاكاة · نقل ثون ٥
         </div>
       </AbsoluteFill>
       <SimTag />
@@ -442,7 +492,7 @@ const SceneClosing: React.FC<{ p: VideoProps; dur: number }> = ({ p, dur }) => {
 
 export const RasdVideo: React.FC<VideoProps> = (props) => {
   const frames = sceneFrames(props.durationSec);
-  const scenes = [SceneIntro, SceneProblem, SceneConflict, SceneOptimize, SceneBeforeAfter, SceneCitizen, SceneClosing];
+  const scenes = [SceneIntro, SceneProblem, SceneConflict, SceneOptimize, SceneReview, SceneBeforeAfter, SceneCitizen, SceneClosing];
   let from = 0;
   return (
     <AbsoluteFill style={{ background: '#050a14' }}>

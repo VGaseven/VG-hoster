@@ -9,6 +9,7 @@ import { OptimizePage } from '@/components/optimization/OptimizePage';
 import { ComparePage } from '@/components/optimization/ComparePage';
 import { CitizenPage } from '@/components/citizen/CitizenPage';
 import { SettingsPage } from '@/components/layout/SettingsPage';
+import { OperatorsPage } from '@/components/citizen/OperatorsPage';
 
 const AnalyticsPage = lazy(() => import('@/components/analytics/AnalyticsPage'));
 const StudioPage = lazy(() => import('@/components/video/StudioPage'));
@@ -30,6 +31,7 @@ const router = createBrowserRouter([
       { path: 'analytics', element: <Suspense fallback={<Loading />}><AnalyticsPage /></Suspense> },
       { path: 'studio', element: <Suspense fallback={<Loading />}><StudioPage /></Suspense> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'operators', element: <OperatorsPage /> },
       { path: '*', element: <OverviewPage /> },
     ],
   },

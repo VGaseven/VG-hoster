@@ -58,7 +58,8 @@ export function getVideoData(): VideoData {
     conflict,
     options: opt.options,
     chosen,
-    mBefore: evaluateSchedule(withDemo),
+    // "before" = every project on its proposed schedule, nothing published yet (same rule as the app)
+    mBefore: evaluateSchedule(withDemo.map((p) => ({ ...p, schedule: { ...p.proposed }, coordinationGroup: undefined, status: p.status === 'rejected' ? p.status : ('submitted' as const) }))),
     mAfter: evaluateSchedule(after),
     snapBefore,
     snapAfter,

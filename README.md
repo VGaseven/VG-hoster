@@ -1,17 +1,37 @@
-# رصد | RASD — Naqlthon 5 prototype
+# رَصد | RASD — Naqlthon 5 prototype
 
-**Coordinate before closing. Predict before disrupting.**
-**ننسق قبل الإغلاق، ونتنبأ قبل التعطيل.**
+**المسار: التنقل الذكي المدعوم بالبيانات · تنسيقٌ مبكر يحمي حركة المدينة**
 
-RASD is an Arabic-first (RTL), desktop-first 3D GIS decision-support prototype for coordinating
-road closures in Riyadh. It demonstrates one connected workflow:
+> خدمة تجمع خطط الإغلاقات، تكشف تعارضها وتقارن بدائلها، وتُظهر الإغلاقات مسبقاً لمستخدمي الطريق.
 
-> Project submission → spatial analysis → conflict detection → impact simulation →
-> schedule optimization → government approval → citizen notification → video export
+RASD is a proactive **road-closure coordination and decision-support** prototype (not a traffic
+surveillance, emergency or environmental platform). It follows the official mechanism from the
+team's Naqlthon 5 presentation:
 
-> ⚠️ **All project records are synthetic.** Traffic values come from a local simulation model
+> **إدخال المشاريع ← تحليل التعارض ← مقارنة البدائل ← مراجعة القرار**
+> Project data → Conflict analysis → Alternative comparison → Decision review
+
+* **Scope**: one real Riyadh neighbourhood — **حي العليا (Al Olaya)**, King Fahd Rd / Olaya St
+  corridor — with clearly labelled *hypothetical* projects.
+* **Three official alternatives**: تقديم الموعد حسب المرونة · تأخير الموعد حسب الأولوية ·
+  نافذة مشتركة إذا أمكن فنيًا. Earlier/delay search the flexibility window for the closest slot
+  that introduces no new conflicts; a shared window is **never auto-recommended** and requires
+  explicit technical confirmation by both entities.
+* **Decision review**: the responsible authority can **accept, reject (with reason) or modify**
+  (dates constrained to each project's window); every decision is logged with its rationale.
+* **Primary outcomes** (computed, never assumed): إغلاقات أقل تكراراً (closure episodes / repeated
+  closures) · أثر أخف على الحركة (closure km-days, conflicts) · استعداد أفضل لمستخدم الطريق
+  (share of closures published before the day of travel). Traffic delay, detour and economic cost
+  are *supplementary modelled indicators* with transparent assumptions.
+* **Stakeholders**: citizens & residents (“خطّط لرحلة الغد قبل مفاجأة الإغلاق”), responsible
+  authorities, executing entities (contractors/utilities), transport operators.
+* **«عرض سيناريو رصد»**: a 10-scene automated but controllable demonstration (play / pause /
+  replay / back / next / reset) of the full story.
+
+> ⚠️ **All project records are hypothetical.** Traffic values come from a local simulation model
 > (synthetic demand), not real telemetry. Economic figures use configurable, illustrative
-> assumptions — not official Saudi statistics. The UI shows a permanent **SIMULATION DATA** badge.
+> assumptions — not official statistics. No integration with Google Maps or any government
+> platform is implied. The UI shows a permanent **SIMULATION DATA** badge.
 
 ---
 
@@ -43,16 +63,17 @@ Requirements: Node 20+ (tested on Node 22), Chromium/Chrome for rendering (auto-
 
 ## Judge path (≈ 3 minutes)
 
-1. Open the app → the 3D Olaya / King Fahd Rd digital twin loads with projects, alerts and moving simulated vehicles.
-2. Click **عرض الحكام** (Judge Demo) for an automated ~2.5-minute story, **or** manually:
-3. **محاكاة تعارض جديد** → an 11-stage replayable scenario (pause / back / skip / reset).
-4. **مركز تحسين الجدولة** → three calculated alternatives with a transparent weighted score → **تطبيق الحل**.
-5. **مقارنة السيناريوهات** → split-screen / slider before-vs-after with model-computed deltas.
-6. **تجربة المواطن** → “خطط لمشوار بكرة من اليوم”: approved closure, alternative route, best departure time.
-7. **استوديو المحاكاة** → preview and export the MP4.
+1. Open the app → حي العليا in 3D with hypothetical projects, the 4-step workflow and the three primary outcomes.
+2. Click **عرض سيناريو رصد** for the 10-scene story (≈ 1.5 min, fully controllable), **or** manually:
+3. **إدخال المشاريع** → click a road on the map, set closure boundaries, dates, hours, flexibility, lanes.
+4. **تحليل التعارض** → evidence-based conflict (geometric / modelled network / proximity-only).
+5. **مقارنة البدائل** → the three official alternatives with feasibility, schedule, new conflicts and impact → **إرسال للمراجعة**.
+6. **مراجعة القرار** → accept / reject / modify → original vs coordinated plan.
+7. **تجربة المواطن** → “خطّط لرحلة الغد قبل مفاجأة الإغلاق”; **مشغّلو النقل** → published closures with lead time.
+8. **استوديو المحاكاة** → preview and export the MP4 (`output/rasd-simulation.mp4`).
 
 Keyboard: `Space` play/pause · `R` reset camera · `2`/`3` 2D/3D · `[`/`]` speed · `B` before/after ·
-`T` cinematic tour · `N` new conflict scenario · `G` tutorial · `?` shortcuts.
+`T` cinematic tour · `N` RASD show (conflict scene) · `G` tutorial · `?` shortcuts.
 
 ## What is real vs simulated
 

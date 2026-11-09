@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useStore, type Speed } from '@/store/store';
+import { startShow } from '@/components/tutorial/RasdShow';
 
 const SPEEDS: Speed[] = [0.5, 1, 2, 4];
 
@@ -11,7 +12,7 @@ export const SHORTCUTS: [string, string][] = [
   ['[ / ]', 'إبطاء / تسريع المحاكاة'],
   ['B', 'تبديل قبل / بعد التنسيق'],
   ['T', 'جولة سينمائية'],
-  ['N', 'محاكاة تعارض جديد'],
+  ['N', 'عرض سيناريو رصد (من مشهد التعارض)'],
   ['G', 'فتح الدليل التفاعلي'],
   ['?', 'عرض الاختصارات'],
   ['Esc', 'إلغاء التحديد / إيقاف الكاميرا'],
@@ -56,7 +57,7 @@ export function useKeyboard(onHelp: () => void) {
           break;
         case 'n':
         case 'N':
-          navigate('/conflicts?scenario=1');
+          startShow(2);
           break;
         case 'g':
         case 'G':

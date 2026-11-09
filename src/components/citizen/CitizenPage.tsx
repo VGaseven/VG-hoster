@@ -45,9 +45,19 @@ export function CitizenPage() {
   return (
     <div className="flex h-full" data-testid="citizen-page">
       <aside className="scroll-thin w-[420px] shrink-0 overflow-y-auto border-l border-white/6 bg-gradient-to-b from-ink-900 to-ink-950 p-5">
-        <div className="text-[11px] font-semibold tracking-wide text-cyan-300">تجربة المواطن · رصد</div>
-        <h1 className="mt-1 text-2xl font-bold">خطط لمشوار بكرة من اليوم</h1>
-        <p className="mt-1 text-[12.5px] text-slate-400">اعرف الإغلاقات المعتمدة على طريقك قبل أن تتحرك، وقارن المسارات وأوقات الانطلاق.</p>
+        <div className="text-[11px] font-semibold tracking-wide text-violet-300">تجربة المواطن: معرفة الإغلاق قبل الوصول</div>
+        <h1 className="mt-1 text-2xl font-bold leading-snug">خطّط لرحلة الغد قبل مفاجأة الإغلاق</h1>
+        <p className="mt-1 text-[12.5px] text-slate-400">تظهر الإغلاقات المخطط لها مسبقاً، ليختار الشخص طريقه قبل يوم الرحلة.</p>
+        <div className="mt-3 grid grid-cols-2 gap-2 text-[11.5px]" data-testid="citizen-before-after">
+          <div className="rounded-xl border border-red-400/20 bg-red-500/[0.06] p-2.5">
+            <div className="font-semibold text-red-200">قبل</div>
+            <div className="mt-0.5 text-slate-400">الوصول صباحاً إلى طريق مغلق.</div>
+          </div>
+          <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/[0.06] p-2.5">
+            <div className="font-semibold text-emerald-200">بعد</div>
+            <div className="mt-0.5 text-slate-400">معرفة الإغلاق وبدائله من اليوم السابق.</div>
+          </div>
+        </div>
         <div className="mt-4 flex gap-1.5">
           {CITIZEN_JOURNEYS.map((j) => (
             <button
@@ -110,8 +120,9 @@ export function CitizenPage() {
             {plan.affecting.length > 0 ? (
               <div className="rounded-2xl border border-amber-400/40 bg-amber-400/[0.08] p-3.5" data-testid="citizen-advisory">
                 <div className="flex items-center gap-2 text-[14px] font-semibold text-amber-100">
-                  <AlertTriangle size={17} /> تنبيه: إغلاق على مسارك المعتاد
+                  <AlertTriangle size={17} /> اعرف الإغلاق قبل موعدك: إغلاق على مسارك المعتاد
                 </div>
+                <div className="num mt-1 text-[11px] text-amber-200/70">تنبيه مسبق مساء {fmtDate(isoFromDay(day - 1))} — قبل يوم الرحلة</div>
                 {plan.affecting.map((p) => (
                   <div key={p.id} className="mt-2 rounded-lg bg-black/25 p-2.5 text-[12px]">
                     <div className="font-medium text-slate-100">{p.title}</div>
@@ -158,7 +169,7 @@ export function CitizenPage() {
                 </div>
               )}
             </div>
-            <p className="text-[10.5px] leading-relaxed text-slate-500">الأوقات تقديرات من نموذج محاكاة محلي (طلب مروري تركيبي) وليست بيانات مرور حية.</p>
+            <p className="text-[10.5px] leading-relaxed text-slate-500">الأوقات تقديرات من نموذج محاكاة محلي (طلب مروري تركيبي) وليست بيانات مرور حية. الإغلاق والالتفاف افتراضيان؛ تصور توضيحي لا يفترض تكاملاً مع أي تطبيق خرائط أو منصة حكومية.</p>
           </motion.div>
         )}
 

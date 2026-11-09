@@ -32,7 +32,7 @@ describe('conflict detection engine', () => {
     const c = pair('RASD-P01', 'RASD-P02')!;
     expect(c.category).toBe('direct');
     expect(c.kind).toBe('geometric');
-    expect(c.overlap).toEqual({ start: '2026-12-15', end: '2026-12-24', days: 10 });
+    expect(c.overlap).toEqual({ start: '2026-12-10', end: '2026-12-24', days: 15 });
     expect(c.evidence.some((e) => e.kind === 'geometric')).toBe(true);
   });
   it('Scenario 2 — closure on another project’s detour is a modeled network conflict', () => {

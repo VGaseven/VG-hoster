@@ -91,24 +91,54 @@ test('form validation shows meaningful errors', async ({ page }) => {
   await expect(page.getByText('العنوان قصير جداً').first()).toBeVisible();
 });
 
-test('TEST 5/6/7 — three alternatives, approve, timeline changes, before/after metrics differ', async ({ page }) => {
+test('TEST 5/6/7 — three official alternatives, decision review (accept), schedules change, plans compared', async ({ page }) => {
   await fresh(page, '/optimize');
   await page.getByTestId('opt-conflict-select').selectOption('C-RASD-P01-RASD-P02');
   for (const k of ['earlier', 'delay', 'coordinated']) await expect(page.getByTestId(`option-${k}`)).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByTestId('option-coordinated')).toContainText('الخيار الموصى به');
-  const before = (await stored(page)).projects.find((p: { id: string }) => p.id === 'RASD-P02').schedule;
+  await expect(page.getByTestId('option-earlier')).toContainText('تقديم الموعد حسب المرونة');
+  await expect(page.getByTestId('option-delay')).toContainText('تأخير الموعد حسب الأولوية');
+  await expect(page.getByTestId('option-coordinated')).toContainText('نافذة مشتركة إذا أمكن فنيًا');
+  // shared window is never auto-recommended and needs technical confirmation
+  await expect(page.getByTestId('option-coordinated')).not.toContainText('الخيار الموصى به');
   await page.getByTestId('apply-coordinated').click();
+  await expect(page.getByTestId('confirm-approve')).toBeDisabled();
+  await page.getByTestId('tech-confirm').check();
+  await expect(page.getByTestId('confirm-approve')).toBeEnabled();
+  const before = (await stored(page)).projects.find((p: { id: string }) => p.id === 'RASD-P02').schedule;
   await page.getByTestId('confirm-approve').click();
   await expect(page.getByTestId('compare-page')).toBeVisible();
-  const after = (await stored(page)).projects.find((p: { id: string }) => p.id === 'RASD-P02');
+  const st = await stored(page);
+  const after = st.projects.find((p: { id: string }) => p.id === 'RASD-P02');
   expect(after.schedule).not.toEqual(before);
   expect(after.status).toBe('scheduled');
-  expect((await stored(page)).audit[0].action).toBe('approve_option');
-  await expect(page.getByTestId('compare-metrics')).toBeVisible();
-  const delta = await page.getByTestId('delta-تأخير المركبات (م-س)').textContent();
-  expect(delta).toMatch(/-\d/); // modeled reduction, computed not hard-coded
+  expect(after.coordinationGroup).toBeTruthy();
+  expect(st.audit[0].action).toBe('approve_option');
+  await expect(page.getByTestId('compare-metrics')).toContainText('النتائج الرئيسية');
+  await expect(page.getByTestId('delta-تأخير المركبات (م-س)')).toHaveText(/-\d/);
   await page.getByTestId('mode-slider').click();
   await expect(page.getByTestId('compare-slider')).toBeVisible();
+});
+
+test('decision review — reject with reason, then modify dates within constraints', async ({ page }) => {
+  await fresh(page, '/optimize');
+  await page.getByTestId('opt-conflict-select').selectOption('C-RASD-P08-RASD-P09');
+  await expect(page.getByTestId('option-delay')).toBeVisible({ timeout: 30_000 });
+  await page.getByTestId('apply-delay').click();
+  await page.getByTestId('decision-reject').click();
+  await expect(page.getByTestId('confirm-reject')).toBeDisabled();
+  await page.getByTestId('decision-rationale').fill('يتعارض مع فعالية في الحي');
+  await page.getByTestId('confirm-reject').click();
+  expect((await stored(page)).audit[0].action).toBe('reject_option');
+  await page.getByTestId('apply-delay').click();
+  await page.getByTestId('decision-modify').click();
+  await page.getByTestId('modify-start-RASD-P09').fill('2027-03-01');
+  await expect(page.getByTestId('confirm-approve')).toBeDisabled(); // beyond latest completion
+  await page.getByTestId('modify-start-RASD-P09').fill('2027-01-20');
+  await expect(page.getByTestId('confirm-approve')).toBeEnabled();
+  await page.getByTestId('confirm-approve').click();
+  const st = await stored(page);
+  expect(st.audit[0].action).toBe('modify_option');
+  expect(st.projects.find((p: { id: string }) => p.id === 'RASD-P09').schedule.start).toBe('2027-01-20');
 });
 
 test('TEST 8 — citizen previews an approved future closure with an alternative', async ({ page }) => {
@@ -116,19 +146,20 @@ test('TEST 8 — citizen previews an approved future closure with an alternative
   await page.getByTestId('journey-J1').click();
   await expect(page.getByTestId('citizen-advisory')).toBeVisible();
   await expect(page.getByTestId('citizen-advisory')).toContainText('طريق الملك فهد');
+  await expect(page.getByRole('heading', { name: 'خطّط لرحلة الغد قبل مفاجأة الإغلاق' })).toBeVisible();
   await page.getByTestId('trip-date').fill('2027-02-27');
   await expect(page.getByTestId('citizen-clear')).toBeVisible();
 });
 
-test('TEST 9 — completes the interactive tutorial', async ({ page }) => {
+test('TEST 9 — completes the interactive tutorial (official workflow)', async ({ page }) => {
   await fresh(page);
   await page.locator('[data-tour="nav-tutorial"]').click();
   await expect(page.getByTestId('tutorial')).toBeVisible();
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 11; i++) {
     await page.getByTestId('tutorial-next').click();
-    await page.waitForTimeout(250);
+    await page.waitForTimeout(300);
   }
-  await expect(page.getByTestId('tutorial-title')).toHaveText('صدّر فيديو المحاكاة');
+  await expect(page.getByTestId('tutorial-title')).toHaveText('عرض سيناريو رصد وتصدير الفيديو');
   await page.getByTestId('tutorial-back').click();
   await page.getByTestId('tutorial-next').click();
   await page.getByTestId('tutorial-finish').click();
@@ -150,18 +181,40 @@ test('TEST 10 — play, pause and reset the scenario clock', async ({ page }) =>
   await expect(page.getByTestId('date-input')).toHaveValue('2026-12-01');
 });
 
-test('conflict scenario player walks all 11 stages and opens optimization', async ({ page }) => {
-  await fresh(page, '/conflicts?scenario=1');
-  await expect(page.getByTestId('scenario-player')).toBeVisible();
-  await page.getByTestId('stage-pause').click();
-  for (let i = 0; i < 9; i++) await page.getByTestId('stage-next').click();
-  await expect(page.getByTestId('stage-title')).toHaveText('الأثر المروري المُنمذج');
-  await page.getByTestId('stage-back').click();
-  await expect(page.getByTestId('stage-title')).toHaveText('محاكاة إعادة توجيه الحركة');
-  await page.getByTestId('stage-next').click();
-  await page.getByTestId('stage-next').click();
-  await expect(page.getByTestId('optimize-page')).toBeVisible();
+test('«عرض سيناريو رصد» — 10 controllable scenes from project data to results', async ({ page }) => {
+  await fresh(page);
+  await page.locator('[data-tour="judge-demo"]').click();
+  await expect(page.getByTestId('rasd-show')).toBeVisible();
+  await page.getByTestId('show-pause').click();
+  await expect(page.getByTestId('show-title')).toContainText('حي العليا');
+  await page.getByTestId('show-next').click();
+  await page.getByTestId('show-next').click();
+  await expect(page.getByTestId('show-title')).toContainText('مشروع ثانٍ');
   expect((await stored(page)).projects.some((p: { id: string }) => p.id === 'RASD-D01')).toBe(true);
+  await page.getByTestId('show-next').click();
+  await expect(page).toHaveURL(/\/conflicts$/);
+  await expect(page.getByTestId('conflict-warning')).toBeVisible();
+  await page.getByTestId('show-next').click();
+  await page.getByTestId('show-next').click();
+  await expect(page.getByTestId('option-delay')).toBeVisible({ timeout: 30_000 });
+  await page.getByTestId('show-back').click(); // replayable / manual navigation
+  await expect(page.getByTestId('show-title')).toHaveText('فتح البدائل الثلاثة');
+  for (let i = 0; i < 4; i++) await page.getByTestId('show-next').click();
+  await expect(page).toHaveURL(/\/citizen$/);
+  expect((await stored(page)).audit.some((a: { action: string }) => a.action === 'approve_option')).toBe(true);
+  await page.getByTestId('show-next').click();
+  await expect(page.getByTestId('show-results')).toBeVisible();
+  await page.getByTestId('show-replay').click();
+  await page.getByTestId('show-close').click();
+  await expect(page.getByTestId('rasd-show')).toHaveCount(0);
+});
+
+test('stakeholders: four groups on the overview, operators page lists published closures', async ({ page }) => {
+  await fresh(page);
+  for (const id of ['citizens', 'authorities', 'executors', 'operators']) await expect(page.getByTestId(`stakeholder-${id}`)).toBeVisible();
+  await expect(page.getByTestId('primary-outcomes')).toContainText('إغلاقات أقل تكراراً');
+  await page.getByTestId('stakeholder-operators').click();
+  await expect(page.getByTestId('operators-page')).toContainText('إشعار مسبق');
 });
 
 test('TEST 11 — exports scenario metrics to CSV', async ({ page }) => {
@@ -174,18 +227,8 @@ test('TEST 11 — exports scenario metrics to CSV', async ({ page }) => {
   expect(csv.split('\n').filter((l) => l.startsWith('"daily"')).length).toBe(92);
 });
 
-test('judge demo mode starts and can be stopped', async ({ page }) => {
-  await fresh(page);
-  await page.locator('[data-tour="judge-demo"]').click();
-  await expect(page.getByTestId('demo-caption')).toBeVisible();
-  await page.waitForTimeout(7500);
-  await expect(page).toHaveURL(/\/map$/);
-  await page.getByTestId('demo-stop').click();
-  await expect(page.getByTestId('judge-demo')).toHaveCount(0);
-});
-
 test('language toggle switches UI chrome to English', async ({ page }) => {
   await fresh(page);
   await page.getByTestId('lang-toggle').click();
-  await expect(page.getByRole('link', { name: 'Conflict Detection' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Conflict Analysis' })).toBeVisible();
 });

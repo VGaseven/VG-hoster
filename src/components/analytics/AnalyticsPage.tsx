@@ -97,7 +97,7 @@ export default function AnalyticsPage() {
     <div className="scroll-thin h-full overflow-y-auto p-6" data-testid="analytics-page">
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <h1 className="flex items-center gap-2 text-xl font-bold">
-          <BarChart3 className="text-cyan-300" /> لوحة مؤشرات الأثر
+          <BarChart3 className="text-violet-300" /> لوحة مؤشرات الأثر
         </h1>
         <SimBadge />
         <div className="mr-auto flex gap-2">
@@ -109,6 +109,25 @@ export default function AnalyticsPage() {
           </Button>
         </div>
       </div>
+      <div className="mb-3 grid gap-3 md:grid-cols-3" data-testid="analytics-outcomes">
+        {(
+          [
+            ['إغلاقات أقل تكراراً', 'مرات إغلاق المقاطع (إغلاقات متكررة)', `${fmtNum(mB.closureEpisodes)} (${mB.repeatedClosures})`, `${fmtNum(mA.closureEpisodes)} (${mA.repeatedClosures})`, mA.closureEpisodes <= mB.closureEpisodes],
+            ['أثر أخف على الحركة', 'كم-يوم مغلق · التعارضات', `${fmtNum(mB.closureKmDays, 1)} · ${mB.conflicts}`, `${fmtNum(mA.closureKmDays, 1)} · ${mA.conflicts}`, mA.closureKmDays <= mB.closureKmDays],
+            ['استعداد أفضل لمستخدم الطريق', 'نسبة الإغلاقات المعلنة قبل يوم الرحلة', `${fmtNum(mB.visibleClosureShare)}%`, `${fmtNum(mA.visibleClosureShare)}%`, mA.visibleClosureShare >= mB.visibleClosureShare],
+          ] as const
+        ).map(([t, h, b, a, good]) => (
+          <Panel key={t} className="p-4">
+            <div className="text-[13px] font-semibold text-violet-200">{t}</div>
+            <div className="text-[11px] text-slate-500">{h}</div>
+            <div className="num mt-2 text-lg">
+              <span className="text-slate-500">{b}</span> <span className="text-slate-600">→</span> <b className={good ? 'text-emerald-300' : 'text-red-300'}>{a}</b>
+            </div>
+            <div className="text-[10.5px] text-slate-500">الخطة الأصلية → الخطة الحالية</div>
+          </Panel>
+        ))}
+      </div>
+      <div className="mb-2 text-[12px] font-semibold text-slate-400">مؤشرات تشغيلية ومُنمذجة مساندة</div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Stat label="المشاريع المسجلة" value={projects.length} icon={<Landmark size={12} />} />
         <Stat label="إغلاقات مخططة نشطة" value={projects.filter((p) => p.status !== 'rejected').length} icon={<CalendarCheck2 size={12} />} />
@@ -268,7 +287,7 @@ export default function AnalyticsPage() {
             {audit.map((a) => (
               <div key={a.id} className="rounded-lg border border-white/6 bg-white/[0.02] p-2.5 text-[12px]">
                 <div className="flex justify-between text-slate-400">
-                  <span>{{ approve_option: 'اعتماد بديل', approve_project: 'اعتماد مشروع', reject_project: 'رفض مشروع', register_project: 'تسجيل مشروع', reset: 'إعادة ضبط', status_change: 'تغيير حالة' }[a.action]}</span>
+                  <span>{{ approve_option: 'اعتماد بديل', reject_option: 'رفض بديل', modify_option: 'اعتماد بديل معدّل', approve_project: 'اعتماد مشروع', reject_project: 'رفض مشروع', register_project: 'تسجيل مشروع', reset: 'إعادة ضبط', status_change: 'تغيير حالة' }[a.action]}</span>
                   <span className="num">{fmtDate(a.at.slice(0, 10))} {a.at.slice(11, 16)}</span>
                 </div>
                 <div className="mt-1 text-slate-200">{a.rationale}</div>

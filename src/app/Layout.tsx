@@ -8,14 +8,14 @@ import { MapToolbar } from '@/components/layout/MapToolbar';
 import { MainMap } from '@/components/map/MainMap';
 import { Toasts } from '@/components/ui/Toasts';
 import { Tutorial } from '@/components/tutorial/Tutorial';
-import { JudgeDemo } from '@/components/tutorial/JudgeDemo';
+import { RasdShow } from '@/components/tutorial/RasdShow';
 import { ShortcutsDialog } from '@/components/tutorial/ShortcutsDialog';
 import { useSimClock } from '@/hooks/useSimClock';
 import { useKeyboard } from '@/hooks/useKeyboard';
 import { useStore } from '@/store/store';
 import { useEffect } from 'react';
 
-const FULL_PAGES = ['/compare', '/citizen', '/analytics', '/studio', '/settings'];
+const FULL_PAGES = ['/compare', '/citizen', '/analytics', '/studio', '/settings', '/operators'];
 
 export function Layout() {
   const { pathname } = useLocation();
@@ -46,13 +46,13 @@ export function Layout() {
             <Timeline />
           </>
         )}
-        <div className={full ? 'absolute inset-0 z-30 overflow-hidden bg-ink-950' : 'pointer-events-none absolute inset-0 z-10'}>
+        <div className={full ? 'rasd-bg absolute inset-0 z-30 overflow-hidden' : 'pointer-events-none absolute inset-0 z-10'}>
           <Outlet />
         </div>
       </main>
       <Toasts />
       <Tutorial />
-      <JudgeDemo />
+      <RasdShow />
       <ShortcutsDialog open={help} onClose={() => setHelp(false)} />
     </div>
   );

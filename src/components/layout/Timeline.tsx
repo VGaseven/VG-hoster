@@ -52,7 +52,7 @@ export function Timeline() {
       <div className="glass pointer-events-auto rounded-xl">
         <div className="flex flex-wrap items-center gap-2 px-3 py-2">
           <div className="flex items-center gap-1">
-            <button className="grid h-9 w-9 place-items-center rounded-lg bg-cyan-400 text-slate-950 transition hover:bg-cyan-300 active:scale-95" onClick={togglePlay} aria-label={playing ? t('إيقاف مؤقت') : t('بدء المحاكاة')} data-testid="play-toggle" data-tour="play">
+            <button className="grid h-9 w-9 place-items-center rounded-lg bg-[#6c5dd3] text-white transition hover:bg-[#7c6ee0] active:scale-95" onClick={togglePlay} aria-label={playing ? t('إيقاف مؤقت') : t('بدء المحاكاة')} data-testid="play-toggle" data-tour="play">
               {playing ? <Pause size={17} /> : <Play size={17} />}
             </button>
             <button className="grid h-9 w-9 place-items-center rounded-lg text-slate-300 hover:bg-white/5" onClick={restart} aria-label={t('إعادة التشغيل')} title={t('إعادة التشغيل')} data-testid="restart">

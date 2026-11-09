@@ -81,25 +81,38 @@ Severity = transparent points (category base + geometric bonus + interaction del
 access drop + repetition + critical priority), shown in the UI breakdown. ≥ 65 high, 40–64 medium.
 Projects in the same approved coordination group are not reported.
 
+## 4b. Official outcome metrics (`closureOutcomes` in `simulate.ts`)
+
+Independent of the traffic model and aligned with the presentation:
+* **closureEpisodes / repeatedClosures** — separate closure episodes per block (closed → reopened → closed counts twice).
+* **closureKmDays** — union of closed extents per block × days (duration and geographic extent).
+* **visibleClosureShare** — share of closure km-days belonging to approved/scheduled (published) projects.
+The “before” plan has nothing approved, so its share reflects closures users would meet unannounced.
+
 ## 5. Optimisation (`src/engine/optimization/optimize.ts`)
 
 For a conflict, three families are generated and each candidate schedule is **re-simulated over the
 full horizon and re-checked for conflicts**:
 
-* **A Earlier** — move the lower-priority/more flexible project to finish 1 buffer day before the
-  other starts; feasible only if ≥ earliest permitted start.
-* **B Delay** — start 1 buffer day after the other ends; feasible only if ≤ latest completion.
-* **C Coordinated** — one shared work window/zone, only if on the same block, technically compatible
+* **A تقديم الموعد حسب المرونة** — the lower-priority/more flexible project must finish ≥ 1 buffer
+  day before the other starts; the flexibility window is then searched (day by day, closest first)
+  for the slot that introduces the fewest conflicts with **any** project (0 preferred).
+* **B تأخير الموعد حسب الأولوية** — same search after the other ends, bounded by latest completion.
+* **C نافذة مشتركة إذا أمكن فنيًا** — one shared work window/zone, only if on the same block, technically compatible
   categories (`SHARED_ZONE_COMPATIBLE`), same closure type, ≥ 1 lane left open, and all deadlines
   met. Sequential chains on the same block are grouped (S3 → three utilities).
 
-Score = 100 − Σ wᵢ·(metricᵢ / worstᵢ) / Σw × 100 over conflicts, delay, closure-days, detour,
-accessibility and schedule shift; weights are user-adjustable and the ranking updates instantly.
-If nothing is feasible the UI explains why.
+Score = 100 − Σ wᵢ·(metricᵢ / worstᵢ) / Σw × 100 over conflicts, closure episodes, closure km-days
+(primary), delay, accessibility, detour (supplementary) and schedule shift; weights are adjustable.
+**Policy**: the shared window is never recommended automatically — it is flagged “requires technical
+confirmation” (and “highest score” when applicable) and can only be approved after both entities
+confirm. If nothing is feasible the UI explains why.
 
-## 6. Approval workflow
+## 6. Decision review (مراجعة القرار)
 
-Statuses: draft · submitted · conflict_detected · under_review · alternative_proposed · approved ·
+«إرسال للمراجعة» opens the authority review: **accept**, **reject** (reason required → `reject_option`,
+projects back to *under_review*) or **modify** (edit start dates, validated against each project's
+window, re-simulated live → `modify_option`). Statuses: draft · submitted · conflict_detected · under_review · alternative_proposed · approved ·
 rejected · scheduled. `approveOption` applies the schedule changes, sets moved projects to
 *scheduled* and the counterpart to *approved*, recomputes conflicts/statuses, and appends an audit
 entry (date, option, rationale, previous/updated schedules). “Before” = every project on its
@@ -107,7 +120,9 @@ originally proposed schedule; “after” = current. Reset restores the seed (Se
 
 ## 7. Video pipeline
 
-`video/compositions/RasdVideo.tsx` (7 scenes, 45–60 s, 4 presets). Live WebGL map capture is not
+`video/compositions/RasdVideo.tsx` (8 scenes following the presentation: idea · project data ·
+conflict analysis · three alternatives · authority review · original vs coordinated plan · citizen ·
+closing; 45–60 s, 4 presets). Live WebGL map capture is not
 deterministic, so scenes use `video/components/CityScene.tsx`: a perspective projection of the same
 network, closures, buildings and vehicle model drawn with Canvas 2D (roads/buildings/vehicles,
 painter’s algorithm) plus SVG labels, driven by keyframed cameras that are pure functions of the

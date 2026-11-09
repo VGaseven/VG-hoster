@@ -115,8 +115,9 @@ export const CityScene: React.FC<CitySceneProps> = ({ width: W, height: H, camer
     const ctx = cv.getContext('2d');
     if (!ctx) return;
     const sky = ctx.createRadialGradient(W / 2, H * 0.2, 0, W / 2, H * 0.2, Math.max(W, H) * 0.9);
-    sky.addColorStop(0, '#13233b');
-    sky.addColorStop(1, '#050a14');
+    sky.addColorStop(0, '#0c1f4d');
+    sky.addColorStop(0.55, '#061230');
+    sky.addColorStop(1, '#040a1d');
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, W, H);
     ctx.lineCap = 'round';
@@ -156,10 +157,10 @@ export const CityScene: React.FC<CitySceneProps> = ({ width: W, height: H, camer
       const b = proj(5, gy);
       if (a && b) (ctx.moveTo(a[0], a[1]), ctx.lineTo(b[0], b[1]));
     }
-    stroke('#1e293b', 0.6, 0.55);
+    stroke('#1b2b5c', 0.6, 0.55);
     for (const { s, pts } of SEG_KM) {
       line(pts);
-      stroke('#0f1a2c', (s.roadClass === 'motorway' ? 34 : s.roadClass === 'connector' ? 4 : 20) * scale);
+      stroke('#0b1838', (s.roadClass === 'motorway' ? 34 : s.roadClass === 'connector' ? 4 : 20) * scale);
     }
     for (const { s, pts } of SEG_KM)
       if (highlight.includes(s.id)) {
@@ -219,11 +220,11 @@ export const CityScene: React.FC<CitySceneProps> = ({ width: W, height: H, camer
     ctx.lineWidth = 0.5;
     for (const it of items) {
       const tall = it.h > 120;
-      const roof = tall ? '#4a76a8' : it.h > 40 ? '#33557c' : '#26405f';
-      const wallA = tall ? '#2f4f75' : it.h > 40 ? '#223b5a' : '#1a2d47';
-      const wallB = tall ? '#253f5f' : it.h > 40 ? '#1b304b' : '#15253b';
+      const roof = tall ? '#5b5fc7' : it.h > 40 ? '#33478a' : '#22346a';
+      const wallA = tall ? '#3a3f8f' : it.h > 40 ? '#22336b' : '#192a58';
+      const wallB = tall ? '#2e3378' : it.h > 40 ? '#1b2a5a' : '#13214a';
       const walls = [0, 1, 2, 3].map((i) => ({ i, j: (i + 1) % 4, d: (it.bp[i][2] + it.bp[(i + 1) % 4][2]) / 2 })).sort((a, b) => b.d - a.d);
-      ctx.strokeStyle = '#0b1424';
+      ctx.strokeStyle = '#08112b';
       for (const { i, j } of walls) {
         ctx.beginPath();
         ctx.moveTo(it.bp[i][0], it.bp[i][1]);

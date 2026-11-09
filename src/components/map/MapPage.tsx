@@ -32,7 +32,7 @@ export function MapPage() {
     ['إيقاف مؤقت', <Pause size={14} />, () => useStore.getState().setPlaying(false), 'ctl-pause'],
     ['إعادة التشغيل', <RotateCcw size={14} />, () => useStore.getState().restartSim(), 'ctl-restart'],
     ['إضافة مشروع', <FilePlus2 size={14} />, () => navigate('/register'), 'ctl-add'],
-    ['كشف التعارض', <Radar size={14} />, () => navigate('/conflicts?scenario=1'), 'ctl-detect'],
+    ['كشف التعارض', <Radar size={14} />, () => navigate('/conflicts'), 'ctl-detect'],
     ['مقارنة الحلول', <Wand2 size={14} />, () => navigate('/optimize'), 'ctl-compare'],
     ['تطبيق الحل', <Sparkles size={14} />, applyBest, 'ctl-apply'],
     ['عرض تجربة المواطن', <UserRound size={14} />, () => navigate('/citizen'), 'ctl-citizen'],

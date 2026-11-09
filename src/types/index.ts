@@ -132,6 +132,13 @@ export interface Conflict {
 }
 
 export interface ScenarioMetrics {
+  /** PRIMARY (official RASD outcomes) ─ 1) fewer repeated closures */
+  closureEpisodes: number;
+  repeatedClosures: number;
+  /** 2) lighter disruption: duration & geographic extent of closures */
+  closureKmDays: number;
+  /** 3) better preparation: share of closure-days published (approved) before the trip */
+  visibleClosureShare: number;
   conflicts: number;
   highConflicts: number;
   closureSegmentDays: number;
@@ -177,10 +184,16 @@ export interface OptimizationOption {
   tradeoffsAr: string[];
   score: number;
   recommended: boolean;
+  /** Shared windows are never auto-recommended: they need technical confirmation by both entities. */
+  requiresTechnicalConfirmation?: boolean;
+  /** Highest weighted score (may differ from the recommendation). */
+  topScore?: boolean;
 }
 
 export interface Weights {
   conflicts: number;
+  /** official outcome: fewer repeated closures */
+  repeat: number;
   delay: number;
   closureDays: number;
   detour: number;
@@ -198,7 +211,7 @@ export interface EconomicAssumptions {
 export interface AuditEntry {
   id: string;
   at: string;
-  action: 'approve_option' | 'approve_project' | 'reject_project' | 'register_project' | 'reset' | 'status_change';
+  action: 'approve_option' | 'reject_option' | 'modify_option' | 'approve_project' | 'reject_project' | 'register_project' | 'reset' | 'status_change';
   conflictId?: string;
   optionKind?: OptionKind;
   projectIds: string[];

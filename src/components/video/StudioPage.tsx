@@ -16,7 +16,7 @@ interface Job {
   seconds?: number;
 }
 
-const SCENES = ['المقدمة', 'المشكلة', 'كشف التعارض', 'التحسين', 'قبل/بعد', 'تجربة المواطن', 'الختام'];
+const SCENES = ['الفكرة', 'إدخال المشاريع', 'تحليل التعارض', 'البدائل', 'مراجعة الجهة', 'الخطتان', 'المواطن', 'الختام'];
 
 export default function StudioPage() {
   const [props, setProps] = useState<VideoProps>(DEFAULT_VIDEO_PROPS);
@@ -92,7 +92,7 @@ export default function StudioPage() {
       <aside className="scroll-thin w-[360px] shrink-0 space-y-4 overflow-y-auto border-r border-white/6 p-5">
         <Panel className="p-4">
           <SectionTitle icon={<Film size={16} />}>إعدادات الفيديو</SectionTitle>
-          <div className="text-[12px] text-slate-400">السيناريو: تعارض طريق الملك فهد / شارع العليا (محاكاة)</div>
+          <div className="text-[12px] text-slate-400">السيناريو: حي العليا — مشروعان افتراضيان متقاربان (نفس بيانات التطبيق)</div>
           <div className="mt-3 text-xs font-semibold text-slate-400">الدقة</div>
           <div className="mt-1.5 grid grid-cols-2 gap-1.5">
             {(Object.keys(PRESETS) as (keyof typeof PRESETS)[]).map((k) => (

@@ -66,6 +66,9 @@ interface State {
   district: string;
   notificationsOpen: boolean;
   lastOptimization: { conflictId: string; options: OptimizationOption[] } | null;
+  focusOption: OptimizationOption['kind'] | null;
+  reviewRequest: OptimizationOption['kind'] | null;
+  show: { active: boolean; scene: number; playing: boolean };
 
   setLang: (l: Lang) => void;
   selectProject: (id: string | null) => void;
@@ -92,7 +95,11 @@ interface State {
   injectDemoConflict: () => Project;
   removeProject: (id: string) => void;
   setStatus: (id: string, status: ProjectStatus, rationale?: string) => void;
-  approveOption: (conflictId: string, option: OptimizationOption, rationale: string) => void;
+  approveOption: (conflictId: string, option: OptimizationOption, rationale: string, modified?: boolean) => void;
+  rejectOption: (conflictId: string, option: OptimizationOption, rationale: string) => void;
+  setFocusOption: (k: OptimizationOption['kind'] | null) => void;
+  setReviewRequest: (k: OptimizationOption['kind'] | null) => void;
+  setShow: (s: Partial<State['show']>) => void;
   resetScenario: () => void;
   setTutorial: (t: Partial<State['tutorial']>) => void;
   setDemo: (active: boolean) => void;
@@ -148,7 +155,7 @@ export const useStore = create<State>()(
       draft: { segmentId: null, from: 0.2, to: 0.8, pickStage: 'idle' },
       toasts: [],
       panels: { left: true, right: true, timeline: true },
-      scenarioName: 'ممر العليا — طريق الملك فهد',
+      scenarioName: 'حي العليا — مشاريع افتراضية',
       tutorial: { active: false, step: 0 },
       demo: { active: false },
       reducedMotion: typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
@@ -156,6 +163,9 @@ export const useStore = create<State>()(
       district: 'حي العليا',
       notificationsOpen: false,
       lastOptimization: null,
+      focusOption: null,
+      reviewRequest: null,
+      show: { active: false, scene: 0, playing: true },
 
       setLang: (lang) => set({ lang }),
       selectProject: (id) => set({ selectedProjectId: id, panels: { ...get().panels, right: id ? true : get().panels.right } }),
@@ -216,7 +226,16 @@ export const useStore = create<State>()(
         };
         set({ projects, audit: [audit, ...get().audit] });
       },
-      approveOption: (conflictId, option, rationale) => {
+      setFocusOption: (focusOption) => set({ focusOption }),
+      setReviewRequest: (reviewRequest) => set({ reviewRequest }),
+      setShow: (sh) => set({ show: { ...get().show, ...sh } }),
+      rejectOption: (conflictId, option, rationale) => {
+        const conflict = getConflicts(get().projects).find((c) => c.id === conflictId);
+        const ids = conflict?.projectIds ?? option.changes.map((c) => c.projectId);
+        const audit: AuditEntry = { id: `A-${Date.now()}`, at: new Date().toISOString(), action: 'reject_option', conflictId, optionKind: option.kind, projectIds: ids, rationale, changes: option.changes, actor: 'الجهة المختصة (عرض تجريبي)' };
+        set({ projects: get().projects.map((p) => (ids.includes(p.id) && p.status === 'alternative_proposed' ? { ...p, status: 'under_review' as const } : p)), audit: [audit, ...get().audit] });
+      },
+      approveOption: (conflictId, option, rationale, modified) => {
         const changed = new Map(option.changes.map((c) => [c.projectId, c]));
         const conflict = getConflicts(get().projects).find((c) => c.id === conflictId);
         const involved = new Set([...(conflict?.projectIds ?? []), ...changed.keys()]);
@@ -231,13 +250,13 @@ export const useStore = create<State>()(
         const audit: AuditEntry = {
           id: `A-${Date.now()}`,
           at: new Date().toISOString(),
-          action: 'approve_option',
+          action: modified ? 'modify_option' : 'approve_option',
           conflictId,
           optionKind: option.kind,
           projectIds: [...involved],
           rationale,
           changes: option.changes,
-          actor: 'متخذ القرار (عرض تجريبي)',
+          actor: 'الجهة المختصة (عرض تجريبي)',
         };
         set({ projects, audit: [audit, ...get().audit], lastOptimization: null });
       },
@@ -251,6 +270,7 @@ export const useStore = create<State>()(
           selectedConflictId: null,
           highlightSegments: [],
           lastOptimization: null,
+          focusOption: null,
           viewMode: 'after',
           simTime: dayIndex('2026-12-16') + 8 / 24,
           playing: false,
@@ -287,6 +307,7 @@ export const useStore = create<State>()(
         const parsed = PersistedSchema.safeParse(persisted);
         if (!parsed.success) return current;
         const p = parsed.data as Partial<State>;
+        if (p.weights && (p.weights as Partial<Weights>).repeat === undefined) p.weights = { ...DEFAULT_WEIGHTS, ...p.weights };
         return { ...current, ...p, projects: syncStatuses((p.projects as Project[] | undefined) ?? current.projects), overlays: { ...current.overlays, ...(p.overlays ?? {}) } };
       },
     },
